@@ -11,8 +11,8 @@
     "lastKnown": {
       "commit": "f8a8b01",
       "build": "pass",
-      "tests": "82 pass",
-      "warnings": "NU1900 package vulnerability checks could not reach api.nuget.org in sandbox"
+      "tests": "86 pass",
+      "warnings": "none"
     }
   },
   "bootstrap": {
@@ -37,7 +37,8 @@
     { "id": "handoff-bootstrap", "commit": null, "state": "done", "note": "Added AGENTS.md bootstrap prompt and PROJECT_STATE.json handoff ledger." },
     { "id": "continue-skill", "commit": null, "state": "done-local", "note": "Installed local Codex skill at C:/Users/ZunairFayaz/.codex/skills/continue for /Continue-style task selection, verification, ledger update, and commit workflow." },
     { "id": "google-group-label-batch-writer", "commit": null, "state": "done-local", "note": "GoogleContactBatchWriter reconciles desired contact labels through a Google contact-group label client port before contact writes." },
-    { "id": "google-group-label-provider", "commit": "f8a8b01", "state": "done", "note": "Added a live People API HTTP client behind IGoogleContactGroupLabelClient, with delegated access-token seam and fake-handler tests for list/create/update/delete contact-group label calls." }
+    { "id": "google-group-label-provider", "commit": "f8a8b01", "state": "done", "note": "Added a live People API HTTP client behind IGoogleContactGroupLabelClient, with delegated access-token seam and fake-handler tests for list/create/update/delete contact-group label calls." },
+    { "id": "google-delegated-token-provider", "commit": null, "state": "done-local", "note": "Added delegated service-account access-token acquisition for Google People API calls, with fake token-source tests and explicit contacts scope docs/sample config." }
   ],
   "inProgress": [],
   "pending": [
@@ -55,7 +56,6 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Wire Google provider read/write around Core planner with dry-run logging.",
-    "Implement delegated Google credential token acquisition for live People API calls."
+    "Wire Google provider read/write around Core planner with dry-run logging."
   ]
 }

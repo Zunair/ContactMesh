@@ -12,4 +12,12 @@ Required Google Workspace setup:
 6. Store the service account credential outside the repository.
 7. Configure `samples/google/appsettings.sample.json` for local dry-runs.
 
+For People API contact reads and writes, authorize:
+
+```text
+https://www.googleapis.com/auth/contacts
+```
+
+The Google provider requests delegated tokens for the target user's email address when calling People API contact endpoints.
+
 Start with `DryRun: true` and a limited target group before applying changes to real user contacts.

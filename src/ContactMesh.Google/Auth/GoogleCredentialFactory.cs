@@ -13,4 +13,10 @@ public sealed class GoogleCredentialFactory
     {
         return this.options.ServiceAccountFile;
     }
+
+    public IGoogleAccessTokenProvider CreateDelegatedAccessTokenProvider(
+        IGoogleDelegatedAccessTokenSource? tokenSource = null)
+    {
+        return new GoogleDelegatedAccessTokenProvider(this.options, tokenSource);
+    }
 }
