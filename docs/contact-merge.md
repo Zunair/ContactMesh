@@ -21,4 +21,6 @@ Before planning normal sync changes, providers can ask core to prune contacts th
 
 Directory users are shaped into managed contacts by core: the user ID becomes the contact source ID, the work email is primary, organization fields are copied into managed company fields, labels are attached as policy output, and provider metadata is carried through without exposing provider APIs to core.
 
+Email policy cleanup removes duplicate email addresses on a contact and prefers the provider-resolved send-as address as the primary work email when it is present.
+
 The goal is predictable sync without deleting useful personal details users have added themselves.
