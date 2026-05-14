@@ -13,4 +13,11 @@ public sealed class MicrosoftGraphClientFactory
     {
         return this.options.TenantId;
     }
+
+    public IMicrosoftGraphAccessTokenProvider CreateAccessTokenProvider(HttpClient httpClient)
+    {
+        return new MicrosoftClientCredentialsAccessTokenProvider(
+            this.options,
+            new MicrosoftClientCredentialsTokenSource(httpClient));
+    }
 }

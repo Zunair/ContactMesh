@@ -2,9 +2,9 @@
 
 The Microsoft 365 provider is intentionally scaffolded but not production-ready.
 
-Planned provider work:
+Provider work:
 
-1. Add Microsoft Graph authentication through `MicrosoftGraphClientFactory`.
+1. Microsoft Graph client-credentials token acquisition through `MicrosoftGraphClientFactory`.
 2. Map Graph users to `MeshUser`.
 3. Map Graph groups and nested memberships to `MeshGroup`.
 4. Map Outlook contacts to `MeshContact`.
