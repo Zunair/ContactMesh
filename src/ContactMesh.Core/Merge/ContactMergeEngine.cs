@@ -5,10 +5,12 @@ namespace ContactMesh.Core.Merge;
 public sealed class ContactMergeEngine
 {
     private readonly PhoneNormalizer phoneNormalizer;
+    private readonly ContactMergeOptions options;
 
-    public ContactMergeEngine(PhoneNormalizer? phoneNormalizer = null)
+    public ContactMergeEngine(PhoneNormalizer? phoneNormalizer = null, ContactMergeOptions? options = null)
     {
         this.phoneNormalizer = phoneNormalizer ?? new PhoneNormalizer();
+        this.options = options ?? new ContactMergeOptions();
     }
 
     public MeshContact Merge(MeshContact sourceContact, MeshContact existingContact)
@@ -47,9 +49,28 @@ public sealed class ContactMergeEngine
             JobTitle = sourceContact.JobTitle ?? existingContact.JobTitle,
             Emails = sourceEmails.Concat(userOwnedEmails).ToList(),
             Phones = sourcePhones.Concat(userOwnedPhones).ToList(),
-            Labels = sourceContact.Labels.Union(existingContact.Labels, StringComparer.OrdinalIgnoreCase).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            Labels = this.MergeLabels(sourceContact.Labels, existingContact.Labels),
             Metadata = MergeMetadata(existingContact.Metadata, sourceContact.Metadata)
         };
+    }
+
+    private IReadOnlySet<string> MergeLabels(IReadOnlySet<string> source, IReadOnlySet<string> existing)
+    {
+        if (this.options.ManagedLabels.Count == 0)
+        {
+            return source.Union(existing, StringComparer.OrdinalIgnoreCase).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var merged = existing
+            .Where(label => !this.options.ManagedLabels.Contains(label))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var label in source)
+        {
+            merged.Add(label);
+        }
+
+        return merged;
     }
 
     private static IDictionary<string, string> MergeMetadata(IDictionary<string, string> existing, IDictionary<string, string> source)

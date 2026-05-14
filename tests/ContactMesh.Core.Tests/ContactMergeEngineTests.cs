@@ -127,4 +127,51 @@ public sealed class ContactMergeEngineTests
         Assert.Contains("Sales", merged.Labels);
         Assert.Contains("Personal", merged.Labels);
     }
+
+    [Fact]
+    public void Merge_Removes_Stale_Managed_Labels_But_Preserves_UserOwned_Labels()
+    {
+        var source = new MeshContact
+        {
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
+        };
+
+        var existing = new MeshContact
+        {
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "directory", "Sales", "Personal" }
+        };
+
+        var options = new ContactMergeOptions
+        {
+            ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory", "Sales" }
+        };
+
+        var merged = new ContactMergeEngine(options: options).Merge(source, existing);
+
+        Assert.Equal(2, merged.Labels.Count);
+        Assert.Contains("Directory", merged.Labels);
+        Assert.Contains("Personal", merged.Labels);
+        Assert.DoesNotContain("Sales", merged.Labels);
+    }
+
+    [Fact]
+    public void Merge_Keeps_Label_Union_When_No_Managed_Label_Set_Configured()
+    {
+        var source = new MeshContact
+        {
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
+        };
+
+        var existing = new MeshContact
+        {
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Sales", "Personal" }
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, existing);
+
+        Assert.Equal(3, merged.Labels.Count);
+        Assert.Contains("Directory", merged.Labels);
+        Assert.Contains("Sales", merged.Labels);
+        Assert.Contains("Personal", merged.Labels);
+    }
 }

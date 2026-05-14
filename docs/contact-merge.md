@@ -11,6 +11,7 @@ Current merge behavior:
 - Source phone numbers are deduplicated by normalized digits.
 - User-owned emails and phone numbers are preserved when they do not duplicate source data.
 - Notes are treated as user-owned by default and are not overwritten by source contacts.
+- Managed labels are reconciled when configured: labels no longer granted by policy are removed, while personal labels remain.
 - Source metadata overwrites existing metadata with the same key.
 
 When a managed contact becomes stale, ContactMesh deletes it only if no user-owned data remains. If the user has added notes, non-managed emails, non-managed phone numbers, labels, or metadata, ContactMesh removes managed fields and keeps the contact as user-owned.
@@ -22,5 +23,7 @@ Before planning normal sync changes, providers can ask core to prune contacts th
 Directory users are shaped into managed contacts by core: the user ID becomes the contact source ID, the work email is primary, organization fields are copied into managed company fields, labels are attached as policy output, and provider metadata is carried through without exposing provider APIs to core.
 
 Email policy cleanup removes duplicate email addresses on a contact and prefers the provider-resolved send-as address as the primary work email when it is present.
+
+Label reconciliation is provider-neutral. Providers may pass the set of labels ContactMesh owns, and core treats only those labels as policy-controlled.
 
 The goal is predictable sync without deleting useful personal details users have added themselves.

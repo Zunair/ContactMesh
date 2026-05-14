@@ -15,3 +15,4 @@ All notable changes to ContactMesh will be documented in this file.
 - Ported organization unit include/exclude target eligibility rules.
 - Added provider-neutral directory user to managed contact shaping.
 - Added provider-neutral contact email policy cleanup for duplicate emails and send-as primary selection.
+- Added provider-neutral managed-label reconciliation during contact merge.
