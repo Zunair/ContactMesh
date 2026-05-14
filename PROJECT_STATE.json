@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-14",
-  "head": "80c2e2f",
+  "head": "119ca0c",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": null,
       "build": "pass",
-      "tests": "115 pass",
+      "tests": "121 pass",
       "warnings": "NU1900 package vulnerability data was unavailable because https://api.nuget.org/v3/index.json could not be reached during sandboxed restore/build."
     }
   },
@@ -45,11 +45,12 @@
     { "id": "logging-dry-run-output", "commit": null, "state": "done", "note": "Added provider-neutral sync run summary aggregation, structured dry-run operation log fields, shared CLI/Worker dry-run report output, and tests." },
     { "id": "config-binding", "commit": null, "state": "done", "note": "Added shared host configuration binding for ContactMesh, SyncRule, Google Workspace, and Microsoft365 options across CLI/Worker/Web, with binding tests." },
     { "id": "web-settings-ui", "commit": null, "state": "done", "note": "Replaced the Web placeholder with a server-rendered settings overview for runtime, rules, and provider options, with renderer tests for binding display, encoding, and secret masking." },
-    { "id": "microsoft-graph-auth", "commit": null, "state": "done", "note": "Added Microsoft Graph client-credentials token request normalization and HTTP token source through MicrosoftGraphClientFactory, with fake-source and fake-handler tests." }
+    { "id": "microsoft-graph-auth", "commit": null, "state": "done", "note": "Added Microsoft Graph client-credentials token request normalization and HTTP token source through MicrosoftGraphClientFactory, with fake-source and fake-handler tests." },
+    { "id": "microsoft-graph-directory-users", "commit": null, "state": "done", "note": "Added a paged Microsoft Graph users client, mapped Graph users to MeshUser, and wired Microsoft365 host directory reads with fake-handler/provider tests." }
   ],
   "inProgress": [],
   "pending": [
-    { "id": "microsoft-graph-provider", "state": "pending", "note": "Graph auth is in place; live Graph directory, group, contact read/write implementation remains." },
+    { "id": "microsoft-graph-provider", "state": "pending", "note": "Graph auth and directory user reads are in place; live Graph group, contact read/write implementation remains." },
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
   ],
   "blocked": [
@@ -57,6 +58,6 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Microsoft365 provider is scaffolded; live Graph implementation remains later-phase work."
+    "Graph auth and directory user reads are in place; live Graph group, contact read/write implementation remains."
   ]
 }

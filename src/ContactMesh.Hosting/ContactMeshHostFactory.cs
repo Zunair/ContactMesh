@@ -45,7 +45,7 @@ public static class ContactMeshHostFactory
         return contactMesh.Provider.Trim().ToUpperInvariant() switch
         {
             "GOOGLE" => CreateGoogle(googleWorkspace, httpClient),
-            "MICROSOFT365" or "MICROSOFT" => CreateMicrosoft365(microsoft365),
+            "MICROSOFT365" or "MICROSOFT" => CreateMicrosoft365(microsoft365, httpClient),
             _ => CreateScaffolded()
         };
     }
@@ -63,12 +63,14 @@ public static class ContactMeshHostFactory
             new GooglePeopleContactProvider(contactClient, labelClient, writer));
     }
 
-    private static ContactSyncOrchestrator CreateMicrosoft365(Microsoft365Options options)
+    private static ContactSyncOrchestrator CreateMicrosoft365(Microsoft365Options options, HttpClient httpClient)
     {
-        _ = options;
+        var graphClientFactory = new MicrosoftGraphClientFactory(options);
+        var accessTokenProvider = graphClientFactory.CreateAccessTokenProvider(httpClient);
+        var directoryClient = new MicrosoftGraphDirectoryClient(httpClient, accessTokenProvider);
 
         return new ContactSyncOrchestrator(
-            new MicrosoftUserProvider(),
+            new MicrosoftUserProvider(directoryClient),
             new MicrosoftGroupProvider(),
             new MicrosoftContactProvider());
     }
