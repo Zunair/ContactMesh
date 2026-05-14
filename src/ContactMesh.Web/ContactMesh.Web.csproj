@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ContactMesh.Core\ContactMesh.Core.csproj" />
+    <ProjectReference Include="..\ContactMesh.Hosting\ContactMesh.Hosting.csproj" />
   </ItemGroup>
 </Project>
