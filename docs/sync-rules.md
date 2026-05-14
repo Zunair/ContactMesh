@@ -9,6 +9,8 @@ Current rule options:
 - `ExclusionGroups`: users or groups that should not receive managed contacts.
 - `ScopedGroupRoots`: group trees used for scoped, group-aware contact visibility.
 - `GroupMappings`: source-to-target group mappings used to merge one group's members into another contact label.
+- `IncludedOrganizationUnits`: organization unit prefixes that are allowed to receive managed contacts.
+- `ExcludedOrganizationUnits`: organization unit prefixes that are blocked; append `=Ignore` to suppress noisy reporting.
 
 Rule processing belongs in `ContactMesh.Core`. Provider projects only resolve provider-specific group memberships and map them into `MeshGroup`.
 

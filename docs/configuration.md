@@ -13,7 +13,9 @@ ContactMesh uses one central `ContactMesh` section and provider-specific section
       "GlobalExternalContactGroups": [],
       "ExclusionGroups": [],
       "ScopedGroupRoots": [],
-      "GroupMappings": []
+      "GroupMappings": [],
+      "IncludedOrganizationUnits": [],
+      "ExcludedOrganizationUnits": []
     }
   }
 }

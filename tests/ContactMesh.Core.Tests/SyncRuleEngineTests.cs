@@ -11,9 +11,9 @@ public sealed class SyncRuleEngineTests
     {
         var users = new[]
         {
-            User("1", "active@example.org"),
-            User("2", "blocked@example.org"),
-            User("3", "suspended@example.org", isSuspended: true)
+            User("1", "active@example.org", "/Staff"),
+            User("2", "blocked@example.org", "/Staff"),
+            User("3", "suspended@example.org", "/Staff", isSuspended: true)
         };
 
         var engine = new SyncRuleEngine(new ExclusionRule(new[] { "blocked@example.org" }));
@@ -23,6 +23,67 @@ public sealed class SyncRuleEngineTests
         var target = Assert.Single(targets);
         Assert.Equal("1", target.UserId);
         Assert.Equal("active@example.org", target.UserEmail);
+    }
+
+    [Fact]
+    public void CreateTargets_Uses_OrganizationUnit_Eligibility()
+    {
+        var users = new[]
+        {
+            User("1", "included@example.org", "/Staff"),
+            User("2", "excluded@example.org", "/Service Accounts"),
+            User("3", "outside@example.org", "/Archive")
+        };
+
+        var engine = new SyncRuleEngine(
+            organizationUnitRule: new OrganizationUnitRule(
+                includedOrganizationUnits: new[] { "/Staff", "/Service Accounts" },
+                excludedOrganizationUnits: new[] { "/Service Accounts=Ignore" }));
+
+        var targets = engine.CreateTargets(users);
+
+        var target = Assert.Single(targets);
+        Assert.Equal("included@example.org", target.UserEmail);
+    }
+
+    [Fact]
+    public void OrganizationUnitRule_Includes_Users_When_No_Inclusion_List_Is_Configured()
+    {
+        var evaluation = new OrganizationUnitRule().Evaluate(User("1", "person@example.org", "/Any"));
+
+        Assert.True(evaluation.IsIncluded);
+    }
+
+    [Fact]
+    public void OrganizationUnitRule_Matches_Any_Included_OrganizationUnit_Prefix()
+    {
+        var rule = new OrganizationUnitRule(includedOrganizationUnits: new[] { "/Staff", "/Volunteers" });
+
+        var evaluation = rule.Evaluate(User("1", "person@example.org", "/Volunteers/Board"));
+
+        Assert.True(evaluation.IsIncluded);
+    }
+
+    [Fact]
+    public void OrganizationUnitRule_Excludes_OrganizationUnit_Prefixes()
+    {
+        var rule = new OrganizationUnitRule(excludedOrganizationUnits: new[] { "/Transitioning=Error" });
+
+        var evaluation = rule.Evaluate(User("1", "person@example.org", "/Transitioning/Temp"));
+
+        Assert.False(evaluation.IsIncluded);
+        Assert.False(evaluation.IsIgnored);
+    }
+
+    [Fact]
+    public void OrganizationUnitRule_Marks_Ignore_Exclusions()
+    {
+        var rule = new OrganizationUnitRule(excludedOrganizationUnits: new[] { "/Service Accounts=Ignore" });
+
+        var evaluation = rule.Evaluate(User("1", "person@example.org", "/Service Accounts/App"));
+
+        Assert.False(evaluation.IsIncluded);
+        Assert.True(evaluation.IsIgnored);
     }
 
     [Fact]
@@ -97,9 +158,9 @@ public sealed class SyncRuleEngineTests
         Assert.Empty(decisions);
     }
 
-    private static MeshUser User(string id, string email, bool isSuspended = false)
+    private static MeshUser User(string id, string email, string organizationUnit = "/", bool isSuspended = false)
     {
-        return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };
+        return new MeshUser { Id = id, Email = email, OrganizationUnit = organizationUnit, IsSuspended = isSuspended };
     }
 
     private static MeshContact Contact(string label, string name)

@@ -17,6 +17,8 @@ public sealed record SyncRuleOptions
     public IReadOnlyList<string> ExclusionGroups { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> ScopedGroupRoots { get; init; } = Array.Empty<string>();
     public IReadOnlyList<GroupMapping> GroupMappings { get; init; } = Array.Empty<GroupMapping>();
+    public IReadOnlyList<string> IncludedOrganizationUnits { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> ExcludedOrganizationUnits { get; init; } = Array.Empty<string>();
 }
 
 public sealed record GroupMapping(string From, string To);
