@@ -62,7 +62,7 @@ public sealed class StaleContactCleanupEngineTests
         Assert.False(result.ShouldDelete);
         Assert.Null(result.Contact.SourceId);
         Assert.Null(result.Contact.DisplayName);
-        Assert.Empty(result.Contact.Emails.Where(email => email.Address.EndsWith("@example.org", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(result.Contact.Emails, email => email.Address.EndsWith("@example.org", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("jane.personal@example.net", Assert.Single(result.Contact.Emails).Address);
         Assert.Equal("267-555-2222", Assert.Single(result.Contact.Phones).Number);
         Assert.DoesNotContain("Directory", result.Contact.Labels);
