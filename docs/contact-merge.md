@@ -17,4 +17,6 @@ When a managed contact becomes stale, ContactMesh deletes it only if no user-own
 
 When duplicate managed contacts share the same primary email, ContactMesh keeps the first contact, merges unique emails, phone numbers, labels, metadata, and notes into it, then deletes the duplicate records.
 
+Before planning normal sync changes, providers can ask core to prune contacts that are either blank or only contain a managed-domain email with no notes, phone numbers, labels, or organization data.
+
 The goal is predictable sync without deleting useful personal details users have added themselves.

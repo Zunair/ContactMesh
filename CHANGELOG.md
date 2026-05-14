@@ -11,3 +11,4 @@ All notable changes to ContactMesh will be documented in this file.
 - Ported legacy group visibility and group mapping behavior into provider-neutral core rules.
 - Ported stale managed-contact cleanup so user-owned details are preserved when managed contacts fall out of scope.
 - Ported duplicate managed-contact consolidation by primary email.
+- Ported blank and managed-email-only contact pruning rules.
