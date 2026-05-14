@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-14",
-  "head": "6ca855f",
+  "head": "12412e4",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,8 +11,8 @@
     "lastKnown": {
       "commit": null,
       "build": "pass",
-      "tests": "103 pass",
-      "warnings": null
+      "tests": "106 pass",
+      "warnings": "NU1900 package vulnerability data was unavailable because https://api.nuget.org/v3/index.json could not be reached during sandboxed restore/build."
     }
   },
   "bootstrap": {
@@ -43,11 +43,11 @@
     { "id": "sync-orchestration", "commit": "080d8fc", "state": "done", "note": "Added provider-neutral run orchestration for directory users, group visibility/exclusions, group mappings, factories, planner execution, and wired CLI/Worker hosts to run it." },
     { "id": "sync-state-store", "commit": "6ca855f", "state": "done", "note": "Expanded provider-neutral sync state contract for checkpoints and per-contact provider IDs/etags, with a JSON file-backed store and persistence tests." },
     { "id": "logging-dry-run-output", "commit": null, "state": "done", "note": "Added provider-neutral sync run summary aggregation, structured dry-run operation log fields, shared CLI/Worker dry-run report output, and tests." },
-    { "id": "config-binding", "commit": null, "state": "done", "note": "Added shared host configuration binding for ContactMesh, SyncRule, Google Workspace, and Microsoft365 options across CLI/Worker/Web, with binding tests." }
+    { "id": "config-binding", "commit": null, "state": "done", "note": "Added shared host configuration binding for ContactMesh, SyncRule, Google Workspace, and Microsoft365 options across CLI/Worker/Web, with binding tests." },
+    { "id": "web-settings-ui", "commit": null, "state": "done", "note": "Replaced the Web placeholder with a server-rendered settings overview for runtime, rules, and provider options, with renderer tests for binding display, encoding, and secret masking." }
   ],
   "inProgress": [],
   "pending": [
-    { "id": "web-settings-ui", "state": "pending", "note": "Settings UI placeholder exists only as Web shell." },
     { "id": "microsoft-graph-provider", "state": "pending", "note": "Microsoft365 provider is scaffolded; live Graph implementation remains later-phase work." },
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
   ],
@@ -56,6 +56,6 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Settings UI placeholder exists only as Web shell."
+    "Microsoft365 provider is scaffolded; live Graph implementation remains later-phase work."
   ]
 }
