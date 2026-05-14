@@ -1,0 +1,39 @@
+# Build output
+bin/
+obj/
+.vs/
+packages/
+TestResults/
+*.user
+*.suo
+*.cache
+
+# Secrets
+client_secret*.json
+*.pfx
+*.p12
+*.key
+*.pem
+*.snk
+.env
+.env.*
+
+# Logs and exports
+Logs/
+*.log
+*.csv
+*.xlsx
+*.bak
+*.zip
+
+# Legacy migration sources
+GoogleUtils/
+Groups to Contacts Sync for Google/
+tools/migration/GoogleUtils/
+tools/migration/GroupsToContactsSyncForGoogle/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

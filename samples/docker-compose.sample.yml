@@ -1,0 +1,10 @@
+services:
+  contactmesh-worker:
+    image: contactmesh/worker:local
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      DOTNET_ENVIRONMENT: Production
+    volumes:
+      - ./google/appsettings.sample.json:/app/appsettings.json:ro
