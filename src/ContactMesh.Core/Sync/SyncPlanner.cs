@@ -6,10 +6,12 @@ namespace ContactMesh.Core.Sync;
 public sealed class SyncPlanner
 {
     private readonly ContactMergeEngine mergeEngine;
+    private readonly StaleContactCleanupEngine staleContactCleanupEngine;
 
-    public SyncPlanner(ContactMergeEngine? mergeEngine = null)
+    public SyncPlanner(ContactMergeEngine? mergeEngine = null, StaleContactCleanupEngine? staleContactCleanupEngine = null)
     {
         this.mergeEngine = mergeEngine ?? new ContactMergeEngine();
+        this.staleContactCleanupEngine = staleContactCleanupEngine ?? new StaleContactCleanupEngine();
     }
 
     public IReadOnlyList<SyncOperation> CreatePlan(IReadOnlyList<MeshContact> desiredContacts, IReadOnlyList<MeshContact> existingContacts)
@@ -53,12 +55,14 @@ public sealed class SyncPlanner
 
         foreach (var staleContact in existingBySourceId.Values.Where(c => !desiredSourceIds.Contains(c.SourceId!)))
         {
+            var cleanup = this.staleContactCleanupEngine.Clean(staleContact);
+
             operations.Add(new SyncOperation
             {
-                OperationType = SyncOperationType.Delete,
-                DesiredContact = staleContact,
+                OperationType = cleanup.ShouldDelete ? SyncOperationType.Delete : SyncOperationType.Update,
+                DesiredContact = cleanup.Contact,
                 ExistingContact = staleContact,
-                Reason = "Managed contact no longer exists in source."
+                Reason = cleanup.Reason
             });
         }
 

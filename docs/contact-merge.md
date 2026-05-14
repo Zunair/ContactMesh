@@ -13,4 +13,6 @@ Current merge behavior:
 - Notes are treated as user-owned by default and are not overwritten by source contacts.
 - Source metadata overwrites existing metadata with the same key.
 
+When a managed contact becomes stale, ContactMesh deletes it only if no user-owned data remains. If the user has added notes, non-managed emails, non-managed phone numbers, labels, or metadata, ContactMesh removes managed fields and keeps the contact as user-owned.
+
 The goal is predictable sync without deleting useful personal details users have added themselves.

@@ -6,6 +6,7 @@ public sealed record ContactMeshOptions
 
     public string Provider { get; init; } = string.Empty;
     public bool DryRun { get; init; } = true;
+    public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
     public SyncRuleOptions Rules { get; init; } = new();
 }
 

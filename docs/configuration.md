@@ -7,6 +7,7 @@ ContactMesh uses one central `ContactMesh` section and provider-specific section
   "ContactMesh": {
     "Provider": "Google",
     "DryRun": true,
+    "ManagedEmailDomains": [],
     "Rules": {
       "GlobalUserGroups": [],
       "GlobalExternalContactGroups": [],

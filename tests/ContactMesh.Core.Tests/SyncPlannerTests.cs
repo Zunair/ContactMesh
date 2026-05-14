@@ -87,13 +87,41 @@ public sealed class SyncPlannerTests
     [Fact]
     public void CreatePlan_Deletes_Stale_Managed_Contacts()
     {
-        var stale = Contact("user-1", "Jane Doe");
+        var stale = Contact("user-1", "Jane Doe") with
+        {
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" },
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["userId"] = "user-1" }
+        };
 
-        var operations = new SyncPlanner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
 
         var operation = Assert.Single(operations);
         Assert.Equal(SyncOperationType.Delete, operation.OperationType);
         Assert.Equal(stale, operation.DesiredContact);
+    }
+
+    [Fact]
+    public void CreatePlan_Preserves_Stale_Contacts_With_UserOwned_Data()
+    {
+        var stale = Contact("user-1", "Jane Doe") with
+        {
+            Notes = "Personal note",
+            Emails = new[]
+            {
+                new ContactEmail("jane@example.org", "work", true),
+                new ContactEmail("jane.personal@example.net", "home")
+            },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
+        };
+
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+        Assert.Null(operation.DesiredContact.SourceId);
+        Assert.Equal("Personal note", operation.DesiredContact.Notes);
+        Assert.Equal("jane.personal@example.net", Assert.Single(operation.DesiredContact.Emails).Address);
     }
 
     [Fact]
@@ -120,5 +148,15 @@ public sealed class SyncPlannerTests
             Phones = new[] { new ContactPhone("215-555-0100", "work", true) },
             Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
         };
+    }
+
+    private static SyncPlanner Planner()
+    {
+        return new SyncPlanner(
+            staleContactCleanupEngine: new StaleContactCleanupEngine(new StaleContactCleanupOptions
+            {
+                ManagedEmailDomains = new[] { "example.org" },
+                ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
+            }));
     }
 }

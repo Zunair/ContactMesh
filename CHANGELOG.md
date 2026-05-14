@@ -9,3 +9,4 @@ All notable changes to ContactMesh will be documented in this file.
 - Added provider-neutral core models, abstractions, merge logic, sync planning, rule shells, and typed options.
 - Preserved legacy Google Workspace code under `tools/migration/`.
 - Ported legacy group visibility and group mapping behavior into provider-neutral core rules.
+- Ported stale managed-contact cleanup so user-owned details are preserved when managed contacts fall out of scope.

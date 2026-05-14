@@ -7,6 +7,7 @@ TestResults/
 *.user
 *.suo
 *.cache
+src/ContactMesh.Web/Properties/launchSettings.json
 
 # Secrets
 client_secret*.json
