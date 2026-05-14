@@ -2,16 +2,16 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-14",
-  "head": "2f38602",
+  "head": "98d2f02",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
     "lastKnown": {
-      "commit": "2f38602",
+      "commit": "98d2f02",
       "build": "pass",
-      "tests": "78 pass",
+      "tests": "82 pass",
       "warnings": "NU1900 package vulnerability checks could not reach api.nuget.org in sandbox"
     }
   },
@@ -36,12 +36,12 @@
     { "id": "google-group-label-reconcile-plan", "commit": null, "state": "done-local", "note": "Google provider now has tested contact-group label ownership metadata and create/update/delete reconciliation planning without live API calls." },
     { "id": "handoff-bootstrap", "commit": null, "state": "done", "note": "Added AGENTS.md bootstrap prompt and PROJECT_STATE.json handoff ledger." },
     { "id": "continue-skill", "commit": null, "state": "done-local", "note": "Installed local Codex skill at C:/Users/ZunairFayaz/.codex/skills/continue for /Continue-style task selection, verification, ledger update, and commit workflow." },
-    { "id": "google-group-label-batch-writer", "commit": null, "state": "done-local", "note": "GoogleContactBatchWriter reconciles desired contact labels through a Google contact-group label client port before contact writes." }
+    { "id": "google-group-label-batch-writer", "commit": null, "state": "done-local", "note": "GoogleContactBatchWriter reconciles desired contact labels through a Google contact-group label client port before contact writes." },
+    { "id": "google-group-label-provider", "commit": "98d2f02", "state": "done", "note": "Added a live People API HTTP client behind IGoogleContactGroupLabelClient, with delegated access-token seam and fake-handler tests for list/create/update/delete contact-group label calls." }
   ],
   "inProgress": [],
   "pending": [
     { "id": "google-people-provider-live", "state": "pending", "note": "Replace stub GooglePeopleContactProvider/BatchWriter with live People API read/write and mapper coverage." },
-    { "id": "google-group-label-provider", "state": "pending", "note": "Implement the Google contact-group label client with live People API contact-group list/create/update/delete calls." },
     { "id": "sync-orchestration", "state": "pending", "note": "Wire directory/groups/rules/factories/planner into CLI/Worker end-to-end sync flow." },
     { "id": "sync-state-store", "state": "pending", "note": "Implement ISyncStateStore for etags/checkpoints/id mapping." },
     { "id": "logging-dry-run-output", "state": "pending", "note": "Structured sync log summary, dry-run reporting, warning/error aggregation." },
@@ -55,7 +55,7 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Implement the Google People API contact-group label client behind the batch writer port.",
-    "Then wire Google provider read/write around Core planner with dry-run logging."
+    "Wire Google provider read/write around Core planner with dry-run logging.",
+    "Implement delegated Google credential token acquisition for live People API calls."
   ]
 }
