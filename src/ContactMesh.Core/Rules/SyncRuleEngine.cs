@@ -26,4 +26,9 @@ public sealed class SyncRuleEngine
     {
         return contacts.Where(contact => this.visibilityRule.IsVisibleToTarget(contact, target)).ToList();
     }
+
+    public IReadOnlyList<GroupVisibilityDecision> FilterGroupsForTarget(IEnumerable<MeshGroup> groups, SyncTarget target)
+    {
+        return this.visibilityRule.FilterVisibleGroups(groups, target);
+    }
 }

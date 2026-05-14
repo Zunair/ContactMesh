@@ -45,6 +45,58 @@ public sealed class SyncRuleEngineTests
         Assert.DoesNotContain(hidden, contacts);
     }
 
+    [Fact]
+    public void FilterGroupsForTarget_Includes_Domain_Visible_Groups_For_All_Targets()
+    {
+        var group = Group("all@example.org", MeshGroupVisibility.Domain, MeshGroupVisibility.Domain);
+        var target = Target("user-1", "person@example.org");
+
+        var decisions = new SyncRuleEngine().FilterGroupsForTarget(new[] { group }, target);
+
+        var decision = Assert.Single(decisions);
+        Assert.Equal(group, decision.Group);
+        Assert.True(decision.CanSeeMembers);
+    }
+
+    [Fact]
+    public void FilterGroupsForTarget_Includes_Member_Visible_Groups_Only_For_Members()
+    {
+        var group = Group("members@example.org", MeshGroupVisibility.Members, MeshGroupVisibility.Members, "person@example.org");
+        var memberTarget = Target("user-1", "person@example.org");
+        var nonMemberTarget = Target("user-2", "other@example.org");
+
+        var memberDecisions = new SyncRuleEngine().FilterGroupsForTarget(new[] { group }, memberTarget);
+        var nonMemberDecisions = new SyncRuleEngine().FilterGroupsForTarget(new[] { group }, nonMemberTarget);
+
+        var memberDecision = Assert.Single(memberDecisions);
+        Assert.True(memberDecision.CanSeeMembers);
+        Assert.Empty(nonMemberDecisions);
+    }
+
+    [Fact]
+    public void FilterGroupsForTarget_Can_Show_Group_Without_Showing_Members()
+    {
+        var group = Group("announcements@example.org", MeshGroupVisibility.Domain, MeshGroupVisibility.Members, "member@example.org");
+        var target = Target("user-1", "person@example.org");
+
+        var decisions = new SyncRuleEngine().FilterGroupsForTarget(new[] { group }, target);
+
+        var decision = Assert.Single(decisions);
+        Assert.Equal(group, decision.Group);
+        Assert.False(decision.CanSeeMembers);
+    }
+
+    [Fact]
+    public void FilterGroupsForTarget_Hides_Hidden_Groups()
+    {
+        var group = Group("private@example.org", MeshGroupVisibility.Hidden, MeshGroupVisibility.Hidden, "person@example.org");
+        var target = Target("user-1", "person@example.org");
+
+        var decisions = new SyncRuleEngine().FilterGroupsForTarget(new[] { group }, target);
+
+        Assert.Empty(decisions);
+    }
+
     private static MeshUser User(string id, string email, bool isSuspended = false)
     {
         return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };
@@ -56,6 +108,34 @@ public sealed class SyncRuleEngineTests
         {
             DisplayName = name,
             Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { label }
+        };
+    }
+
+    private static SyncTarget Target(string id, string email)
+    {
+        return new SyncTarget { UserId = id, UserEmail = email };
+    }
+
+    private static MeshGroup Group(
+        string email,
+        MeshGroupVisibility groupVisibility,
+        MeshGroupVisibility memberVisibility,
+        params string[] members)
+    {
+        return new MeshGroup
+        {
+            Id = email,
+            Email = email,
+            GroupVisibility = groupVisibility,
+            MemberVisibility = memberVisibility,
+            Members = members
+                .Select(emailAddress => new MeshGroupMember
+                {
+                    Id = emailAddress,
+                    Email = emailAddress,
+                    Type = MeshGroupMemberType.User
+                })
+                .ToList()
         };
     }
 }

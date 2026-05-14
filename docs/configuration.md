@@ -11,7 +11,8 @@ ContactMesh uses one central `ContactMesh` section and provider-specific section
       "GlobalUserGroups": [],
       "GlobalExternalContactGroups": [],
       "ExclusionGroups": [],
-      "ScopedGroupRoots": []
+      "ScopedGroupRoots": [],
+      "GroupMappings": []
     }
   }
 }

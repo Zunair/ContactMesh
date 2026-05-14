@@ -8,5 +8,12 @@ Current rule options:
 - `GlobalExternalContactGroups`: shared external contact groups.
 - `ExclusionGroups`: users or groups that should not receive managed contacts.
 - `ScopedGroupRoots`: group trees used for scoped, group-aware contact visibility.
+- `GroupMappings`: source-to-target group mappings used to merge one group's members into another contact label.
 
 Rule processing belongs in `ContactMesh.Core`. Provider projects only resolve provider-specific group memberships and map them into `MeshGroup`.
+
+Group visibility uses provider-neutral values:
+
+- `Domain`: every target can see the group or its members.
+- `Members`: only members can see the group or its members.
+- `Hidden`: no target can see it through sync rules.
