@@ -15,4 +15,6 @@ Current merge behavior:
 
 When a managed contact becomes stale, ContactMesh deletes it only if no user-owned data remains. If the user has added notes, non-managed emails, non-managed phone numbers, labels, or metadata, ContactMesh removes managed fields and keeps the contact as user-owned.
 
+When duplicate managed contacts share the same primary email, ContactMesh keeps the first contact, merges unique emails, phone numbers, labels, metadata, and notes into it, then deletes the duplicate records.
+
 The goal is predictable sync without deleting useful personal details users have added themselves.
