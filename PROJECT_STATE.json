@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "repo": "ContactMesh",
+  "updated": "2026-05-14",
+  "head": "2f38602",
+  "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
+  "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
+  "verify": {
+    "build": "dotnet build ContactMesh.sln -m:1",
+    "test": "dotnet test ContactMesh.sln -m:1 --no-build",
+    "lastKnown": {
+      "commit": "2f38602",
+      "build": "pass",
+      "tests": "72 pass",
+      "warnings": 0
+    }
+  },
+  "bootstrap": {
+    "file": "AGENTS.md",
+    "instruction": "New coding sessions should read AGENTS.md, then PROJECT_STATE.json, before continuing."
+  },
+  "completed": [
+    { "id": "repo-scaffold", "commit": "6836aaa", "state": "done", "note": "Solution renamed/reorganized into src/tests/docs/samples/tools; OSS docs, gitignore, samples, provider shells." },
+    { "id": "core-abstractions", "commit": "6836aaa", "state": "done", "note": "Provider-neutral models/options/interfaces/sync planner/executor/merge shells." },
+    { "id": "legacy-ignore", "commit": "6836aaa", "state": "done", "note": "Legacy GoogleUtils and Groups to Contacts migration sources preserved under ignored tools/migration paths." },
+    { "id": "group-visibility-mapping", "commit": "5b34de8", "state": "done", "note": "Group visibility/member visibility and group mapping rules ported into Core; Google visibility mapper added." },
+    { "id": "stale-contact-cleanup", "commit": "ea3ee8e", "state": "done", "note": "Stale managed contacts delete only when no user-owned data remains; otherwise strip managed fields." },
+    { "id": "duplicate-consolidation", "commit": "16804de", "state": "done", "note": "Managed duplicate contacts by primary email are merged and extras deleted." },
+    { "id": "contact-pruning", "commit": "4ac2219", "state": "done", "note": "Blank contacts and managed-email-only contacts can be pruned." },
+    { "id": "ou-eligibility", "commit": "ae8f6d2", "state": "done", "note": "Included/excluded organization unit target eligibility rules, including =Ignore semantics." },
+    { "id": "directory-user-contact-shaping", "commit": "c3c86b9", "state": "done", "note": "Directory users map to managed MeshContact with work email, org fields, phones, labels, metadata." },
+    { "id": "email-policy", "commit": "99e20b7", "state": "done", "note": "Duplicate contact emails removed; provider-resolved send-as can become primary work email." },
+    { "id": "managed-label-reconcile", "commit": "0e905ad", "state": "done", "note": "Policy-owned labels reconcile during merge while personal labels are preserved." },
+    { "id": "group-contact-shaping", "commit": "53100c8", "state": "done", "note": "Visible groups can become managed contacts with group: source IDs." },
+    { "id": "xunit-v3", "commit": "2f38602", "state": "done", "note": "All test projects use xunit.v3 3.2.2 and visualstudio runner 3.1.5; analyzer warning fixed." },
+    { "id": "handoff-bootstrap", "commit": null, "state": "done", "note": "Added AGENTS.md bootstrap prompt and PROJECT_STATE.json handoff ledger." },
+    { "id": "continue-skill", "commit": null, "state": "done-local", "note": "Installed local Codex skill at C:/Users/ZunairFayaz/.codex/skills/continue for /Continue-style task selection, verification, ledger update, and commit workflow." }
+  ],
+  "inProgress": [],
+  "pending": [
+    { "id": "google-people-provider-live", "state": "pending", "note": "Replace stub GooglePeopleContactProvider/BatchWriter with live People API read/write and mapper coverage." },
+    { "id": "google-group-label-provider", "state": "pending", "note": "Port contact-group label create/update/delete behavior and app-owned label metadata into Google provider." },
+    { "id": "sync-orchestration", "state": "pending", "note": "Wire directory/groups/rules/factories/planner into CLI/Worker end-to-end sync flow." },
+    { "id": "sync-state-store", "state": "pending", "note": "Implement ISyncStateStore for etags/checkpoints/id mapping." },
+    { "id": "logging-dry-run-output", "state": "pending", "note": "Structured sync log summary, dry-run reporting, warning/error aggregation." },
+    { "id": "config-binding", "state": "pending", "note": "Bind ContactMeshOptions, GoogleWorkspaceOptions, Microsoft365Options, SyncRuleOptions through app hosts." },
+    { "id": "web-settings-ui", "state": "pending", "note": "Settings UI placeholder exists only as Web shell." },
+    { "id": "microsoft-graph-provider", "state": "pending", "note": "Microsoft365 provider is scaffolded; live Graph implementation remains later-phase work." },
+    { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
+  ],
+  "blocked": [
+    { "id": "live-provider-tests", "state": "blocked", "note": "Needs credentials/API test strategy or fakes; do not commit secrets." },
+    { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
+  ],
+  "next": [
+    "Port Google contact group-label ownership/reconciliation into ContactMesh.Google.",
+    "Then wire Google provider read/write around Core planner with dry-run logging."
+  ]
+}
