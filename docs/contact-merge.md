@@ -19,4 +19,6 @@ When duplicate managed contacts share the same primary email, ContactMesh keeps 
 
 Before planning normal sync changes, providers can ask core to prune contacts that are either blank or only contain a managed-domain email with no notes, phone numbers, labels, or organization data.
 
+Directory users are shaped into managed contacts by core: the user ID becomes the contact source ID, the work email is primary, organization fields are copied into managed company fields, labels are attached as policy output, and provider metadata is carried through without exposing provider APIs to core.
+
 The goal is predictable sync without deleting useful personal details users have added themselves.

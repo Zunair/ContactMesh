@@ -13,3 +13,4 @@ All notable changes to ContactMesh will be documented in this file.
 - Ported duplicate managed-contact consolidation by primary email.
 - Ported blank and managed-email-only contact pruning rules.
 - Ported organization unit include/exclude target eligibility rules.
+- Added provider-neutral directory user to managed contact shaping.
