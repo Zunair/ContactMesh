@@ -83,7 +83,11 @@ public sealed class ContactSyncOrchestrator
             results.Add(result);
         }
 
-        return new ContactSyncRunResult { Results = results };
+        return new ContactSyncRunResult
+        {
+            DryRun = options.DryRun,
+            Results = results
+        };
     }
 
     private async Task<IReadOnlyList<MeshContact>> CreateDesiredContactsAsync(

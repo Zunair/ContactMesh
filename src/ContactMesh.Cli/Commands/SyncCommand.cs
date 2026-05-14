@@ -1,3 +1,4 @@
+using ContactMesh.Core.Logging;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 
@@ -15,10 +16,10 @@ public sealed class SyncCommand
     {
         var result = await orchestrator.RunAsync(options, cancellationToken).ConfigureAwait(false);
 
-        await output.WriteLineAsync($"Targets: {result.TargetCount}").ConfigureAwait(false);
-        await output.WriteLineAsync(
-            $"Plan: {result.CreateCount} create, {result.UpdateCount} update, {result.DeleteCount} delete, {result.NoChangeCount} unchanged.")
-            .ConfigureAwait(false);
+        foreach (var line in SyncRunReportFormatter.Format(result))
+        {
+            await output.WriteLineAsync(line).ConfigureAwait(false);
+        }
 
         return result;
     }

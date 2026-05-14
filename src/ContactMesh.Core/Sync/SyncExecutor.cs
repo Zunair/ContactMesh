@@ -35,17 +35,58 @@ public sealed class SyncExecutor
         bool dryRun)
     {
         var now = DateTimeOffset.UtcNow;
-        var changeCount = operations.Count(o => o.OperationType is not SyncOperationType.NoChange);
+        var createCount = operations.Count(o => o.OperationType == SyncOperationType.Create);
+        var updateCount = operations.Count(o => o.OperationType == SyncOperationType.Update);
+        var deleteCount = operations.Count(o => o.OperationType == SyncOperationType.Delete);
+        var changeCount = createCount + updateCount + deleteCount;
         var entries = new List<SyncLogEntry>
         {
-            new(now, "Information", $"Planned {operations.Count} operation(s) for {target.UserId}; {changeCount} write(s).")
+            new(
+                now,
+                SyncLogLevel.Information,
+                $"Planned {operations.Count} operation(s) for {target.UserId}: {createCount} create, {updateCount} update, {deleteCount} delete, {changeCount} write(s).",
+                target.UserId)
         };
 
         if (dryRun)
         {
-            entries.Add(new SyncLogEntry(now, "Information", "Dry run enabled; provider writes were skipped."));
+            entries.Add(new SyncLogEntry(
+                now,
+                SyncLogLevel.Information,
+                "Dry run enabled; provider writes were skipped.",
+                target.UserId));
+        }
+
+        foreach (var operation in operations.Where(operation => operation.OperationType is not SyncOperationType.NoChange))
+        {
+            entries.Add(new SyncLogEntry(
+                now,
+                SyncLogLevel.Information,
+                $"{(dryRun ? "Dry-run" : "Applied")} {FormatOperationType(operation.OperationType)} {DescribeContact(operation.DesiredContact)}.",
+                target.UserId,
+                operation.OperationType,
+                operation.DesiredContact.SourceId,
+                operation.Reason));
         }
 
         return entries;
+    }
+
+    private static string FormatOperationType(SyncOperationType operationType)
+    {
+        return operationType.ToString().ToLowerInvariant();
+    }
+
+    private static string DescribeContact(MeshContact contact)
+    {
+        return new[]
+            {
+                contact.DisplayName,
+                contact.SourceId,
+                contact.Emails.FirstOrDefault(email => email.IsPrimary)?.Address,
+                contact.Emails.FirstOrDefault()?.Address
+            }
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?? "(unknown contact)";
     }
 }

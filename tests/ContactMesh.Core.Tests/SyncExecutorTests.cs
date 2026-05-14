@@ -20,7 +20,8 @@ public sealed class SyncExecutorTests
                 new SyncOperation
                 {
                     OperationType = SyncOperationType.Create,
-                    DesiredContact = new MeshContact { SourceId = "directory-user-1" }
+                    DesiredContact = new MeshContact { SourceId = "directory-user-1", DisplayName = "Directory User" },
+                    Reason = "New managed contact."
                 }
             },
             dryRun: true,
@@ -29,6 +30,11 @@ public sealed class SyncExecutorTests
         Assert.Equal(0, provider.ApplyCount);
         Assert.Contains(result.LogEntries, entry => entry.Message.Contains("Planned 1 operation(s)", StringComparison.Ordinal));
         Assert.Contains(result.LogEntries, entry => entry.Message.Contains("Dry run enabled", StringComparison.Ordinal));
+        var operationEntry = result.LogEntries.Single(entry => entry.OperationType == SyncOperationType.Create);
+        Assert.Equal("user@example.org", operationEntry.TargetUserId);
+        Assert.Equal("directory-user-1", operationEntry.SourceId);
+        Assert.Equal("New managed contact.", operationEntry.Reason);
+        Assert.Contains("Dry-run create Directory User.", operationEntry.Message, StringComparison.Ordinal);
     }
 
     private sealed class FakeContactProvider : IContactProvider

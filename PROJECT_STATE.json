@@ -9,10 +9,10 @@
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
     "lastKnown": {
-      "commit": "6ca855f",
+      "commit": null,
       "build": "pass",
-      "tests": "98 pass",
-      "warnings": "none"
+      "tests": "100 pass",
+      "warnings": "NU1900 package vulnerability data was unavailable because https://api.nuget.org/v3/index.json could not be reached during sandboxed restore/build."
     }
   },
   "bootstrap": {
@@ -41,11 +41,11 @@
     { "id": "google-delegated-token-provider", "commit": null, "state": "done-local", "note": "Added delegated service-account access-token acquisition for Google People API calls, with fake token-source tests and explicit contacts scope docs/sample config." },
     { "id": "google-people-provider-planner-dry-run", "commit": null, "state": "done-local", "note": "Google People contacts now read through a live HTTP client, write create/update/delete through the batch writer, map planner metadata, and emit provider-neutral dry-run log entries." },
     { "id": "sync-orchestration", "commit": "080d8fc", "state": "done", "note": "Added provider-neutral run orchestration for directory users, group visibility/exclusions, group mappings, factories, planner execution, and wired CLI/Worker hosts to run it." },
-    { "id": "sync-state-store", "commit": "6ca855f", "state": "done", "note": "Expanded provider-neutral sync state contract for checkpoints and per-contact provider IDs/etags, with a JSON file-backed store and persistence tests." }
+    { "id": "sync-state-store", "commit": "6ca855f", "state": "done", "note": "Expanded provider-neutral sync state contract for checkpoints and per-contact provider IDs/etags, with a JSON file-backed store and persistence tests." },
+    { "id": "logging-dry-run-output", "commit": null, "state": "done", "note": "Added provider-neutral sync run summary aggregation, structured dry-run operation log fields, shared CLI/Worker dry-run report output, and tests." }
   ],
   "inProgress": [],
   "pending": [
-    { "id": "logging-dry-run-output", "state": "pending", "note": "Structured sync log summary, dry-run reporting, warning/error aggregation." },
     { "id": "config-binding", "state": "pending", "note": "Bind ContactMeshOptions, GoogleWorkspaceOptions, Microsoft365Options, SyncRuleOptions through app hosts." },
     { "id": "web-settings-ui", "state": "pending", "note": "Settings UI placeholder exists only as Web shell." },
     { "id": "microsoft-graph-provider", "state": "pending", "note": "Microsoft365 provider is scaffolded; live Graph implementation remains later-phase work." },
@@ -56,6 +56,6 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Structured sync log summary, dry-run reporting, warning/error aggregation."
+    "Bind ContactMeshOptions, GoogleWorkspaceOptions, Microsoft365Options, SyncRuleOptions through app hosts."
   ]
 }

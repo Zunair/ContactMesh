@@ -1,3 +1,4 @@
+using ContactMesh.Core.Logging;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 
@@ -23,9 +24,10 @@ public sealed class ContactSyncJob
     {
         var result = await this.orchestrator.RunAsync(this.options, cancellationToken).ConfigureAwait(false);
 
-        await this.output.WriteLineAsync(
-            $"Sync completed for {result.TargetCount} target(s): {result.CreateCount} create, {result.UpdateCount} update, {result.DeleteCount} delete, {result.NoChangeCount} unchanged.")
-            .ConfigureAwait(false);
+        foreach (var line in SyncRunReportFormatter.Format(result))
+        {
+            await this.output.WriteLineAsync(line).ConfigureAwait(false);
+        }
 
         return result;
     }
