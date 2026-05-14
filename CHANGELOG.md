@@ -16,3 +16,4 @@ All notable changes to ContactMesh will be documented in this file.
 - Added provider-neutral directory user to managed contact shaping.
 - Added provider-neutral contact email policy cleanup for duplicate emails and send-as primary selection.
 - Added provider-neutral managed-label reconciliation during contact merge.
+- Added provider-neutral group-to-contact shaping for distribution-list contacts.

@@ -14,6 +14,8 @@ Current rule options:
 
 Rule processing belongs in `ContactMesh.Core`. Provider projects only resolve provider-specific group memberships and map them into `MeshGroup`.
 
+Visible groups can be shaped into managed contacts with a `group:` source ID. This keeps distribution-list contacts distinct from directory users while still letting the same sync planner create, update, or remove them.
+
 Group visibility uses provider-neutral values:
 
 - `Domain`: every target can see the group or its members.
