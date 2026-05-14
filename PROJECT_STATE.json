@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-14",
-  "head": "f8a8b01",
+  "head": "pending-local",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": "f8a8b01",
       "build": "pass",
-      "tests": "86 pass",
+      "tests": "93 pass",
       "warnings": "none"
     }
   },
@@ -38,11 +38,11 @@
     { "id": "continue-skill", "commit": null, "state": "done-local", "note": "Installed local Codex skill at C:/Users/ZunairFayaz/.codex/skills/continue for /Continue-style task selection, verification, ledger update, and commit workflow." },
     { "id": "google-group-label-batch-writer", "commit": null, "state": "done-local", "note": "GoogleContactBatchWriter reconciles desired contact labels through a Google contact-group label client port before contact writes." },
     { "id": "google-group-label-provider", "commit": "f8a8b01", "state": "done", "note": "Added a live People API HTTP client behind IGoogleContactGroupLabelClient, with delegated access-token seam and fake-handler tests for list/create/update/delete contact-group label calls." },
-    { "id": "google-delegated-token-provider", "commit": null, "state": "done-local", "note": "Added delegated service-account access-token acquisition for Google People API calls, with fake token-source tests and explicit contacts scope docs/sample config." }
+    { "id": "google-delegated-token-provider", "commit": null, "state": "done-local", "note": "Added delegated service-account access-token acquisition for Google People API calls, with fake token-source tests and explicit contacts scope docs/sample config." },
+    { "id": "google-people-provider-planner-dry-run", "commit": null, "state": "done-local", "note": "Google People contacts now read through a live HTTP client, write create/update/delete through the batch writer, map planner metadata, and emit provider-neutral dry-run log entries." }
   ],
   "inProgress": [],
   "pending": [
-    { "id": "google-people-provider-live", "state": "pending", "note": "Replace stub GooglePeopleContactProvider/BatchWriter with live People API read/write and mapper coverage." },
     { "id": "sync-orchestration", "state": "pending", "note": "Wire directory/groups/rules/factories/planner into CLI/Worker end-to-end sync flow." },
     { "id": "sync-state-store", "state": "pending", "note": "Implement ISyncStateStore for etags/checkpoints/id mapping." },
     { "id": "logging-dry-run-output", "state": "pending", "note": "Structured sync log summary, dry-run reporting, warning/error aggregation." },
@@ -56,6 +56,6 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Wire Google provider read/write around Core planner with dry-run logging."
+    "Wire directory/groups/rules/factories/planner into CLI/Worker end-to-end sync flow."
   ]
 }

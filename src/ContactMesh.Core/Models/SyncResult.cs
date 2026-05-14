@@ -1,3 +1,5 @@
+using ContactMesh.Core.Logging;
+
 namespace ContactMesh.Core.Models;
 
 public sealed record SyncResult
@@ -6,6 +8,7 @@ public sealed record SyncResult
     public bool DryRun { get; init; }
     public IReadOnlyList<SyncOperation> Operations { get; init; } = Array.Empty<SyncOperation>();
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<SyncLogEntry> LogEntries { get; init; } = Array.Empty<SyncLogEntry>();
 
     public int CreateCount => Operations.Count(o => o.OperationType == SyncOperationType.Create);
     public int UpdateCount => Operations.Count(o => o.OperationType == SyncOperationType.Update);

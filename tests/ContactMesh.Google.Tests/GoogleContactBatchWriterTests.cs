@@ -54,6 +54,53 @@ public sealed class GoogleContactBatchWriterTests
             CancellationToken.None);
     }
 
+    [Fact]
+    public async Task ApplyAsync_Writes_Create_Update_Delete_Contacts_When_Client_Is_Configured()
+    {
+        var client = new FakePeopleContactClient();
+        var labelClient = new FakeContactGroupLabelClient(
+            new[] { Label("contactGroups/directory", "Directory", "contact-mesh", "Directory") });
+        var writer = new GoogleContactBatchWriter(contactClient: client, labelClient: labelClient);
+
+        await writer.ApplyAsync(
+            "user@example.org",
+            new ContactChangeSet
+            {
+                Creates = new[] { Contact("Directory") with { SourceId = "directory-user-1" } },
+                Updates = new[]
+                {
+                    Contact("Directory") with
+                    {
+                        SourceId = "directory-user-2",
+                        Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            [GoogleContactMapper.ResourceNameMetadataKey] = "people/c456"
+                        }
+                    }
+                },
+                Deletes = new[]
+                {
+                    Contact("Directory") with
+                    {
+                        Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            [GoogleContactMapper.ResourceNameMetadataKey] = "people/c789"
+                        }
+                    }
+                }
+            },
+            CancellationToken.None);
+
+        Assert.Equal(
+            new[]
+            {
+                "create:user@example.org:directory-user-1::contactGroups/directory",
+                "update:user@example.org:directory-user-2:people/c456:contactGroups/directory",
+                "delete:user@example.org:people/c789"
+            },
+            client.Calls);
+    }
+
     private static MeshContact Contact(params string[] labels)
     {
         return new MeshContact
@@ -133,6 +180,42 @@ public sealed class GoogleContactBatchWriterTests
                 clientData
                     .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                     .Select(pair => $"{pair.Key}={pair.Value}"));
+        }
+    }
+
+    private sealed class FakePeopleContactClient : IGooglePeopleContactClient
+    {
+        public List<string> Calls { get; } = new();
+
+        public Task<IReadOnlyList<GooglePersonContact>> ListAsync(string userId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<GooglePersonContact>>(Array.Empty<GooglePersonContact>());
+        }
+
+        public Task CreateAsync(string userId, GooglePersonContact contact, CancellationToken cancellationToken)
+        {
+            this.Calls.Add($"create:{userId}:{contact.SourceId}:{contact.ResourceName}:{FormatGroups(contact)}");
+
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(string userId, GooglePersonContact contact, CancellationToken cancellationToken)
+        {
+            this.Calls.Add($"update:{userId}:{contact.SourceId}:{contact.ResourceName}:{FormatGroups(contact)}");
+
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(string userId, string resourceName, CancellationToken cancellationToken)
+        {
+            this.Calls.Add($"delete:{userId}:{resourceName}");
+
+            return Task.CompletedTask;
+        }
+
+        private static string FormatGroups(GooglePersonContact contact)
+        {
+            return string.Join(",", contact.ContactGroupResourceNames.Order(StringComparer.Ordinal));
         }
     }
 }
