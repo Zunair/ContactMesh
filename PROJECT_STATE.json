@@ -2,14 +2,14 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-14",
-  "head": "98d2f02",
+  "head": "f8a8b01",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
     "lastKnown": {
-      "commit": "98d2f02",
+      "commit": "f8a8b01",
       "build": "pass",
       "tests": "82 pass",
       "warnings": "NU1900 package vulnerability checks could not reach api.nuget.org in sandbox"
@@ -37,7 +37,7 @@
     { "id": "handoff-bootstrap", "commit": null, "state": "done", "note": "Added AGENTS.md bootstrap prompt and PROJECT_STATE.json handoff ledger." },
     { "id": "continue-skill", "commit": null, "state": "done-local", "note": "Installed local Codex skill at C:/Users/ZunairFayaz/.codex/skills/continue for /Continue-style task selection, verification, ledger update, and commit workflow." },
     { "id": "google-group-label-batch-writer", "commit": null, "state": "done-local", "note": "GoogleContactBatchWriter reconciles desired contact labels through a Google contact-group label client port before contact writes." },
-    { "id": "google-group-label-provider", "commit": "98d2f02", "state": "done", "note": "Added a live People API HTTP client behind IGoogleContactGroupLabelClient, with delegated access-token seam and fake-handler tests for list/create/update/delete contact-group label calls." }
+    { "id": "google-group-label-provider", "commit": "f8a8b01", "state": "done", "note": "Added a live People API HTTP client behind IGoogleContactGroupLabelClient, with delegated access-token seam and fake-handler tests for list/create/update/delete contact-group label calls." }
   ],
   "inProgress": [],
   "pending": [
