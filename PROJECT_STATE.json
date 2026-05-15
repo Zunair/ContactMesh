@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-15",
-  "head": "280bd5f",
+  "head": "0029874",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -56,7 +56,7 @@
     { "id": "web-settings-editor", "commit": null, "state": "done-local", "note": "Web settings now resolves repo-root appsettings.local.json from project launches, shows the absolute config path/load status, renders editable settings fields, and saves JSON back to the ignored local config while preserving masked secrets." },
     { "id": "live-provider-tests", "commit": null, "state": "done-local", "note": "Added an opt-in live-provider dry-run test project with explicit environment gating, secret-free config path injection, DryRun and TargetUsers safety assertions, and docs for secure execution." },
     { "id": "main-contacts-group-source-scope", "commit": "4fd2f1b", "state": "done", "note": "Added MainContactsGroupEmail source scoping and MainContactsGroupLabel directory labeling so managed directory contacts can come from a configured group, including nested groups, without limiting sync recipients." },
-    { "id": "main-contacts-group-label-spelling", "commit": null, "state": "done-local", "note": "Removed the misspelled MainContactsGroupLable compatibility option and kept MainContactsGroupLabel as the only configuration spelling." }
+    { "id": "main-contacts-group-label-spelling", "commit": "0029874", "state": "done", "note": "Removed the misspelled MainContactsGroupLable compatibility option and kept MainContactsGroupLabel as the only configuration spelling." }
   ],
   "inProgress": [],
   "pending": [
