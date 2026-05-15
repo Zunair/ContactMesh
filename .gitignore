@@ -11,6 +11,7 @@ src/ContactMesh.Web/Properties/launchSettings.json
 
 # Secrets
 client_secret*.json
+appsettings*.json
 *.pfx
 *.p12
 *.key

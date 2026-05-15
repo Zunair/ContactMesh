@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-15",
-  "head": "f004024",
+  "head": "a39d15e",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -49,9 +49,9 @@
     { "id": "microsoft-graph-directory-users", "commit": null, "state": "done", "note": "Added a paged Microsoft Graph users client, mapped Graph users to MeshUser, and wired Microsoft365 host directory reads with fake-handler/provider tests." },
     { "id": "microsoft-graph-contacts", "commit": null, "state": "done", "note": "Added a live Graph contacts client/provider for Outlook contact list/create/update/delete, source-id extended properties, category label mapping, host wiring, and fake-handler/provider tests." },
     { "id": "microsoft-graph-provider", "commit": null, "state": "done", "note": "Added live Graph group and transitive membership reads, mapped group users/org contacts into provider-neutral groups/contacts, and wired Microsoft365 host group reads with fake-handler/provider tests." },
-    { "id": "readme-build-run-docs", "commit": null, "state": "done-local", "note": "Updated README to reflect current provider/host state, .NET 8 build and test commands, config flow, CLI/Worker/Web run steps, provider setup notes, and pending Docker hosted worker mode." },
+    { "id": "readme-build-run-docs", "commit": null, "state": "done-local", "note": "Updated README to reflect current provider/host state, .NET 8 build and test commands, config flow, CLI/Worker/Web run steps, provider setup notes, pending Docker hosted worker mode, and local appsettings ignore coverage." },
     { "id": "microsoft365-live-dry-run", "commit": "202acf2", "state": "done", "note": "Ran a live Microsoft365 dry-run with app credentials: Graph auth/users/groups/contact reads succeeded for mailbox-enabled targets; 297 targets produced 81,437 planned creates with writes skipped, and 24 targets reported MailboxNotEnabledForRESTAPI without aborting the run." },
-    { "id": "microsoft365-target-scope", "commit": null, "state": "done-local", "note": "Added provider-neutral TargetUsers scoping so Microsoft365 dry-runs can limit sync recipients while preserving eligible directory users as source contacts; documented and surfaced the setting in samples/config/UI tests." }
+    { "id": "microsoft365-target-scope", "commit": "a39d15e", "state": "done", "note": "Added provider-neutral TargetUsers scoping so Microsoft365 dry-runs can limit sync recipients while preserving eligible directory users as source contacts; documented and surfaced the setting in samples/config/UI tests." }
   ],
   "inProgress": [],
   "pending": [
