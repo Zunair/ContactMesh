@@ -7,11 +7,16 @@ public sealed class SyncPlanner
 {
     private readonly ContactMergeEngine mergeEngine;
     private readonly StaleContactCleanupEngine staleContactCleanupEngine;
+    private readonly EmailNormalizer emailNormalizer;
 
-    public SyncPlanner(ContactMergeEngine? mergeEngine = null, StaleContactCleanupEngine? staleContactCleanupEngine = null)
+    public SyncPlanner(
+        ContactMergeEngine? mergeEngine = null,
+        StaleContactCleanupEngine? staleContactCleanupEngine = null,
+        EmailNormalizer? emailNormalizer = null)
     {
         this.mergeEngine = mergeEngine ?? new ContactMergeEngine();
         this.staleContactCleanupEngine = staleContactCleanupEngine ?? new StaleContactCleanupEngine();
+        this.emailNormalizer = emailNormalizer ?? new EmailNormalizer();
     }
 
     public IReadOnlyList<SyncOperation> CreatePlan(IReadOnlyList<MeshContact> desiredContacts, IReadOnlyList<MeshContact> existingContacts)
@@ -21,10 +26,16 @@ public sealed class SyncPlanner
             .Where(c => !string.IsNullOrWhiteSpace(c.SourceId))
             .GroupBy(c => c.SourceId!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var existingByEmail = this.BuildUniqueExistingEmailIndex(existingContacts);
+        var matchedExistingSourceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var desired in desiredContacts)
         {
-            if (string.IsNullOrWhiteSpace(desired.SourceId) || !existingBySourceId.TryGetValue(desired.SourceId, out var existing))
+            MeshContact? existing = null;
+            var matchedBySourceId = !string.IsNullOrWhiteSpace(desired.SourceId)
+                && existingBySourceId.TryGetValue(desired.SourceId, out existing);
+
+            if (!matchedBySourceId && !this.TryFindExistingByEmail(desired, existingByEmail, out existing))
             {
                 operations.Add(new SyncOperation
                 {
@@ -36,6 +47,11 @@ public sealed class SyncPlanner
                 continue;
             }
 
+            if (!string.IsNullOrWhiteSpace(existing!.SourceId))
+            {
+                matchedExistingSourceIds.Add(existing.SourceId!);
+            }
+
             var merged = this.mergeEngine.Merge(desired, existing);
             var type = AreEquivalent(merged, existing) ? SyncOperationType.NoChange : SyncOperationType.Update;
 
@@ -44,7 +60,9 @@ public sealed class SyncPlanner
                 OperationType = type,
                 DesiredContact = merged,
                 ExistingContact = existing,
-                Reason = type == SyncOperationType.NoChange ? "No managed fields changed." : "Managed fields changed."
+                Reason = type == SyncOperationType.NoChange
+                    ? "No managed fields changed."
+                    : matchedBySourceId ? "Managed fields changed." : "Existing contact matched by email."
             });
         }
 
@@ -53,7 +71,9 @@ public sealed class SyncPlanner
             .Select(c => c.SourceId!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var staleContact in existingBySourceId.Values.Where(c => !desiredSourceIds.Contains(c.SourceId!)))
+        foreach (var staleContact in existingBySourceId.Values.Where(c =>
+            !desiredSourceIds.Contains(c.SourceId!)
+            && !matchedExistingSourceIds.Contains(c.SourceId!)))
         {
             var cleanup = this.staleContactCleanupEngine.Clean(staleContact);
 
@@ -67,6 +87,34 @@ public sealed class SyncPlanner
         }
 
         return operations;
+    }
+
+    private Dictionary<string, MeshContact> BuildUniqueExistingEmailIndex(IReadOnlyList<MeshContact> existingContacts)
+    {
+        return existingContacts
+            .SelectMany(contact => contact.Emails
+                .Select(email => (email: this.emailNormalizer.NormalizeForComparison(email.Address), contact)))
+            .Where(item => item.email.Length > 0)
+            .GroupBy(item => item.email, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Select(item => item.contact).Distinct().Count() == 1)
+            .ToDictionary(group => group.Key, group => group.First().contact, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool TryFindExistingByEmail(
+        MeshContact desired,
+        IReadOnlyDictionary<string, MeshContact> existingByEmail,
+        out MeshContact? existing)
+    {
+        foreach (var email in desired.Emails.Select(email => this.emailNormalizer.NormalizeForComparison(email.Address)))
+        {
+            if (email.Length > 0 && existingByEmail.TryGetValue(email, out existing))
+            {
+                return true;
+            }
+        }
+
+        existing = null;
+        return false;
     }
 
     private static bool AreEquivalent(MeshContact left, MeshContact right)

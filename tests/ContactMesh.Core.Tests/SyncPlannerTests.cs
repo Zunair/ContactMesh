@@ -46,6 +46,62 @@ public sealed class SyncPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_Updates_Unmanaged_Contact_With_Matching_Email()
+    {
+        var desired = Contact("user-1", "Jane Doe") with
+        {
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) },
+            JobTitle = "Director"
+        };
+        var existing = new MeshContact
+        {
+            DisplayName = "Jane",
+            Emails = new[]
+            {
+                new ContactEmail("JANE@example.org", "work", true),
+                new ContactEmail("jane.personal@example.net", "home")
+            },
+            Notes = "Met at conference."
+        };
+
+        var operations = new SyncPlanner().CreatePlan(new[] { desired }, new[] { existing });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+        Assert.Equal(existing, operation.ExistingContact);
+        Assert.Equal("user-1", operation.DesiredContact.SourceId);
+        Assert.Equal("Director", operation.DesiredContact.JobTitle);
+        Assert.Contains(operation.DesiredContact.Emails, email => email.Address == "jane.personal@example.net");
+        Assert.Equal("Met at conference.", operation.DesiredContact.Notes);
+        Assert.Equal("Existing contact matched by email.", operation.Reason);
+    }
+
+    [Fact]
+    public void CreatePlan_Creates_When_Email_Match_Is_Ambiguous()
+    {
+        var desired = Contact("user-1", "Jane Doe") with
+        {
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) }
+        };
+        var firstExisting = new MeshContact
+        {
+            DisplayName = "Jane",
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) }
+        };
+        var secondExisting = new MeshContact
+        {
+            DisplayName = "Jane Alt",
+            Emails = new[] { new ContactEmail("JANE@example.org", "work", true) }
+        };
+
+        var operations = new SyncPlanner().CreatePlan(new[] { desired }, new[] { firstExisting, secondExisting });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Create, operation.OperationType);
+        Assert.Null(operation.ExistingContact);
+    }
+
+    [Fact]
     public void CreatePlan_Does_Not_Update_When_Only_Existing_Notes_Differ()
     {
         var desired = Contact("user-1", "Jane Doe") with
