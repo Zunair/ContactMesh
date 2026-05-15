@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-15",
-  "head": "7c5cd41",
+  "head": "5b1797c",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,8 +11,8 @@
     "lastKnown": {
       "commit": null,
       "build": "pass",
-      "tests": "142 pass",
-      "warnings": "NU1900 package vulnerability data was unavailable because https://api.nuget.org/v3/index.json could not be reached during sandboxed restore/build."
+      "tests": "144 pass",
+      "warnings": "NU1900 package vulnerability data was unavailable because https://api.nuget.org/v3/index.json could not be reached during restore/build."
     }
   },
   "bootstrap": {
@@ -48,14 +48,16 @@
     { "id": "microsoft-graph-auth", "commit": null, "state": "done", "note": "Added Microsoft Graph client-credentials token request normalization and HTTP token source through MicrosoftGraphClientFactory, with fake-source and fake-handler tests." },
     { "id": "microsoft-graph-directory-users", "commit": null, "state": "done", "note": "Added a paged Microsoft Graph users client, mapped Graph users to MeshUser, and wired Microsoft365 host directory reads with fake-handler/provider tests." },
     { "id": "microsoft-graph-contacts", "commit": null, "state": "done", "note": "Added a live Graph contacts client/provider for Outlook contact list/create/update/delete, source-id extended properties, category label mapping, host wiring, and fake-handler/provider tests." },
-    { "id": "microsoft-graph-provider", "commit": null, "state": "done", "note": "Added live Graph group and transitive membership reads, mapped group users/org contacts into provider-neutral groups/contacts, and wired Microsoft365 host group reads with fake-handler/provider tests." }
+    { "id": "microsoft-graph-provider", "commit": null, "state": "done", "note": "Added live Graph group and transitive membership reads, mapped group users/org contacts into provider-neutral groups/contacts, and wired Microsoft365 host group reads with fake-handler/provider tests." },
+    { "id": "readme-build-run-docs", "commit": null, "state": "done-local", "note": "Updated README to reflect current provider/host state, .NET 8 build and test commands, config flow, CLI/Worker/Web run steps, provider setup notes, and pending Docker hosted worker mode." },
+    { "id": "microsoft365-live-dry-run", "commit": "5b1797c", "state": "done", "note": "Ran a live Microsoft365 dry-run with app credentials: Graph auth/users/groups/contact reads succeeded for mailbox-enabled targets; 297 targets produced 81,437 planned creates with writes skipped, and 24 targets reported MailboxNotEnabledForRESTAPI without aborting the run." }
   ],
   "inProgress": [],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
   ],
   "blocked": [
-    { "id": "live-provider-tests", "state": "blocked", "note": "Needs credentials/API test strategy or fakes; do not commit secrets." },
+    { "id": "live-provider-tests", "state": "blocked", "note": "Manual Microsoft365 dry-run succeeded with tenant credentials; automated live-provider test strategy is still pending and must not commit secrets." },
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [

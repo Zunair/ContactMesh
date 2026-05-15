@@ -1,4 +1,5 @@
 using ContactMesh.Core.Abstractions;
+using ContactMesh.Core.Logging;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Rules;
 
@@ -75,12 +76,19 @@ public sealed class ContactSyncOrchestrator
                 ruleEngine,
                 cancellationToken).ConfigureAwait(false);
 
-            var result = await syncEngine.SyncAsync(
-                target,
-                desiredContacts,
-                options.DryRun,
-                cancellationToken).ConfigureAwait(false);
-            results.Add(result);
+            try
+            {
+                var result = await syncEngine.SyncAsync(
+                    target,
+                    desiredContacts,
+                    options.DryRun,
+                    cancellationToken).ConfigureAwait(false);
+                results.Add(result);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                results.Add(CreateErrorResult(target, options.DryRun, ex));
+            }
         }
 
         return new ContactSyncRunResult
@@ -178,5 +186,25 @@ public sealed class ContactSyncOrchestrator
     {
         return string.Equals(user.Id, target.UserId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(user.Email, target.UserEmail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static SyncResult CreateErrorResult(SyncTarget target, bool dryRun, Exception exception)
+    {
+        var message = $"Target sync failed for {target.UserId}: {exception.Message}";
+
+        return new SyncResult
+        {
+            TargetUserId = target.UserId,
+            DryRun = dryRun,
+            Errors = new[] { message },
+            LogEntries = new[]
+            {
+                new SyncLogEntry(
+                    DateTimeOffset.UtcNow,
+                    SyncLogLevel.Error,
+                    message,
+                    target.UserId)
+            }
+        };
     }
 }

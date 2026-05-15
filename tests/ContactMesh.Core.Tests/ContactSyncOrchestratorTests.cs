@@ -74,6 +74,33 @@ public sealed class ContactSyncOrchestratorTests
             contact => Assert.Contains("team@example.org", contact.Labels));
     }
 
+    [Fact]
+    public async Task RunAsync_Reports_Target_Errors_And_Continues()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("user-1", "first@example.org"),
+            User("user-2", "second@example.org")
+        });
+        var contactProvider = new CapturingContactProvider
+        {
+            FailingUserId = "user-1"
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(Array.Empty<MeshGroup>(), new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions { DryRun = true },
+            CancellationToken.None);
+
+        Assert.Equal(2, result.TargetCount);
+        Assert.Equal(1, result.ErrorCount);
+        Assert.Contains("Target sync failed for user-1", Assert.Single(result.Errors));
+        Assert.Contains(result.Results, syncResult => syncResult.TargetUserId == "user-2" && !syncResult.HasErrors);
+    }
+
     private static MeshUser User(string id, string email, bool isSuspended = false)
     {
         return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };
@@ -151,8 +178,15 @@ public sealed class ContactSyncOrchestratorTests
         public IDictionary<string, ContactChangeSet> AppliedChanges { get; } =
             new Dictionary<string, ContactChangeSet>(StringComparer.OrdinalIgnoreCase);
 
+        public string? FailingUserId { get; init; }
+
         public Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
         {
+            if (string.Equals(userId, this.FailingUserId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("contact store unavailable");
+            }
+
             return Task.FromResult<IReadOnlyList<MeshContact>>(Array.Empty<MeshContact>());
         }
 

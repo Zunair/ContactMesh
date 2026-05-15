@@ -153,6 +153,25 @@ public sealed class MicrosoftGraphContactClientTests
         Assert.Equal("Microsoft Graph access token provider returned an empty token.", ex.Message);
     }
 
+    [Fact]
+    public async Task ListAsync_Includes_Graph_Error_Details()
+    {
+        var handler = new RecordingHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                ReasonPhrase = "Not Found",
+                Content = JsonContent("""{ "error": { "code": "ErrorItemNotFound" } }""")
+            });
+        var client = CreateClient(handler);
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.ListAsync("user@example.org", CancellationToken.None));
+
+        Assert.Contains("404 (Not Found)", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("GET /v1.0/users/user%40example.org/contacts?", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("ErrorItemNotFound", ex.Message, StringComparison.Ordinal);
+    }
+
     private static MicrosoftGraphContactClient CreateClient(RecordingHandler handler)
     {
         return new MicrosoftGraphContactClient(

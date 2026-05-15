@@ -54,7 +54,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
                 .ConfigureAwait(false);
             using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
 
             var payload = await response.Content.ReadFromJsonAsync<GraphCollectionResponse<ContactResource>>(
                 JsonOptions,
@@ -120,7 +120,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
             .ConfigureAwait(false);
         using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task SendJsonAsync<TPayload>(
@@ -134,7 +134,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         request.Content = JsonContent.Create(payload, options: JsonOptions);
 
         using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<HttpRequestMessage> CreateRequestAsync(
@@ -170,6 +170,26 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
     private static string EscapePathSegment(string value)
     {
         return Uri.EscapeDataString(value.Trim());
+    }
+
+    private static async Task EnsureSuccessAsync(
+        HttpResponseMessage response,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var body = response.Content is null
+            ? string.Empty
+            : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var bodyExcerpt = body.Length <= 2048 ? body : body[..2048];
+        var requestUri = request.RequestUri?.PathAndQuery ?? request.RequestUri?.ToString() ?? "(unknown URI)";
+
+        throw new HttpRequestException(
+            $"Microsoft Graph contact request failed: {(int)response.StatusCode} ({response.ReasonPhrase}) for {request.Method} {requestUri}. Response: {bodyExcerpt}");
     }
 
     private static MicrosoftGraphContact ToMicrosoftGraphContact(ContactResource contact)
