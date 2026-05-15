@@ -32,6 +32,7 @@ public sealed class StaleContactCleanupEngineTests
         Assert.Empty(result.Contact.Emails);
         Assert.Empty(result.Contact.Phones);
         Assert.Empty(result.Contact.Labels);
+        Assert.Contains("notes", result.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -69,6 +70,10 @@ public sealed class StaleContactCleanupEngineTests
         Assert.Contains("Personal", result.Contact.Labels);
         Assert.False(result.Contact.Metadata.ContainsKey("userId"));
         Assert.Equal("JD", result.Contact.Metadata["nickname"]);
+        Assert.Contains("1 email", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("1 phone", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("1 label", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("1 metadata field", result.Reason, StringComparison.Ordinal);
     }
 
     private static StaleContactCleanupEngine Engine()

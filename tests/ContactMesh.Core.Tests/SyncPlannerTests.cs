@@ -217,6 +217,7 @@ public sealed class SyncPlannerTests
         Assert.Null(operation.DesiredContact.CompanyName);
         Assert.Empty(operation.DesiredContact.Emails);
         Assert.Equal("Keep this context.", operation.DesiredContact.Notes);
+        Assert.Contains("notes", operation.Reason, StringComparison.Ordinal);
     }
 
     [Fact]

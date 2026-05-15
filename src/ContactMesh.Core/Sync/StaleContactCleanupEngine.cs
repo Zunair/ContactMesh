@@ -37,7 +37,7 @@ public sealed class StaleContactCleanupEngine
             {
                 ShouldDelete = false,
                 Contact = cleaned,
-                Reason = "Managed contact is stale; preserving user-owned details and removing managed fields."
+                Reason = $"Managed contact is stale; preserving user-owned details ({DescribeUserOwnedData(cleaned)}) and removing managed fields."
             }
             : new StaleContactCleanupResult
             {
@@ -70,6 +70,43 @@ public sealed class StaleContactCleanupEngine
             || contact.Labels.Count > 0
             || contact.Metadata.Count > 0
             || !string.IsNullOrWhiteSpace(contact.Notes);
+    }
+
+    private static string DescribeUserOwnedData(MeshContact contact)
+    {
+        var details = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(contact.Notes))
+        {
+            details.Add("notes");
+        }
+
+        if (contact.Emails.Count > 0)
+        {
+            details.Add(DescribeCount(contact.Emails.Count, "email"));
+        }
+
+        if (contact.Phones.Count > 0)
+        {
+            details.Add(DescribeCount(contact.Phones.Count, "phone"));
+        }
+
+        if (contact.Labels.Count > 0)
+        {
+            details.Add(DescribeCount(contact.Labels.Count, "label"));
+        }
+
+        if (contact.Metadata.Count > 0)
+        {
+            details.Add(DescribeCount(contact.Metadata.Count, "metadata field"));
+        }
+
+        return string.Join(", ", details);
+    }
+
+    private static string DescribeCount(int count, string singular)
+    {
+        return count == 1 ? $"1 {singular}" : $"{count} {singular}s";
     }
 
     private static string NormalizeDomain(string domain)

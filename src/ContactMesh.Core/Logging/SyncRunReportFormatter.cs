@@ -50,7 +50,7 @@ public static class SyncRunReportFormatter
 
         foreach (var operation in result.Operations.Where(operation => operation.OperationType is not SyncOperationType.NoChange))
         {
-            lines.Add($"  Dry-run {FormatOperationType(operation.OperationType)}: {DescribeContact(operation.DesiredContact)}{FormatReason(operation)}");
+            lines.Add($"  Dry-run {FormatOperationType(operation.OperationType)}: {DescribeContact(operation)}{FormatReason(operation)}");
         }
     }
 
@@ -66,22 +66,30 @@ public static class SyncRunReportFormatter
         return operationType.ToString().ToLowerInvariant();
     }
 
-    private static string DescribeContact(MeshContact contact)
+    private static string DescribeContact(SyncOperation operation)
     {
-        var identity = new[]
+        var identity = GetIdentity(operation.DesiredContact)
+            ?? (operation.ExistingContact is null ? null : GetIdentity(operation.ExistingContact))
+            ?? "(unknown contact)";
+
+        var sourceId = operation.DesiredContact.SourceId ?? operation.ExistingContact?.SourceId;
+
+        return string.IsNullOrWhiteSpace(sourceId)
+            || string.Equals(identity, sourceId, StringComparison.OrdinalIgnoreCase)
+            ? identity
+            : $"{identity} [{sourceId}]";
+    }
+
+    private static string? GetIdentity(MeshContact contact)
+    {
+        return new[]
             {
                 contact.DisplayName,
                 contact.SourceId,
                 contact.Emails.FirstOrDefault(email => email.IsPrimary)?.Address,
                 contact.Emails.FirstOrDefault()?.Address
             }
-            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
-            ?? "(unknown contact)";
-
-        return string.IsNullOrWhiteSpace(contact.SourceId)
-            || string.Equals(identity, contact.SourceId, StringComparison.OrdinalIgnoreCase)
-            ? identity
-            : $"{identity} [{contact.SourceId}]";
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 
     private static string FormatReason(SyncOperation operation)

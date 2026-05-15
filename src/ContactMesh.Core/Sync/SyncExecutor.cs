@@ -62,10 +62,10 @@ public sealed class SyncExecutor
             entries.Add(new SyncLogEntry(
                 now,
                 SyncLogLevel.Information,
-                $"{(dryRun ? "Dry-run" : "Applied")} {FormatOperationType(operation.OperationType)} {DescribeContact(operation.DesiredContact)}.",
+                $"{(dryRun ? "Dry-run" : "Applied")} {FormatOperationType(operation.OperationType)} {DescribeContact(operation)}.",
                 target.UserId,
                 operation.OperationType,
-                operation.DesiredContact.SourceId,
+                operation.DesiredContact.SourceId ?? operation.ExistingContact?.SourceId,
                 operation.Reason));
         }
 
@@ -77,7 +77,14 @@ public sealed class SyncExecutor
         return operationType.ToString().ToLowerInvariant();
     }
 
-    private static string DescribeContact(MeshContact contact)
+    private static string DescribeContact(SyncOperation operation)
+    {
+        return GetIdentity(operation.DesiredContact)
+            ?? (operation.ExistingContact is null ? null : GetIdentity(operation.ExistingContact))
+            ?? "(unknown contact)";
+    }
+
+    private static string? GetIdentity(MeshContact contact)
     {
         return new[]
             {
@@ -86,7 +93,6 @@ public sealed class SyncExecutor
                 contact.Emails.FirstOrDefault(email => email.IsPrimary)?.Address,
                 contact.Emails.FirstOrDefault()?.Address
             }
-            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
-            ?? "(unknown contact)";
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 }

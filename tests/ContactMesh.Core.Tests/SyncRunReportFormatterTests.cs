@@ -58,4 +58,45 @@ public sealed class SyncRunReportFormatterTests
         Assert.Contains("  Dry-run create: Directory User [directory-user-1] - New managed contact.", lines);
         Assert.DoesNotContain(lines, line => line.Contains("No managed fields changed.", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Format_DryRun_Uses_Existing_Contact_Identity_For_Cleanup_Update()
+    {
+        var result = new ContactSyncRunResult
+        {
+            DryRun = true,
+            Results = new[]
+            {
+                new SyncResult
+                {
+                    TargetUserId = "target@example.org",
+                    DryRun = true,
+                    Operations = new[]
+                    {
+                        new SyncOperation
+                        {
+                            OperationType = SyncOperationType.Update,
+                            DesiredContact = new MeshContact
+                            {
+                                Notes = "Keep this."
+                            },
+                            ExistingContact = new MeshContact
+                            {
+                                DisplayName = "Former Employee",
+                                Emails = new[] { new ContactEmail("former@example.org", "work", true) }
+                            },
+                            Reason = "Managed contact is stale; preserving user-owned details (notes) and removing managed fields."
+                        }
+                    }
+                }
+            }
+        };
+
+        var lines = SyncRunReportFormatter.Format(result);
+
+        Assert.Contains(
+            "  Dry-run update: Former Employee - Managed contact is stale; preserving user-owned details (notes) and removing managed fields.",
+            lines);
+        Assert.DoesNotContain(lines, line => line.Contains("(unknown contact)", StringComparison.Ordinal));
+    }
 }
