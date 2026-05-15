@@ -32,7 +32,7 @@ public sealed class StaleContactCleanupEngineTests
         Assert.Empty(result.Contact.Emails);
         Assert.Empty(result.Contact.Phones);
         Assert.Empty(result.Contact.Labels);
-        Assert.Contains("notes", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("notes=Call after 5 PM.", result.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -70,10 +70,28 @@ public sealed class StaleContactCleanupEngineTests
         Assert.Contains("Personal", result.Contact.Labels);
         Assert.False(result.Contact.Metadata.ContainsKey("userId"));
         Assert.Equal("JD", result.Contact.Metadata["nickname"]);
-        Assert.Contains("1 email", result.Reason, StringComparison.Ordinal);
-        Assert.Contains("1 phone", result.Reason, StringComparison.Ordinal);
-        Assert.Contains("1 label", result.Reason, StringComparison.Ordinal);
-        Assert.Contains("1 metadata field", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("emails=[jane.personal@example.net]", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("phones=[267-555-2222]", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("labels=[Personal]", result.Reason, StringComparison.Ordinal);
+        Assert.Contains("metadata=[nickname=JD]", result.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Clean_Includes_Metadata_Values_In_Preserved_Details()
+    {
+        var contact = ManagedContact() with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["customA"] = "Alpha",
+                ["customB"] = "Bravo"
+            }
+        };
+
+        var result = Engine().Clean(contact);
+
+        Assert.False(result.ShouldDelete);
+        Assert.Contains("metadata=[customA=Alpha; customB=Bravo]", result.Reason, StringComparison.Ordinal);
     }
 
     private static StaleContactCleanupEngine Engine()

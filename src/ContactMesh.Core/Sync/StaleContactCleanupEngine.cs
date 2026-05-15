@@ -4,6 +4,8 @@ namespace ContactMesh.Core.Sync;
 
 public sealed class StaleContactCleanupEngine
 {
+    private const int MaxDetailLength = 120;
+
     private readonly StaleContactCleanupOptions options;
 
     public StaleContactCleanupEngine(StaleContactCleanupOptions? options = null)
@@ -78,35 +80,51 @@ public sealed class StaleContactCleanupEngine
 
         if (!string.IsNullOrWhiteSpace(contact.Notes))
         {
-            details.Add("notes");
+            details.Add($"notes={FormatValue(contact.Notes)}");
         }
 
         if (contact.Emails.Count > 0)
         {
-            details.Add(DescribeCount(contact.Emails.Count, "email"));
+            details.Add($"emails={FormatList(contact.Emails.Select(email => email.Address))}");
         }
 
         if (contact.Phones.Count > 0)
         {
-            details.Add(DescribeCount(contact.Phones.Count, "phone"));
+            details.Add($"phones={FormatList(contact.Phones.Select(phone => phone.Number))}");
         }
 
         if (contact.Labels.Count > 0)
         {
-            details.Add(DescribeCount(contact.Labels.Count, "label"));
+            details.Add($"labels={FormatList(contact.Labels.Order(StringComparer.OrdinalIgnoreCase))}");
         }
 
         if (contact.Metadata.Count > 0)
         {
-            details.Add(DescribeCount(contact.Metadata.Count, "metadata field"));
+            details.Add($"metadata={FormatList(contact.Metadata
+                .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(item => $"{item.Key}={item.Value}"))}");
         }
 
         return string.Join(", ", details);
     }
 
-    private static string DescribeCount(int count, string singular)
+    private static string FormatList(IEnumerable<string> values)
     {
-        return count == 1 ? $"1 {singular}" : $"{count} {singular}s";
+        return $"[{string.Join("; ", values.Select(FormatValue))}]";
+    }
+
+    private static string FormatValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "(blank)";
+        }
+
+        var normalized = value.ReplaceLineEndings(" ").Trim();
+
+        return normalized.Length <= MaxDetailLength
+            ? normalized
+            : $"{normalized[..MaxDetailLength]}...";
     }
 
     private static string NormalizeDomain(string domain)

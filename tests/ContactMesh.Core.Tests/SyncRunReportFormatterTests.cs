@@ -85,7 +85,7 @@ public sealed class SyncRunReportFormatterTests
                                 DisplayName = "Former Employee",
                                 Emails = new[] { new ContactEmail("former@example.org", "work", true) }
                             },
-                            Reason = "Managed contact is stale; preserving user-owned details (notes) and removing managed fields."
+                            Reason = "Managed contact is stale; preserving user-owned details (notes=Keep this.) and removing managed fields."
                         }
                     }
                 }
@@ -95,7 +95,7 @@ public sealed class SyncRunReportFormatterTests
         var lines = SyncRunReportFormatter.Format(result);
 
         Assert.Contains(
-            "  Dry-run update: Former Employee - Managed contact is stale; preserving user-owned details (notes) and removing managed fields.",
+            "  Dry-run update: Former Employee - Managed contact is stale; preserving user-owned details (notes=Keep this.) and removing managed fields.",
             lines);
         Assert.DoesNotContain(lines, line => line.Contains("(unknown contact)", StringComparison.Ordinal));
     }

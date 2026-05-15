@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": "79203d2",
       "build": "pass",
-      "tests": "156 pass, 1 skipped",
+      "tests": "157 pass, 1 skipped",
       "warnings": null
     }
   },
@@ -59,7 +59,8 @@
     { "id": "main-contacts-group-label-spelling", "commit": "0029874", "state": "done", "note": "Removed the misspelled main contacts group label compatibility option and kept MainContactsGroupLabel as the only configuration spelling." },
     { "id": "planner-email-match-adoption", "commit": "bd6dbe0", "state": "done", "note": "SyncPlanner now adopts a unique existing contact with a matching email when source-id metadata is absent, so personal/company-email contacts plan as updates instead of duplicate creates." },
     { "id": "unmanaged-company-email-cleanup", "commit": "54f7ea5", "state": "done", "note": "Configured managed email domains now flow into sync planning, and unmatched unmanaged company-domain contacts are cleaned as stale contacts so empty company contacts delete while notes/user-owned details are preserved." },
-    { "id": "cleanup-debug-reasons", "commit": "79203d2", "state": "done", "note": "Dry-run cleanup updates now identify the original contact when cleaned fields are blank and stale cleanup reasons list which user-owned detail categories prevented deletion." }
+    { "id": "cleanup-debug-reasons", "commit": "79203d2", "state": "done", "note": "Dry-run cleanup updates now identify the original contact when cleaned fields are blank and stale cleanup reasons list which user-owned detail categories prevented deletion." },
+    { "id": "cleanup-debug-values", "commit": null, "state": "done-local", "note": "Stale cleanup dry-run reasons now include preserved user-owned values, including metadata key/value pairs, emails, phones, labels, and notes." }
   ],
   "inProgress": [],
   "pending": [
