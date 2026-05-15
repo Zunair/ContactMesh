@@ -6,7 +6,7 @@ Provider work:
 
 1. Microsoft Graph client-credentials token acquisition through `MicrosoftGraphClientFactory`.
 2. Read Graph users and map them to `MeshUser`.
-3. Map Graph groups and nested memberships to `MeshGroup`.
+3. Map Graph groups and transitive user/contact memberships to `MeshGroup`.
 4. Map Outlook contacts to `MeshContact`.
 5. Implement batched contact writes.
 6. Add tenant-safe dry-run reporting.

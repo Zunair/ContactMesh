@@ -1,8 +1,8 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-05-14",
-  "head": "43db0e7",
+  "updated": "2026-05-15",
+  "head": "7c5cd41",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": null,
       "build": "pass",
-      "tests": "130 pass",
+      "tests": "142 pass",
       "warnings": "NU1900 package vulnerability data was unavailable because https://api.nuget.org/v3/index.json could not be reached during sandboxed restore/build."
     }
   },
@@ -47,11 +47,11 @@
     { "id": "web-settings-ui", "commit": null, "state": "done", "note": "Replaced the Web placeholder with a server-rendered settings overview for runtime, rules, and provider options, with renderer tests for binding display, encoding, and secret masking." },
     { "id": "microsoft-graph-auth", "commit": null, "state": "done", "note": "Added Microsoft Graph client-credentials token request normalization and HTTP token source through MicrosoftGraphClientFactory, with fake-source and fake-handler tests." },
     { "id": "microsoft-graph-directory-users", "commit": null, "state": "done", "note": "Added a paged Microsoft Graph users client, mapped Graph users to MeshUser, and wired Microsoft365 host directory reads with fake-handler/provider tests." },
-    { "id": "microsoft-graph-contacts", "commit": null, "state": "done", "note": "Added a live Graph contacts client/provider for Outlook contact list/create/update/delete, source-id extended properties, category label mapping, host wiring, and fake-handler/provider tests." }
+    { "id": "microsoft-graph-contacts", "commit": null, "state": "done", "note": "Added a live Graph contacts client/provider for Outlook contact list/create/update/delete, source-id extended properties, category label mapping, host wiring, and fake-handler/provider tests." },
+    { "id": "microsoft-graph-provider", "commit": null, "state": "done", "note": "Added live Graph group and transitive membership reads, mapped group users/org contacts into provider-neutral groups/contacts, and wired Microsoft365 host group reads with fake-handler/provider tests." }
   ],
   "inProgress": [],
   "pending": [
-    { "id": "microsoft-graph-provider", "state": "pending", "note": "Graph auth, directory user reads, and Outlook contact read/write are in place; live Graph group and group-contact implementation remains." },
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
   ],
   "blocked": [
@@ -59,6 +59,6 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Implement live Microsoft Graph group and group-contact reads."
+    "Implement Docker hosted worker mode."
   ]
 }
