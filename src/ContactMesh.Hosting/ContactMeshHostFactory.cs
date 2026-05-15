@@ -44,13 +44,13 @@ public static class ContactMeshHostFactory
     {
         return contactMesh.Provider.Trim().ToUpperInvariant() switch
         {
-            "GOOGLE" => CreateGoogle(googleWorkspace, httpClient),
-            "MICROSOFT365" or "MICROSOFT" => CreateMicrosoft365(microsoft365, httpClient),
-            _ => CreateScaffolded()
+            "GOOGLE" => CreateGoogle(contactMesh, googleWorkspace, httpClient),
+            "MICROSOFT365" or "MICROSOFT" => CreateMicrosoft365(contactMesh, microsoft365, httpClient),
+            _ => CreateScaffolded(contactMesh)
         };
     }
 
-    private static ContactSyncOrchestrator CreateGoogle(GoogleWorkspaceOptions options, HttpClient httpClient)
+    private static ContactSyncOrchestrator CreateGoogle(ContactMeshOptions contactMesh, GoogleWorkspaceOptions options, HttpClient httpClient)
     {
         var tokenProvider = new GoogleDelegatedAccessTokenProvider(options);
         var contactClient = new GooglePeopleContactClient(httpClient, tokenProvider);
@@ -60,10 +60,11 @@ public static class ContactMeshHostFactory
         return new ContactSyncOrchestrator(
             new GoogleUserProvider(),
             new GoogleGroupProvider(),
-            new GooglePeopleContactProvider(contactClient, labelClient, writer));
+            new GooglePeopleContactProvider(contactClient, labelClient, writer),
+            planner: CreatePlanner(contactMesh));
     }
 
-    private static ContactSyncOrchestrator CreateMicrosoft365(Microsoft365Options options, HttpClient httpClient)
+    private static ContactSyncOrchestrator CreateMicrosoft365(ContactMeshOptions contactMesh, Microsoft365Options options, HttpClient httpClient)
     {
         var graphClientFactory = new MicrosoftGraphClientFactory(options);
         var accessTokenProvider = graphClientFactory.CreateAccessTokenProvider(httpClient);
@@ -75,15 +76,49 @@ public static class ContactMeshHostFactory
         return new ContactSyncOrchestrator(
             new MicrosoftUserProvider(directoryClient),
             new MicrosoftGroupProvider(groupClient),
-            new MicrosoftContactProvider(contactClient, contactWriter));
+            new MicrosoftContactProvider(contactClient, contactWriter),
+            planner: CreatePlanner(
+                contactMesh,
+                new[]
+                {
+                    MicrosoftContactMapper.ContactIdMetadataKey,
+                    MicrosoftContactMapper.ChangeKeyMetadataKey
+                }));
     }
 
-    private static ContactSyncOrchestrator CreateScaffolded()
+    private static ContactSyncOrchestrator CreateScaffolded(ContactMeshOptions contactMesh)
     {
         return new ContactSyncOrchestrator(
             new EmptyDirectoryProvider(),
             new EmptyGroupProvider(),
-            new EmptyContactProvider());
+            new EmptyContactProvider(),
+            planner: CreatePlanner(contactMesh));
+    }
+
+    private static SyncPlanner CreatePlanner(ContactMeshOptions contactMesh, IEnumerable<string>? additionalManagedMetadataKeys = null)
+    {
+        var managedMetadataKeys = new StaleContactCleanupOptions()
+            .ManagedMetadataKeys
+            .Concat(additionalManagedMetadataKeys ?? Array.Empty<string>())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return new SyncPlanner(
+            staleContactCleanupEngine: new StaleContactCleanupEngine(new StaleContactCleanupOptions
+            {
+                ManagedEmailDomains = contactMesh.ManagedEmailDomains,
+                ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ResolveDirectoryLabel(contactMesh.Rules)
+                },
+                ManagedMetadataKeys = managedMetadataKeys
+            }));
+    }
+
+    private static string ResolveDirectoryLabel(SyncRuleOptions rules)
+    {
+        return string.IsNullOrWhiteSpace(rules.MainContactsGroupLabel)
+            ? ContactSyncOrchestrator.DirectoryLabel
+            : rules.MainContactsGroupLabel.Trim();
     }
 
     private sealed class EmptyDirectoryProvider : IDirectoryProvider

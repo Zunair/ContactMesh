@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": "9432c31",
       "build": "pass",
-      "tests": "157 pass, 1 skipped",
+      "tests": "158 pass, 1 skipped",
       "warnings": null
     }
   },
@@ -60,7 +60,8 @@
     { "id": "planner-email-match-adoption", "commit": "bd6dbe0", "state": "done", "note": "SyncPlanner now adopts a unique existing contact with a matching email when source-id metadata is absent, so personal/company-email contacts plan as updates instead of duplicate creates." },
     { "id": "unmanaged-company-email-cleanup", "commit": "54f7ea5", "state": "done", "note": "Configured managed email domains now flow into sync planning, and unmatched unmanaged company-domain contacts are cleaned as stale contacts so empty company contacts delete while notes/user-owned details are preserved." },
     { "id": "cleanup-debug-reasons", "commit": "79203d2", "state": "done", "note": "Dry-run cleanup updates now identify the original contact when cleaned fields are blank and stale cleanup reasons list which user-owned detail categories prevented deletion." },
-    { "id": "cleanup-debug-values", "commit": "9432c31", "state": "done", "note": "Stale cleanup dry-run reasons now include preserved user-owned values, including metadata key/value pairs, emails, phones, labels, and notes." }
+    { "id": "cleanup-debug-values", "commit": "9432c31", "state": "done", "note": "Stale cleanup dry-run reasons now include preserved user-owned values, including metadata key/value pairs, emails, phones, labels, and notes." },
+    { "id": "microsoft-cleanup-metadata", "commit": null, "state": "done-local", "note": "Microsoft365 host planning now treats Graph contactId/changeKey metadata as managed cleanup fields so those provider bookkeeping values do not prevent stale contact deletion." }
   ],
   "inProgress": [],
   "pending": [
