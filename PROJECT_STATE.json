@@ -2,14 +2,14 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-15",
-  "head": "abf192f",
+  "head": "bd6dbe0",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
     "lastKnown": {
-      "commit": "abf192f",
+      "commit": "bd6dbe0",
       "build": "pass",
       "tests": "152 pass, 1 skipped",
       "warnings": null
@@ -57,7 +57,7 @@
     { "id": "live-provider-tests", "commit": null, "state": "done-local", "note": "Added an opt-in live-provider dry-run test project with explicit environment gating, secret-free config path injection, DryRun and TargetUsers safety assertions, and docs for secure execution." },
     { "id": "main-contacts-group-source-scope", "commit": "4fd2f1b", "state": "done", "note": "Added MainContactsGroupEmail source scoping and MainContactsGroupLabel directory labeling so managed directory contacts can come from a configured group, including nested groups, without limiting sync recipients." },
     { "id": "main-contacts-group-label-spelling", "commit": "0029874", "state": "done", "note": "Removed the misspelled main contacts group label compatibility option and kept MainContactsGroupLabel as the only configuration spelling." },
-    { "id": "planner-email-match-adoption", "commit": "abf192f", "state": "done", "note": "SyncPlanner now adopts a unique existing contact with a matching email when source-id metadata is absent, so personal/company-email contacts plan as updates instead of duplicate creates." }
+    { "id": "planner-email-match-adoption", "commit": "bd6dbe0", "state": "done", "note": "SyncPlanner now adopts a unique existing contact with a matching email when source-id metadata is absent, so personal/company-email contacts plan as updates instead of duplicate creates." }
   ],
   "inProgress": [],
   "pending": [
