@@ -68,11 +68,13 @@ public static class ContactMeshHostFactory
         var graphClientFactory = new MicrosoftGraphClientFactory(options);
         var accessTokenProvider = graphClientFactory.CreateAccessTokenProvider(httpClient);
         var directoryClient = new MicrosoftGraphDirectoryClient(httpClient, accessTokenProvider);
+        var contactClient = new MicrosoftGraphContactClient(httpClient, accessTokenProvider);
+        var contactWriter = new MicrosoftContactBatchWriter(contactClient);
 
         return new ContactSyncOrchestrator(
             new MicrosoftUserProvider(directoryClient),
             new MicrosoftGroupProvider(),
-            new MicrosoftContactProvider());
+            new MicrosoftContactProvider(contactClient, contactWriter));
     }
 
     private static ContactSyncOrchestrator CreateScaffolded()

@@ -5,16 +5,31 @@ namespace ContactMesh.Microsoft365.Contacts;
 
 public sealed class MicrosoftContactProvider : IContactProvider
 {
+    private readonly IMicrosoftGraphContactClient? client;
     private readonly MicrosoftContactBatchWriter writer;
 
-    public MicrosoftContactProvider(MicrosoftContactBatchWriter? writer = null)
+    public MicrosoftContactProvider(
+        IMicrosoftGraphContactClient? client = null,
+        MicrosoftContactBatchWriter? writer = null)
     {
+        this.client = client;
         this.writer = writer ?? new MicrosoftContactBatchWriter();
     }
 
-    public Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
     {
-        return Task.FromResult<IReadOnlyList<MeshContact>>(Array.Empty<MeshContact>());
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        if (this.client is null)
+        {
+            return Array.Empty<MeshContact>();
+        }
+
+        var contacts = await this.client.ListAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return contacts
+            .Select(MicrosoftContactMapper.ToMeshContact)
+            .ToList();
     }
 
     public Task ApplyChangesAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)
