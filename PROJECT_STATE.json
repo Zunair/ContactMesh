@@ -2,14 +2,14 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-15",
-  "head": "cb52cb1",
+  "head": "936761e",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
     "lastKnown": {
-      "commit": "cb52cb1",
+      "commit": "936761e",
       "build": "pass",
       "tests": "161 pass, 1 skipped",
       "warnings": null
@@ -62,7 +62,7 @@
     { "id": "cleanup-debug-reasons", "commit": "79203d2", "state": "done", "note": "Dry-run cleanup updates now identify the original contact when cleaned fields are blank and stale cleanup reasons list which user-owned detail categories prevented deletion." },
     { "id": "cleanup-debug-values", "commit": "9432c31", "state": "done", "note": "Stale cleanup dry-run reasons now include preserved user-owned values, including metadata key/value pairs, emails, phones, labels, and notes." },
     { "id": "microsoft-cleanup-metadata", "commit": "cb52cb1", "state": "done", "note": "Microsoft365 host planning now treats Graph contactId/changeKey metadata as managed cleanup fields so those provider bookkeeping values do not prevent stale contact deletion." },
-    { "id": "managed-phone-note-cleanup", "commit": null, "state": "done-local", "note": "Stale cleanup now treats counted notes made only of managed phone types, such as workMobile migration blocks, as managed data instead of user-owned notes." }
+    { "id": "managed-phone-note-cleanup", "commit": "936761e", "state": "done", "note": "Stale cleanup now treats counted notes made only of managed phone types, such as workMobile migration blocks, as managed data instead of user-owned notes." }
   ],
   "inProgress": [],
   "pending": [
