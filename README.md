@@ -50,6 +50,8 @@ dotnet build ContactMesh.sln -m:1
 dotnet test ContactMesh.sln -m:1 --no-build
 ```
 
+Live provider validation is opt-in and secret-free by default. See `docs/live-provider-tests.md` for the environment variables and dry-run guardrails.
+
 ## Configuration
 
 The hosts load the first `.json` argument as the config file. If no JSON file is passed, they look for `appsettings.json` in the current directory. Environment variables and command-line values override JSON configuration.
@@ -145,7 +147,6 @@ Microsoft 365:
 ## Roadmap
 
 - Complete Docker/hosted worker mode.
-- Define a live-provider test strategy that uses credentials safely or reliable fakes.
 - Keep expanding provider behavior without adding provider references to `ContactMesh.Core`.
 
 ## Security
