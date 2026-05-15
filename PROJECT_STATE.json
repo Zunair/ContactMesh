@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": null,
       "build": "pass",
-      "tests": "147 pass",
+      "tests": "148 pass",
       "warnings": null
     }
   },
@@ -51,7 +51,8 @@
     { "id": "microsoft-graph-provider", "commit": null, "state": "done", "note": "Added live Graph group and transitive membership reads, mapped group users/org contacts into provider-neutral groups/contacts, and wired Microsoft365 host group reads with fake-handler/provider tests." },
     { "id": "readme-build-run-docs", "commit": null, "state": "done-local", "note": "Updated README to reflect current provider/host state, .NET 8 build and test commands, config flow, CLI/Worker/Web run steps, provider setup notes, pending Docker hosted worker mode, and local appsettings ignore coverage." },
     { "id": "microsoft365-live-dry-run", "commit": "202acf2", "state": "done", "note": "Ran a live Microsoft365 dry-run with app credentials: Graph auth/users/groups/contact reads succeeded for mailbox-enabled targets; 297 targets produced 81,437 planned creates with writes skipped, and 24 targets reported MailboxNotEnabledForRESTAPI without aborting the run." },
-    { "id": "microsoft365-target-scope", "commit": "a39d15e", "state": "done", "note": "Added provider-neutral TargetUsers scoping so Microsoft365 dry-runs can limit sync recipients while preserving eligible directory users as source contacts; documented and surfaced the setting in samples/config/UI tests." }
+    { "id": "microsoft365-target-scope", "commit": "a39d15e", "state": "done", "note": "Added provider-neutral TargetUsers scoping so Microsoft365 dry-runs can limit sync recipients while preserving eligible directory users as source contacts; documented and surfaced the setting in samples/config/UI tests." },
+    { "id": "web-settings-descriptions", "commit": null, "state": "done", "note": "Added detailed Web settings descriptions for runtime, sync rules, provider credentials/scopes, dry-run safety, TargetUsers live-test scoping, and credential masking; renderer coverage now checks the guidance." }
   ],
   "inProgress": [],
   "pending": [

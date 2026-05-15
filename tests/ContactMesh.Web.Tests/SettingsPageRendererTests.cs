@@ -92,4 +92,20 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("None", html);
         Assert.Contains("Not set", html);
     }
+
+    [Fact]
+    public void RenderShowsSettingDescriptionsForLiveProviderValidation()
+    {
+        var html = SettingsPageRenderer.Render(
+            new ContactMeshOptions(),
+            new GoogleWorkspaceOptions(),
+            new Microsoft365Options(),
+            "appsettings.json");
+
+        Assert.Contains("Keep this on for live-provider validation", html);
+        Assert.Contains("Optional user IDs or email addresses that limit who receives managed contacts", html);
+        Assert.Contains("append =Ignore to reduce expected noise", html);
+        Assert.Contains("Secret value is masked here", html);
+        Assert.Contains("Keep the file outside the repository", html);
+    }
 }
