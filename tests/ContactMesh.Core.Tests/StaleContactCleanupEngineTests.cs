@@ -36,6 +36,66 @@ public sealed class StaleContactCleanupEngineTests
     }
 
     [Fact]
+    public void Clean_Deletes_Stale_Contact_When_Notes_Only_Contain_Managed_Phone_Migration_Data()
+    {
+        var contact = ManagedContact() with
+        {
+            Notes = """
+                1
+                workMobile: +12156179107
+                """
+        };
+
+        var result = Engine().Clean(contact);
+
+        Assert.True(result.ShouldDelete);
+        Assert.Equal("Managed contact is stale and has no user-owned details.", result.Reason);
+    }
+
+    [Fact]
+    public void Clean_Strips_Managed_Phone_Migration_Notes_And_Preserves_Other_UserOwned_Data()
+    {
+        var contact = ManagedContact() with
+        {
+            Notes = """
+                2
+                work: +12155550100
+                workMobile: +12156179107
+                """,
+            Emails = new[]
+            {
+                new ContactEmail("jane@example.org", "work", true),
+                new ContactEmail("jane.personal@example.net", "home")
+            }
+        };
+
+        var result = Engine().Clean(contact);
+
+        Assert.False(result.ShouldDelete);
+        Assert.Null(result.Contact.Notes);
+        Assert.Equal("jane.personal@example.net", Assert.Single(result.Contact.Emails).Address);
+        Assert.DoesNotContain("notes=", result.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Clean_Preserves_Notes_When_Migrated_Phone_Block_Contains_UserOwned_Type()
+    {
+        var contact = ManagedContact() with
+        {
+            Notes = """
+                1
+                mobile: +12156179107
+                """
+        };
+
+        var result = Engine().Clean(contact);
+
+        Assert.False(result.ShouldDelete);
+        Assert.Equal(contact.Notes, result.Contact.Notes);
+        Assert.Contains("notes=", result.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Clean_Strips_Managed_Data_And_Preserves_UserOwned_Email_And_Phone()
     {
         var contact = ManagedContact() with

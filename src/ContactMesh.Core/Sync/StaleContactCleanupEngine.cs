@@ -24,6 +24,7 @@ public sealed class StaleContactCleanupEngine
             CompanyName = null,
             Department = null,
             JobTitle = null,
+            Notes = IsManagedPhoneNote(contact.Notes) ? null : contact.Notes,
             Emails = contact.Emails.Where(email => !IsManagedEmail(email)).ToList(),
             Phones = contact.Phones.Where(phone => !IsManagedPhone(phone)).ToList(),
             Labels = contact.Labels
@@ -63,6 +64,39 @@ public sealed class StaleContactCleanupEngine
     private bool IsManagedPhone(ContactPhone phone)
     {
         return this.options.ManagedPhoneTypes.Contains(phone.Type);
+    }
+
+    private bool IsManagedPhoneNote(string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return false;
+        }
+
+        var lines = notes
+            .ReplaceLineEndings("\n")
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+        if (lines.Length < 2 || !int.TryParse(lines[0], out var declaredCount) || declaredCount != lines.Length - 1)
+        {
+            return false;
+        }
+
+        return lines
+            .Skip(1)
+            .All(line =>
+            {
+                var separator = line.IndexOf(':', StringComparison.Ordinal);
+                if (separator <= 0 || separator == line.Length - 1)
+                {
+                    return false;
+                }
+
+                var type = line[..separator].Trim();
+                var value = line[(separator + 1)..].Trim();
+
+                return value.Length > 0 && this.options.ManagedPhoneTypes.Contains(type);
+            });
     }
 
     private static bool HasUserOwnedData(MeshContact contact)
