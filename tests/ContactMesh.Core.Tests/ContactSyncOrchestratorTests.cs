@@ -201,6 +201,43 @@ public sealed class ContactSyncOrchestratorTests
             Assert.Contains("-Directory", contact.Labels));
     }
 
+    [Fact]
+    public async Task RunAsync_Deletes_Unmatched_Company_Domain_Contacts_When_Configured()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org")
+        });
+        var staleContact = new MeshContact
+        {
+            DisplayName = "Former Employee",
+            CompanyName = "Example",
+            Emails = new[] { new ContactEmail("former@example.org", "work", true) }
+        };
+        var contactProvider = new CapturingContactProvider
+        {
+            ContactsByUserId =
+            {
+                ["target"] = new[] { staleContact }
+            }
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(Array.Empty<MeshGroup>(), new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                ManagedEmailDomains = new[] { "example.org" }
+            },
+            CancellationToken.None);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        Assert.Contains(staleContact, applied.Deletes);
+    }
+
     private static MeshUser User(string id, string email, bool isSuspended = false)
     {
         return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };
@@ -278,6 +315,9 @@ public sealed class ContactSyncOrchestratorTests
         public IDictionary<string, ContactChangeSet> AppliedChanges { get; } =
             new Dictionary<string, ContactChangeSet>(StringComparer.OrdinalIgnoreCase);
 
+        public IDictionary<string, IReadOnlyList<MeshContact>> ContactsByUserId { get; } =
+            new Dictionary<string, IReadOnlyList<MeshContact>>(StringComparer.OrdinalIgnoreCase);
+
         public string? FailingUserId { get; init; }
 
         public Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
@@ -287,7 +327,10 @@ public sealed class ContactSyncOrchestratorTests
                 throw new InvalidOperationException("contact store unavailable");
             }
 
-            return Task.FromResult<IReadOnlyList<MeshContact>>(Array.Empty<MeshContact>());
+            return Task.FromResult(
+                this.ContactsByUserId.TryGetValue(userId, out var contacts)
+                    ? contacts
+                    : Array.Empty<MeshContact>());
         }
 
         public Task ApplyChangesAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)

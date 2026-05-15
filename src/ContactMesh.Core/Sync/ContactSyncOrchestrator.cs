@@ -15,7 +15,7 @@ public sealed class ContactSyncOrchestrator
     private readonly DirectoryContactFactory directoryContactFactory;
     private readonly GroupContactFactory groupContactFactory;
     private readonly GroupMappingEngine groupMappingEngine;
-    private readonly SyncPlanner planner;
+    private readonly SyncPlanner? planner;
 
     public ContactSyncOrchestrator(
         IDirectoryProvider directoryProvider,
@@ -32,7 +32,7 @@ public sealed class ContactSyncOrchestrator
         this.directoryContactFactory = directoryContactFactory ?? new DirectoryContactFactory();
         this.groupContactFactory = groupContactFactory ?? new GroupContactFactory();
         this.groupMappingEngine = groupMappingEngine ?? new GroupMappingEngine();
-        this.planner = planner ?? new SyncPlanner();
+        this.planner = planner;
     }
 
     public async Task<ContactSyncRunResult> RunAsync(ContactMeshOptions options, CancellationToken cancellationToken)
@@ -60,9 +60,10 @@ public sealed class ContactSyncOrchestrator
             .ToList();
 
         var results = new List<SyncResult>();
+        var planner = this.planner ?? CreatePlanner(options);
         var syncEngine = new ContactSyncEngine(
             this.contactProvider,
-            this.planner,
+            planner,
             new SyncExecutor(this.contactProvider));
 
         foreach (var targetUser in targetEligibleUsers)
@@ -248,6 +249,19 @@ public sealed class ContactSyncOrchestrator
         }
 
         return DirectoryLabel;
+    }
+
+    private static SyncPlanner CreatePlanner(ContactMeshOptions options)
+    {
+        return new SyncPlanner(
+            staleContactCleanupEngine: new StaleContactCleanupEngine(new StaleContactCleanupOptions
+            {
+                ManagedEmailDomains = options.ManagedEmailDomains,
+                ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ResolveDirectoryLabel(options.Rules)
+                }
+            }));
     }
 
     private static bool MatchesGroup(MeshGroup group, string idOrEmail)

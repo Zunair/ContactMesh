@@ -181,6 +181,45 @@ public sealed class SyncPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_Deletes_Unmanaged_Stale_Contacts_With_Managed_Email()
+    {
+        var stale = new MeshContact
+        {
+            DisplayName = "Jane Doe",
+            CompanyName = "Example",
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) }
+        };
+
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Delete, operation.OperationType);
+        Assert.Equal(stale, operation.DesiredContact);
+        Assert.Equal("Managed contact is stale and has no user-owned details.", operation.Reason);
+    }
+
+    [Fact]
+    public void CreatePlan_Preserves_Unmanaged_Stale_Contacts_With_Notes()
+    {
+        var stale = new MeshContact
+        {
+            DisplayName = "Jane Doe",
+            CompanyName = "Example",
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) },
+            Notes = "Keep this context."
+        };
+
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+        Assert.Null(operation.DesiredContact.DisplayName);
+        Assert.Null(operation.DesiredContact.CompanyName);
+        Assert.Empty(operation.DesiredContact.Emails);
+        Assert.Equal("Keep this context.", operation.DesiredContact.Notes);
+    }
+
+    [Fact]
     public void CreatePlan_Ignores_Existing_Contacts_Without_SourceId()
     {
         var personalContact = new MeshContact

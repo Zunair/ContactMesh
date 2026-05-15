@@ -47,6 +47,11 @@ public sealed class StaleContactCleanupEngine
             };
     }
 
+    public bool HasManagedEmail(MeshContact contact)
+    {
+        return contact.Emails.Any(IsManagedEmail);
+    }
+
     private bool IsManagedEmail(ContactEmail email)
     {
         return this.options.ManagedEmailDomains.Any(domain =>

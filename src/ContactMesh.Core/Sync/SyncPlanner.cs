@@ -28,6 +28,7 @@ public sealed class SyncPlanner
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var existingByEmail = this.BuildUniqueExistingEmailIndex(existingContacts);
         var matchedExistingSourceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var matchedExistingContacts = new HashSet<MeshContact>();
 
         foreach (var desired in desiredContacts)
         {
@@ -52,6 +53,8 @@ public sealed class SyncPlanner
                 matchedExistingSourceIds.Add(existing.SourceId!);
             }
 
+            matchedExistingContacts.Add(existing);
+
             var merged = this.mergeEngine.Merge(desired, existing);
             var type = AreEquivalent(merged, existing) ? SyncOperationType.NoChange : SyncOperationType.Update;
 
@@ -63,6 +66,22 @@ public sealed class SyncPlanner
                 Reason = type == SyncOperationType.NoChange
                     ? "No managed fields changed."
                     : matchedBySourceId ? "Managed fields changed." : "Existing contact matched by email."
+            });
+        }
+
+        foreach (var staleContact in existingContacts.Where(contact =>
+            string.IsNullOrWhiteSpace(contact.SourceId)
+            && !matchedExistingContacts.Contains(contact)
+            && this.staleContactCleanupEngine.HasManagedEmail(contact)))
+        {
+            var cleanup = this.staleContactCleanupEngine.Clean(staleContact);
+
+            operations.Add(new SyncOperation
+            {
+                OperationType = cleanup.ShouldDelete ? SyncOperationType.Delete : SyncOperationType.Update,
+                DesiredContact = cleanup.Contact,
+                ExistingContact = staleContact,
+                Reason = cleanup.Reason
             });
         }
 
