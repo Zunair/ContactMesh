@@ -50,10 +50,12 @@ public sealed class ContactSyncOrchestrator
                 options.Rules.ExcludedOrganizationUnits),
             targetUsers: options.Rules.TargetUsers);
 
-        var sourceUsers = ruleEngine.CreateEligibleUsers(users);
+        var eligibleUsers = ruleEngine.CreateEligibleUsers(users);
+        var sourceUsers = ResolveDirectorySourceUsers(eligibleUsers, mappedGroups, options.Rules);
+        var directoryLabel = ResolveDirectoryLabel(options.Rules);
         var targetUsers = ruleEngine.CreateTargets(users)
             .ToDictionary(target => target.UserId, StringComparer.OrdinalIgnoreCase);
-        var targetEligibleUsers = sourceUsers
+        var targetEligibleUsers = eligibleUsers
             .Where(user => targetUsers.ContainsKey(user.Id))
             .ToList();
 
@@ -69,13 +71,14 @@ public sealed class ContactSyncOrchestrator
             var visibleGroups = ruleEngine.FilterGroupsForTarget(mappedGroups, baseTarget);
             var target = baseTarget with
             {
-                LabelNames = BuildTargetLabels(visibleGroups)
+                LabelNames = BuildTargetLabels(visibleGroups, directoryLabel)
             };
             var desiredContacts = await this.CreateDesiredContactsAsync(
                 sourceUsers,
                 target,
                 visibleGroups,
                 ruleEngine,
+                directoryLabel,
                 cancellationToken).ConfigureAwait(false);
 
             try
@@ -105,11 +108,12 @@ public sealed class ContactSyncOrchestrator
         SyncTarget target,
         IReadOnlyList<GroupVisibilityDecision> visibleGroups,
         SyncRuleEngine ruleEngine,
+        string directoryLabel,
         CancellationToken cancellationToken)
     {
         var contacts = eligibleUsers
             .Where(user => !IsTargetUser(user, target))
-            .Select(user => this.directoryContactFactory.CreateUserContact(user, new[] { DirectoryLabel }))
+            .Select(user => this.directoryContactFactory.CreateUserContact(user, new[] { directoryLabel }))
             .ToList();
 
         foreach (var decision in visibleGroups)
@@ -126,6 +130,67 @@ public sealed class ContactSyncOrchestrator
         }
 
         return ruleEngine.FilterContactsForTarget(contacts, target);
+    }
+
+    private static IReadOnlyList<MeshUser> ResolveDirectorySourceUsers(
+        IReadOnlyList<MeshUser> eligibleUsers,
+        IReadOnlyList<MeshGroup> groups,
+        SyncRuleOptions rules)
+    {
+        if (string.IsNullOrWhiteSpace(rules.MainContactsGroupEmail))
+        {
+            return eligibleUsers;
+        }
+
+        var rootGroup = groups.FirstOrDefault(group => MatchesGroup(group, rules.MainContactsGroupEmail));
+        if (rootGroup is null)
+        {
+            return Array.Empty<MeshUser>();
+        }
+
+        var memberKeys = ResolveUserMemberKeys(rootGroup, groups);
+
+        return eligibleUsers
+            .Where(user => memberKeys.Contains(user.Id) || memberKeys.Contains(user.Email))
+            .ToList();
+    }
+
+    private static IReadOnlySet<string> ResolveUserMemberKeys(MeshGroup rootGroup, IReadOnlyList<MeshGroup> groups)
+    {
+        var memberKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visitedGroupKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pendingGroups = new Stack<MeshGroup>();
+
+        pendingGroups.Push(rootGroup);
+
+        while (pendingGroups.Count > 0)
+        {
+            var group = pendingGroups.Pop();
+            if (!visitedGroupKeys.Add(GroupKey(group)))
+            {
+                continue;
+            }
+
+            foreach (var member in group.Members)
+            {
+                if (member.Type == MeshGroupMemberType.Group)
+                {
+                    var childGroup = groups.FirstOrDefault(candidate =>
+                        MatchesGroup(candidate, member.Id) || MatchesGroup(candidate, member.Email));
+                    if (childGroup is not null)
+                    {
+                        pendingGroups.Push(childGroup);
+                    }
+
+                    continue;
+                }
+
+                AddIfPresent(memberKeys, member.Id);
+                AddIfPresent(memberKeys, member.Email);
+            }
+        }
+
+        return memberKeys;
     }
 
     private static IReadOnlySet<string> ResolveUserIdsFromGroups(
@@ -147,11 +212,13 @@ public sealed class ContactSyncOrchestrator
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    private static IReadOnlySet<string> BuildTargetLabels(IReadOnlyList<GroupVisibilityDecision> visibleGroups)
+    private static IReadOnlySet<string> BuildTargetLabels(
+        IReadOnlyList<GroupVisibilityDecision> visibleGroups,
+        string directoryLabel)
     {
         var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            DirectoryLabel
+            directoryLabel
         };
 
         foreach (var decision in visibleGroups)
@@ -171,6 +238,40 @@ public sealed class ContactSyncOrchestrator
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static string ResolveDirectoryLabel(SyncRuleOptions rules)
+    {
+        if (!string.IsNullOrWhiteSpace(rules.MainContactsGroupLabel))
+        {
+            return rules.MainContactsGroupLabel.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(rules.MainContactsGroupLable))
+        {
+            return rules.MainContactsGroupLable.Trim();
+        }
+
+        return DirectoryLabel;
+    }
+
+    private static bool MatchesGroup(MeshGroup group, string idOrEmail)
+    {
+        return string.Equals(group.Id, idOrEmail, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(group.Email, idOrEmail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GroupKey(MeshGroup group)
+    {
+        return string.IsNullOrWhiteSpace(group.Id) ? group.Email : group.Id;
+    }
+
+    private static void AddIfPresent(ISet<string> values, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            values.Add(value);
+        }
     }
 
     private static MeshContact AddLabels(MeshContact contact, IReadOnlyList<string> labels)

@@ -44,6 +44,8 @@ public sealed record SettingsFormModel(
             ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
             Rules = new SyncRuleOptions
             {
+                MainContactsGroupEmail = Read(form, "ContactMesh.Rules.MainContactsGroupEmail"),
+                MainContactsGroupLabel = Read(form, "ContactMesh.Rules.MainContactsGroupLabel"),
                 TargetUsers = Lines(form, "ContactMesh.Rules.TargetUsers"),
                 GlobalUserGroups = Lines(form, "ContactMesh.Rules.GlobalUserGroups"),
                 GlobalExternalContactGroups = Lines(form, "ContactMesh.Rules.GlobalExternalContactGroups"),

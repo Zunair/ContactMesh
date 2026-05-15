@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-15",
-  "head": "13534c4",
+  "head": "15d775b",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
     "lastKnown": {
       "commit": null,
       "build": "pass",
-      "tests": "149 pass, 1 skipped",
+      "tests": "150 pass, 1 skipped",
       "warnings": null
     }
   },
@@ -54,7 +54,8 @@
     { "id": "microsoft365-target-scope", "commit": "a39d15e", "state": "done", "note": "Added provider-neutral TargetUsers scoping so Microsoft365 dry-runs can limit sync recipients while preserving eligible directory users as source contacts; documented and surfaced the setting in samples/config/UI tests." },
     { "id": "web-settings-descriptions", "commit": null, "state": "done", "note": "Added detailed Web settings descriptions for runtime, sync rules, provider credentials/scopes, dry-run safety, TargetUsers live-test scoping, and credential masking; renderer coverage now checks the guidance." },
     { "id": "web-settings-editor", "commit": null, "state": "done-local", "note": "Web settings now resolves repo-root appsettings.local.json from project launches, shows the absolute config path/load status, renders editable settings fields, and saves JSON back to the ignored local config while preserving masked secrets." },
-    { "id": "live-provider-tests", "commit": null, "state": "done-local", "note": "Added an opt-in live-provider dry-run test project with explicit environment gating, secret-free config path injection, DryRun and TargetUsers safety assertions, and docs for secure execution." }
+    { "id": "live-provider-tests", "commit": null, "state": "done-local", "note": "Added an opt-in live-provider dry-run test project with explicit environment gating, secret-free config path injection, DryRun and TargetUsers safety assertions, and docs for secure execution." },
+    { "id": "main-contacts-group-source-scope", "commit": "15d775b", "state": "done", "note": "Added MainContactsGroupEmail source scoping and MainContactsGroupLabel/Lable directory labeling so managed directory contacts can come from a configured group, including nested groups, without limiting sync recipients." }
   ],
   "inProgress": [],
   "pending": [

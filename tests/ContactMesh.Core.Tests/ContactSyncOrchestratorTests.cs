@@ -135,6 +135,72 @@ public sealed class ContactSyncOrchestratorTests
         Assert.DoesNotContain(applied.Value.Creates, contact => contact.SourceId == "target");
     }
 
+    [Fact]
+    public async Task RunAsync_MainContactsGroup_Limits_Directory_Source_Contacts_And_Applies_Label()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            User("direct", "direct@example.org"),
+            User("nested", "nested@example.org"),
+            User("outside", "outside@example.org")
+        });
+        var rootGroup = new MeshGroup
+        {
+            Id = "root",
+            Email = "staff@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "direct",
+                    Email = "direct@example.org",
+                    Type = MeshGroupMemberType.User
+                },
+                new MeshGroupMember
+                {
+                    Id = "nested-group",
+                    Email = "nested-group@example.org",
+                    Type = MeshGroupMemberType.Group
+                }
+            }
+        };
+        var nestedGroup = Group(
+            "nested-group",
+            "nested-group@example.org",
+            MeshGroupVisibility.Hidden,
+            MeshGroupVisibility.Hidden,
+            "nested");
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { rootGroup, nestedGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    MainContactsGroupEmail = "staff@example.org",
+                    MainContactsGroupLable = "-Directory"
+                }
+            },
+            CancellationToken.None);
+
+        var syncResult = Assert.Single(result.Results);
+        Assert.Equal("target", syncResult.TargetUserId);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        Assert.Contains(applied.Creates, contact => contact.SourceId == "direct");
+        Assert.Contains(applied.Creates, contact => contact.SourceId == "nested");
+        Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "outside");
+        Assert.All(applied.Creates.Where(contact => contact.SourceId is "direct" or "nested"), contact =>
+            Assert.Contains("-Directory", contact.Labels));
+    }
+
     private static MeshUser User(string id, string email, bool isSuspended = false)
     {
         return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };

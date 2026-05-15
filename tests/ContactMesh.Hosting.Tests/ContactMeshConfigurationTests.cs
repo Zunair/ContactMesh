@@ -20,6 +20,8 @@ public sealed class ContactMeshConfigurationTests
             ["ContactMesh:DryRun"] = "false",
             ["ContactMesh:ManagedEmailDomains:0"] = "example.org",
             ["ContactMesh:Rules:TargetUsers:0"] = "target@example.org",
+            ["ContactMesh:Rules:MainContactsGroupEmail"] = "company-directory@example.org",
+            ["ContactMesh:Rules:MainContactsGroupLabel"] = "-Directory",
             ["ContactMesh:Rules:GlobalUserGroups:0"] = "all-users",
             ["ContactMesh:Rules:GlobalExternalContactGroups:0"] = "external-users",
             ["ContactMesh:Rules:ExclusionGroups:0"] = "blocked",
@@ -52,11 +54,15 @@ public sealed class ContactMeshConfigurationTests
         Assert.False(contactMesh.DryRun);
         Assert.Equal("example.org", Assert.Single(contactMesh.ManagedEmailDomains));
         Assert.Equal("target@example.org", Assert.Single(contactMesh.Rules.TargetUsers));
+        Assert.Equal("company-directory@example.org", contactMesh.Rules.MainContactsGroupEmail);
+        Assert.Equal("-Directory", contactMesh.Rules.MainContactsGroupLabel);
         Assert.Equal("all-users", Assert.Single(contactMesh.Rules.GlobalUserGroups));
         Assert.Equal("source-group", Assert.Single(contactMesh.Rules.GroupMappings).From);
         Assert.Equal("target-group", Assert.Single(contactMesh.Rules.GroupMappings).To);
 
         Assert.Equal("all-users", Assert.Single(rules.GlobalUserGroups));
+        Assert.Equal("company-directory@example.org", rules.MainContactsGroupEmail);
+        Assert.Equal("-Directory", rules.MainContactsGroupLabel);
         Assert.Equal("external-users", Assert.Single(rules.GlobalExternalContactGroups));
         Assert.Equal("blocked", Assert.Single(rules.ExclusionGroups));
         Assert.Equal("engineering", Assert.Single(rules.ScopedGroupRoots));

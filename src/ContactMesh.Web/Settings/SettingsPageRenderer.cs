@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Sync;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 
@@ -111,6 +112,8 @@ public static class SettingsPageRenderer
 
         html.AppendLine("<div class=\"rules-layout\">");
         AppendListField(html, "Managed domains", "ContactMesh.ManagedEmailDomains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
+        AppendField(html, "Main contacts group", "ContactMesh.Rules.MainContactsGroupEmail", rules.MainContactsGroupEmail, "Optional source group whose user members, including nested group members when the provider supplies them, become directory contacts instead of every eligible tenant user.");
+        AppendField(html, "Main contacts label", "ContactMesh.Rules.MainContactsGroupLabel", ResolveDirectoryLabel(rules), "Label applied to directory contacts from the main contacts group. The legacy MainContactsGroupLable spelling is also accepted in config.");
         AppendListField(html, "Target users", "ContactMesh.Rules.TargetUsers", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
         AppendListField(html, "Global user groups", "ContactMesh.Rules.GlobalUserGroups", "Groups whose user members should receive global managed contacts.", rules.GlobalUserGroups);
         AppendListField(html, "Global external contacts", "ContactMesh.Rules.GlobalExternalContactGroups", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
@@ -303,6 +306,18 @@ public static class SettingsPageRenderer
     private static string Display(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+    }
+
+    private static string ResolveDirectoryLabel(SyncRuleOptions rules)
+    {
+        if (!string.IsNullOrWhiteSpace(rules.MainContactsGroupLabel))
+        {
+            return rules.MainContactsGroupLabel;
+        }
+
+        return string.IsNullOrWhiteSpace(rules.MainContactsGroupLable)
+            ? ContactSyncOrchestrator.DirectoryLabel
+            : rules.MainContactsGroupLable;
     }
 
     private static string Encode(string value)

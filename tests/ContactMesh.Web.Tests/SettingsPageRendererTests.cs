@@ -21,6 +21,8 @@ public sealed class SettingsPageRendererTests
                 ManagedEmailDomains = new[] { "example.org" },
                 Rules = new SyncRuleOptions
                 {
+                    MainContactsGroupEmail = "company-directory@example.org",
+                    MainContactsGroupLabel = "-Directory",
                     TargetUsers = new[] { "target@example.org" },
                     GlobalUserGroups = new[] { "all-users" },
                     GlobalExternalContactGroups = new[] { "external" },
@@ -53,6 +55,8 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("checked", html);
         Assert.Contains("example.org", html);
         Assert.Contains("target@example.org", html);
+        Assert.Contains("company-directory@example.org", html);
+        Assert.Contains("-Directory", html);
         Assert.Contains("all-users", html);
         Assert.Contains("source-group", html);
         Assert.Contains("target-group", html);
@@ -125,6 +129,8 @@ public sealed class SettingsPageRendererTests
             ["ContactMesh.Provider"] = "Microsoft365",
             ["ContactMesh.DryRun"] = "true",
             ["ContactMesh.ManagedEmailDomains"] = "example.org",
+            ["ContactMesh.Rules.MainContactsGroupEmail"] = "company-directory@example.org",
+            ["ContactMesh.Rules.MainContactsGroupLabel"] = "-Directory",
             ["ContactMesh.Rules.TargetUsers"] = "target@example.org",
             ["ContactMesh.Rules.GroupMappings"] = "source@example.org -> target@example.org",
             ["GoogleWorkspace.Scopes"] = GoogleWorkspaceOptions.PeopleContactsScope,
@@ -146,6 +152,8 @@ public sealed class SettingsPageRendererTests
             var json = await File.ReadAllTextAsync(configPath, TestContext.Current.CancellationToken);
 
             Assert.Contains("\"Provider\": \"Microsoft365\"", json);
+            Assert.Contains("\"MainContactsGroupEmail\": \"company-directory@example.org\"", json);
+            Assert.Contains("\"MainContactsGroupLabel\": \"-Directory\"", json);
             Assert.Contains("\"target@example.org\"", json);
             Assert.Contains("\"From\": \"source@example.org\"", json);
             Assert.Contains("\"ClientSecret\": \"existing-secret\"", json);
