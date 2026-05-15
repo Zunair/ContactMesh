@@ -2,6 +2,8 @@ using ContactMesh.Core.Models;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 using ContactMesh.Web.Settings;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Xunit;
 
 namespace ContactMesh.Web.Tests;
@@ -42,9 +44,11 @@ public sealed class SettingsPageRendererTests
                 ClientSecret = "super-secret",
                 Scopes = new[] { "https://graph.microsoft.com/.default" }
             },
-            "settings.json");
+            "settings.json",
+            null);
 
         Assert.Contains("<title>ContactMesh Settings</title>", html);
+        Assert.Contains("<form method=\"post\" action=\"/settings\">", html);
         Assert.Contains("value=\"Google\"", html);
         Assert.Contains("checked", html);
         Assert.Contains("example.org", html);
@@ -54,6 +58,8 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("target-group", html);
         Assert.Contains("service-account.json", html);
         Assert.Contains("Configured", html);
+        Assert.Contains("name=\"ContactMesh.Rules.TargetUsers\"", html);
+        Assert.Contains("name=\"Microsoft365.ClientSecret\"", html);
         Assert.DoesNotContain("super-secret", html);
     }
 
@@ -71,11 +77,11 @@ public sealed class SettingsPageRendererTests
             },
             new GoogleWorkspaceOptions(),
             new Microsoft365Options(),
-            "<appsettings>.json");
+            "appsettings.json",
+            null);
 
         Assert.Contains("&lt;Google&gt;", html);
         Assert.Contains("&lt;blocked&gt;", html);
-        Assert.Contains("&lt;appsettings&gt;.json", html);
         Assert.DoesNotContain("<Google>", html);
     }
 
@@ -86,11 +92,11 @@ public sealed class SettingsPageRendererTests
             new ContactMeshOptions(),
             new GoogleWorkspaceOptions(),
             new Microsoft365Options(),
-            "appsettings.json");
+            "appsettings.json",
+            null);
 
         Assert.Contains("Managed domains", html);
-        Assert.Contains("None", html);
-        Assert.Contains("Not set", html);
+        Assert.Contains("Will be created on save", html);
     }
 
     [Fact]
@@ -100,12 +106,56 @@ public sealed class SettingsPageRendererTests
             new ContactMeshOptions(),
             new GoogleWorkspaceOptions(),
             new Microsoft365Options(),
-            "appsettings.json");
+            "appsettings.json",
+            "Saved");
 
+        Assert.Contains("Saved", html);
         Assert.Contains("Keep this on for live-provider validation", html);
         Assert.Contains("Optional user IDs or email addresses that limit who receives managed contacts", html);
         Assert.Contains("append =Ignore to reduce expected noise", html);
         Assert.Contains("Secret value is masked here", html);
         Assert.Contains("Keep the file outside the repository", html);
+    }
+
+    [Fact]
+    public async Task SettingsFormModelSavesEditableSettingsAndPreservesBlankSecret()
+    {
+        var form = new FormCollection(new Dictionary<string, StringValues>
+        {
+            ["ContactMesh.Provider"] = "Microsoft365",
+            ["ContactMesh.DryRun"] = "true",
+            ["ContactMesh.ManagedEmailDomains"] = "example.org",
+            ["ContactMesh.Rules.TargetUsers"] = "target@example.org",
+            ["ContactMesh.Rules.GroupMappings"] = "source@example.org -> target@example.org",
+            ["GoogleWorkspace.Scopes"] = GoogleWorkspaceOptions.PeopleContactsScope,
+            ["Microsoft365.TenantId"] = "tenant-id",
+            ["Microsoft365.ClientId"] = "client-id",
+            ["Microsoft365.ClientSecret"] = "",
+            ["Microsoft365.Scopes"] = Microsoft365Options.DefaultGraphScope
+        });
+        var configPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+
+        try
+        {
+            var settings = SettingsFormModel.FromForm(
+                form,
+                new GoogleWorkspaceOptions(),
+                new Microsoft365Options { ClientSecret = "existing-secret" });
+
+            await settings.SaveAsync(configPath, TestContext.Current.CancellationToken);
+            var json = await File.ReadAllTextAsync(configPath, TestContext.Current.CancellationToken);
+
+            Assert.Contains("\"Provider\": \"Microsoft365\"", json);
+            Assert.Contains("\"target@example.org\"", json);
+            Assert.Contains("\"From\": \"source@example.org\"", json);
+            Assert.Contains("\"ClientSecret\": \"existing-secret\"", json);
+        }
+        finally
+        {
+            if (File.Exists(configPath))
+            {
+                File.Delete(configPath);
+            }
+        }
     }
 }

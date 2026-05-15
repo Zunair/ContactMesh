@@ -12,7 +12,8 @@ public static class SettingsPageRenderer
         ContactMeshOptions contactMesh,
         GoogleWorkspaceOptions googleWorkspace,
         Microsoft365Options microsoft365,
-        string configPath)
+        string configPath,
+        string? notice)
     {
         var html = new StringBuilder();
 
@@ -47,10 +48,21 @@ public static class SettingsPageRenderer
         AppendStatusPill(html, contactMesh.DryRun ? "Dry run" : "Live writes", "Mode");
         html.AppendLine("</div>");
         html.AppendLine("</header>");
+        if (!string.IsNullOrWhiteSpace(notice))
+        {
+            html.Append("<p class=\"notice\">");
+            html.Append(Encode(notice));
+            html.AppendLine("</p>");
+        }
 
+        html.AppendLine("<form method=\"post\" action=\"/settings\">");
         AppendRuntimeSection(html, contactMesh, configPath);
         AppendRulesSection(html, contactMesh.Rules, contactMesh.ManagedEmailDomains);
         AppendProvidersSection(html, googleWorkspace, microsoft365);
+        html.AppendLine("<div class=\"save-bar\">");
+        html.AppendLine("<button type=\"submit\">Save settings</button>");
+        html.AppendLine("</div>");
+        html.AppendLine("</form>");
 
         html.AppendLine("</section>");
         html.AppendLine("</main>");
@@ -68,12 +80,13 @@ public static class SettingsPageRenderer
         html.AppendLine("<span class=\"muted\">Read only</span>");
         html.AppendLine("</div>");
         html.AppendLine("<div class=\"settings-grid\">");
-        AppendField(html, "Provider", options.Provider, "Selects which provider host ContactMesh uses for directory, group, and contact reads or writes.");
-        AppendField(html, "Config file", configPath, "The JSON file loaded first; environment variables and command-line values can override it.");
+        AppendField(html, "Provider", "ContactMesh.Provider", options.Provider, "Selects which provider host ContactMesh uses for directory, group, and contact reads or writes.");
+        AppendReadonlyField(html, "Config file", Path.GetFullPath(configPath), "The JSON file loaded first; environment variables and command-line values can override it.");
+        AppendReadonlyField(html, "Config status", File.Exists(configPath) ? "Loaded from disk" : "Will be created on save", "If this does not point at appsettings.local.json, launch the Web app with that JSON path.");
         html.AppendLine("<label class=\"setting-row switch-row\">");
         html.AppendLine("<span>Dry run</span>");
         html.AppendLine("<small>When enabled, ContactMesh logs planned changes but skips provider writes. Keep this on for live-provider validation.</small>");
-        html.Append("<input type=\"checkbox\" disabled");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.DryRun\" value=\"true\"");
         if (options.DryRun)
         {
             html.Append(" checked");
@@ -97,14 +110,14 @@ public static class SettingsPageRenderer
         html.AppendLine("</div>");
 
         html.AppendLine("<div class=\"rules-layout\">");
-        AppendChipGroup(html, "Managed domains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
-        AppendChipGroup(html, "Target users", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
-        AppendChipGroup(html, "Global user groups", "Groups whose user members should receive global managed contacts.", rules.GlobalUserGroups);
-        AppendChipGroup(html, "Global external contacts", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
-        AppendChipGroup(html, "Exclusion groups", "Users or group members that should not receive managed contacts.", rules.ExclusionGroups);
-        AppendChipGroup(html, "Scoped group roots", "Root groups used for group-aware visibility, so targets receive contacts from groups they are allowed to see.", rules.ScopedGroupRoots);
-        AppendChipGroup(html, "Included OUs", "Organization unit prefixes allowed to receive managed contacts.", rules.IncludedOrganizationUnits);
-        AppendChipGroup(html, "Excluded OUs", "Organization unit prefixes blocked from receiving managed contacts; append =Ignore to reduce expected noise.", rules.ExcludedOrganizationUnits);
+        AppendListField(html, "Managed domains", "ContactMesh.ManagedEmailDomains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
+        AppendListField(html, "Target users", "ContactMesh.Rules.TargetUsers", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
+        AppendListField(html, "Global user groups", "ContactMesh.Rules.GlobalUserGroups", "Groups whose user members should receive global managed contacts.", rules.GlobalUserGroups);
+        AppendListField(html, "Global external contacts", "ContactMesh.Rules.GlobalExternalContactGroups", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
+        AppendListField(html, "Exclusion groups", "ContactMesh.Rules.ExclusionGroups", "Users or group members that should not receive managed contacts.", rules.ExclusionGroups);
+        AppendListField(html, "Scoped group roots", "ContactMesh.Rules.ScopedGroupRoots", "Root groups used for group-aware visibility, so targets receive contacts from groups they are allowed to see.", rules.ScopedGroupRoots);
+        AppendListField(html, "Included OUs", "ContactMesh.Rules.IncludedOrganizationUnits", "Organization unit prefixes allowed to receive managed contacts.", rules.IncludedOrganizationUnits);
+        AppendListField(html, "Excluded OUs", "ContactMesh.Rules.ExcludedOrganizationUnits", "Organization unit prefixes blocked from receiving managed contacts; append =Ignore to reduce expected noise.", rules.ExcludedOrganizationUnits);
         AppendMappings(html, rules.GroupMappings);
         html.AppendLine("</div>");
         html.AppendLine("</section>");
@@ -124,17 +137,17 @@ public static class SettingsPageRenderer
 
         html.AppendLine("<section class=\"provider-panel\" aria-labelledby=\"google-heading\">");
         html.AppendLine("<h3 id=\"google-heading\">Google Workspace</h3>");
-        AppendDetail(html, "Service account", "Path to the delegated service-account credential file. Keep the file outside the repository.", googleWorkspace.ServiceAccountFile);
-        AppendDetail(html, "Admin user", "Workspace admin account used for domain-wide delegated People API access.", googleWorkspace.AdminUserEmail);
-        AppendDetail(html, "Scopes", "Google OAuth scopes requested by the delegated token provider.", FormatCount(googleWorkspace.Scopes.Count));
+        AppendDetailInput(html, "Service account", "GoogleWorkspace.ServiceAccountFile", "Path to the delegated service-account credential file. Keep the file outside the repository.", googleWorkspace.ServiceAccountFile);
+        AppendDetailInput(html, "Admin user", "GoogleWorkspace.AdminUserEmail", "Workspace admin account used for domain-wide delegated People API access.", googleWorkspace.AdminUserEmail);
+        AppendDetailTextarea(html, "Scopes", "GoogleWorkspace.Scopes", "Google OAuth scopes requested by the delegated token provider.", googleWorkspace.Scopes);
         html.AppendLine("</section>");
 
         html.AppendLine("<section class=\"provider-panel\" aria-labelledby=\"microsoft-heading\">");
         html.AppendLine("<h3 id=\"microsoft-heading\">Microsoft 365</h3>");
-        AppendDetail(html, "Tenant ID", "Microsoft Entra tenant used for Graph client-credentials authentication.", microsoft365.TenantId);
-        AppendDetail(html, "Client ID", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
-        AppendDetail(html, "Client secret", "Secret value is masked here; provide it through ignored local config, environment variables, user secrets, or a secret store.", string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
-        AppendDetail(html, "Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", FormatCount(microsoft365.Scopes.Count));
+        AppendDetailInput(html, "Tenant ID", "Microsoft365.TenantId", "Microsoft Entra tenant used for Graph client-credentials authentication.", microsoft365.TenantId);
+        AppendDetailInput(html, "Client ID", "Microsoft365.ClientId", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
+        AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
+        AppendDetailTextarea(html, "Scopes", "Microsoft365.Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", microsoft365.Scopes);
         html.AppendLine("</section>");
 
         html.AppendLine("</div>");
@@ -150,7 +163,24 @@ public static class SettingsPageRenderer
         html.AppendLine("</span>");
     }
 
-    private static void AppendField(StringBuilder html, string label, string? value, string description)
+    private static void AppendField(StringBuilder html, string label, string name, string? value, string description)
+    {
+        html.AppendLine("<label class=\"setting-row\">");
+        html.Append("<span>");
+        html.Append(Encode(label));
+        html.AppendLine("</span>");
+        html.Append("<small>");
+        html.Append(Encode(description));
+        html.AppendLine("</small>");
+        html.Append("<input name=\"");
+        html.Append(Encode(name));
+        html.Append("\" value=\"");
+        html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
+        html.AppendLine("\">");
+        html.AppendLine("</label>");
+    }
+
+    private static void AppendReadonlyField(StringBuilder html, string label, string? value, string description)
     {
         html.AppendLine("<label class=\"setting-row\">");
         html.Append("<span>");
@@ -165,9 +195,10 @@ public static class SettingsPageRenderer
         html.AppendLine("</label>");
     }
 
-    private static void AppendChipGroup(
+    private static void AppendListField(
         StringBuilder html,
         string title,
+        string name,
         string description,
         IReadOnlyList<string> values)
     {
@@ -178,24 +209,7 @@ public static class SettingsPageRenderer
         html.Append("<p class=\"description\">");
         html.Append(Encode(description));
         html.AppendLine("</p>");
-
-        if (values.Count == 0)
-        {
-            html.AppendLine("<p class=\"empty\">None</p>");
-        }
-        else
-        {
-            html.AppendLine("<div class=\"chips\">");
-            foreach (var value in values)
-            {
-                html.Append("<span class=\"chip\">");
-                html.Append(Encode(value));
-                html.AppendLine("</span>");
-            }
-
-            html.AppendLine("</div>");
-        }
-
+        AppendTextarea(html, name, values);
         html.AppendLine("</section>");
     }
 
@@ -204,32 +218,27 @@ public static class SettingsPageRenderer
         html.AppendLine("<section class=\"rule-group mappings\">");
         html.AppendLine("<h3>Group mappings</h3>");
         html.AppendLine("<p class=\"description\">Merge contacts from one source group into another target group label.</p>");
-        if (mappings.Count == 0)
+        html.Append("<textarea name=\"ContactMesh.Rules.GroupMappings\" rows=\"");
+        html.Append(Math.Max(3, mappings.Count));
+        html.AppendLine("\">");
+        foreach (var mapping in mappings)
         {
-            html.AppendLine("<p class=\"empty\">None</p>");
-        }
-        else
-        {
-            html.AppendLine("<table>");
-            html.AppendLine("<thead><tr><th>From</th><th>To</th></tr></thead>");
-            html.AppendLine("<tbody>");
-            foreach (var mapping in mappings)
-            {
-                html.Append("<tr><td>");
-                html.Append(Encode(mapping.From));
-                html.Append("</td><td>");
-                html.Append(Encode(mapping.To));
-                html.AppendLine("</td></tr>");
-            }
-
-            html.AppendLine("</tbody>");
-            html.AppendLine("</table>");
+            html.Append(Encode(mapping.From));
+            html.Append(" -> ");
+            html.AppendLine(Encode(mapping.To));
         }
 
+        html.AppendLine("</textarea>");
         html.AppendLine("</section>");
     }
 
-    private static void AppendDetail(StringBuilder html, string label, string description, string? value)
+    private static void AppendDetailInput(
+        StringBuilder html,
+        string label,
+        string name,
+        string description,
+        string? value,
+        string? placeholder = null)
     {
         html.AppendLine("<div class=\"detail-row\">");
         html.AppendLine("<div>");
@@ -240,20 +249,60 @@ public static class SettingsPageRenderer
         html.Append(Encode(description));
         html.AppendLine("</small>");
         html.AppendLine("</div>");
-        html.Append("<strong>");
-        html.Append(Encode(Display(value)));
-        html.AppendLine("</strong>");
+        html.Append("<input name=\"");
+        html.Append(Encode(name));
+        html.Append("\" value=\"");
+        html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
+        html.Append("\"");
+        if (!string.IsNullOrWhiteSpace(placeholder))
+        {
+            html.Append(" placeholder=\"");
+            html.Append(Encode(placeholder));
+            html.Append("\"");
+        }
+
+        html.AppendLine(">");
         html.AppendLine("</div>");
+    }
+
+    private static void AppendDetailTextarea(
+        StringBuilder html,
+        string label,
+        string name,
+        string description,
+        IReadOnlyList<string> values)
+    {
+        html.AppendLine("<div class=\"detail-row detail-textarea\">");
+        html.AppendLine("<div>");
+        html.Append("<span>");
+        html.Append(Encode(label));
+        html.AppendLine("</span>");
+        html.Append("<small>");
+        html.Append(Encode(description));
+        html.AppendLine("</small>");
+        html.AppendLine("</div>");
+        AppendTextarea(html, name, values);
+        html.AppendLine("</div>");
+    }
+
+    private static void AppendTextarea(StringBuilder html, string name, IReadOnlyList<string> values)
+    {
+        html.Append("<textarea name=\"");
+        html.Append(Encode(name));
+        html.Append("\" rows=\"");
+        html.Append(Math.Max(3, values.Count));
+        html.AppendLine("\">");
+        foreach (var value in values)
+        {
+            html.AppendLine(Encode(value));
+        }
+
+        html.AppendLine("</textarea>");
     }
 
     private static string Display(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
-    }
-
-    private static string FormatCount(int count)
-    {
-        return count == 1 ? "1 item" : $"{count} items";
     }
 
     private static string Encode(string value)
@@ -405,6 +454,14 @@ h3 {
   border-top: 1px solid var(--line);
 }
 
+.notice {
+  margin-bottom: 18px;
+  border: 1px solid #9adfd5;
+  background: var(--teal-soft);
+  color: #0f4f49;
+  padding: 12px 14px;
+}
+
 .band-header {
   display: flex;
   align-items: center;
@@ -454,13 +511,26 @@ h3 {
   line-height: 1.35;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   min-width: 0;
-  border: 0;
+  border: 1px solid var(--line);
   color: var(--ink);
-  background: transparent;
+  background: #ffffff;
   font: inherit;
+  padding: 9px 10px;
+}
+
+textarea {
+  min-height: 104px;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+input[readonly] {
+  color: var(--muted);
+  background: #f9fafb;
 }
 
 .switch-row {
@@ -539,12 +609,33 @@ th {
   border-top: 1px solid var(--line);
 }
 
-.detail-row strong {
+.detail-row input,
+.detail-row textarea {
   min-width: 0;
   max-width: 64%;
-  overflow-wrap: anywhere;
-  text-align: right;
-  font-size: 0.92rem;
+}
+
+.detail-textarea {
+  align-items: start;
+}
+
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+button {
+  border: 1px solid #0f4f49;
+  background: var(--teal);
+  color: #ffffff;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 700;
 }
 
 @media (max-width: 820px) {
@@ -589,9 +680,9 @@ th {
     display: grid;
   }
 
-  .detail-row strong {
+  .detail-row input,
+  .detail-row textarea {
     max-width: none;
-    text-align: left;
   }
 }
 """;

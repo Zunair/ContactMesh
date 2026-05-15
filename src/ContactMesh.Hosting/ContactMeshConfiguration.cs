@@ -8,9 +8,13 @@ namespace ContactMesh.Hosting;
 
 public static class ContactMeshConfiguration
 {
+    private const string LocalConfigFileName = "appsettings.local.json";
+    private const string DefaultConfigFileName = "appsettings.json";
+
     public static string ResolveConfigPath(IEnumerable<string> args)
     {
-        return args.FirstOrDefault(arg => arg.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) ?? "appsettings.json";
+        return args.FirstOrDefault(arg => arg.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            ?? FindDefaultConfigPath();
     }
 
     public static IConfigurationBuilder AddContactMeshConfigFile(
@@ -20,7 +24,7 @@ public static class ContactMeshConfiguration
     {
         if (File.Exists(configPath))
         {
-            configuration.AddJsonFile(configPath, optional: true, reloadOnChange: false);
+            configuration.AddJsonFile(configPath, optional: true, reloadOnChange: true);
         }
 
         configuration.AddEnvironmentVariables();
@@ -45,5 +49,28 @@ public static class ContactMeshConfiguration
             .Bind(configuration.GetSection(Microsoft365Options.SectionName));
 
         return services;
+    }
+
+    private static string FindDefaultConfigPath()
+    {
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (directory is not null)
+        {
+            var localPath = Path.Combine(directory.FullName, LocalConfigFileName);
+            if (File.Exists(localPath))
+            {
+                return localPath;
+            }
+
+            var solutionPath = Path.Combine(directory.FullName, "ContactMesh.sln");
+            if (File.Exists(solutionPath))
+            {
+                return Path.Combine(directory.FullName, DefaultConfigFileName);
+            }
+
+            directory = directory.Parent;
+        }
+
+        return DefaultConfigFileName;
     }
 }

@@ -77,7 +77,26 @@ public sealed class ContactMeshConfigurationTests
     public void ResolveConfigPathUsesFirstJsonArgumentOrDefault()
     {
         Assert.Equal("custom.json", ContactMeshConfiguration.ResolveConfigPath(new[] { "--dry-run", "custom.json" }));
-        Assert.Equal("appsettings.json", ContactMeshConfiguration.ResolveConfigPath(new[] { "--dry-run" }));
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var child = Path.Combine(root, "src", "ContactMesh.Web");
+        var originalDirectory = Directory.GetCurrentDirectory();
+        Directory.CreateDirectory(child);
+        File.WriteAllText(Path.Combine(root, "ContactMesh.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(root, "appsettings.local.json"), "{}");
+
+        try
+        {
+            Directory.SetCurrentDirectory(child);
+
+            Assert.Equal(
+                Path.Combine(root, "appsettings.local.json"),
+                ContactMeshConfiguration.ResolveConfigPath(new[] { "--dry-run" }));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]
