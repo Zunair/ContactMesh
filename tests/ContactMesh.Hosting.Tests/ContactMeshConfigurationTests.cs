@@ -19,6 +19,7 @@ public sealed class ContactMeshConfigurationTests
             ["ContactMesh:Provider"] = "Google",
             ["ContactMesh:DryRun"] = "false",
             ["ContactMesh:ManagedEmailDomains:0"] = "example.org",
+            ["ContactMesh:Rules:TargetUsers:0"] = "target@example.org",
             ["ContactMesh:Rules:GlobalUserGroups:0"] = "all-users",
             ["ContactMesh:Rules:GlobalExternalContactGroups:0"] = "external-users",
             ["ContactMesh:Rules:ExclusionGroups:0"] = "blocked",
@@ -50,6 +51,7 @@ public sealed class ContactMeshConfigurationTests
         Assert.Equal("Google", contactMesh.Provider);
         Assert.False(contactMesh.DryRun);
         Assert.Equal("example.org", Assert.Single(contactMesh.ManagedEmailDomains));
+        Assert.Equal("target@example.org", Assert.Single(contactMesh.Rules.TargetUsers));
         Assert.Equal("all-users", Assert.Single(contactMesh.Rules.GlobalUserGroups));
         Assert.Equal("source-group", Assert.Single(contactMesh.Rules.GroupMappings).From);
         Assert.Equal("target-group", Assert.Single(contactMesh.Rules.GroupMappings).To);

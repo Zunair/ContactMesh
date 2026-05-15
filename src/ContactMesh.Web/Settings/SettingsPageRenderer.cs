@@ -97,6 +97,7 @@ public static class SettingsPageRenderer
 
         html.AppendLine("<div class=\"rules-layout\">");
         AppendChipGroup(html, "Managed domains", managedEmailDomains);
+        AppendChipGroup(html, "Target users", rules.TargetUsers);
         AppendChipGroup(html, "Global user groups", rules.GlobalUserGroups);
         AppendChipGroup(html, "Global external contacts", rules.GlobalExternalContactGroups);
         AppendChipGroup(html, "Exclusion groups", rules.ExclusionGroups);

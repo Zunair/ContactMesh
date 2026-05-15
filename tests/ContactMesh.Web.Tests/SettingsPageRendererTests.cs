@@ -19,6 +19,7 @@ public sealed class SettingsPageRendererTests
                 ManagedEmailDomains = new[] { "example.org" },
                 Rules = new SyncRuleOptions
                 {
+                    TargetUsers = new[] { "target@example.org" },
                     GlobalUserGroups = new[] { "all-users" },
                     GlobalExternalContactGroups = new[] { "external" },
                     ExclusionGroups = new[] { "blocked" },
@@ -47,6 +48,7 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("value=\"Google\"", html);
         Assert.Contains("checked", html);
         Assert.Contains("example.org", html);
+        Assert.Contains("target@example.org", html);
         Assert.Contains("all-users", html);
         Assert.Contains("source-group", html);
         Assert.Contains("target-group", html);

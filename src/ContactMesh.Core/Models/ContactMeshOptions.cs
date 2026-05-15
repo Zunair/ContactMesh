@@ -12,6 +12,7 @@ public sealed record ContactMeshOptions
 
 public sealed record SyncRuleOptions
 {
+    public IReadOnlyList<string> TargetUsers { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> GlobalUserGroups { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> GlobalExternalContactGroups { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> ExclusionGroups { get; init; } = Array.Empty<string>();

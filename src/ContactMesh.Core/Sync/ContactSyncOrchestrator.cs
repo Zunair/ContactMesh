@@ -47,11 +47,13 @@ public sealed class ContactSyncOrchestrator
             new ExclusionRule(excludedUsers),
             organizationUnitRule: new OrganizationUnitRule(
                 options.Rules.IncludedOrganizationUnits,
-                options.Rules.ExcludedOrganizationUnits));
+                options.Rules.ExcludedOrganizationUnits),
+            targetUsers: options.Rules.TargetUsers);
 
+        var sourceUsers = ruleEngine.CreateEligibleUsers(users);
         var targetUsers = ruleEngine.CreateTargets(users)
             .ToDictionary(target => target.UserId, StringComparer.OrdinalIgnoreCase);
-        var eligibleUsers = users
+        var targetEligibleUsers = sourceUsers
             .Where(user => targetUsers.ContainsKey(user.Id))
             .ToList();
 
@@ -61,7 +63,7 @@ public sealed class ContactSyncOrchestrator
             this.planner,
             new SyncExecutor(this.contactProvider));
 
-        foreach (var targetUser in eligibleUsers)
+        foreach (var targetUser in targetEligibleUsers)
         {
             var baseTarget = targetUsers[targetUser.Id];
             var visibleGroups = ruleEngine.FilterGroupsForTarget(mappedGroups, baseTarget);
@@ -70,7 +72,7 @@ public sealed class ContactSyncOrchestrator
                 LabelNames = BuildTargetLabels(visibleGroups)
             };
             var desiredContacts = await this.CreateDesiredContactsAsync(
-                eligibleUsers,
+                sourceUsers,
                 target,
                 visibleGroups,
                 ruleEngine,

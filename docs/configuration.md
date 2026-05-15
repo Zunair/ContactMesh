@@ -9,6 +9,7 @@ ContactMesh uses one central `ContactMesh` section and provider-specific section
     "DryRun": true,
     "ManagedEmailDomains": [],
     "Rules": {
+      "TargetUsers": [],
       "GlobalUserGroups": [],
       "GlobalExternalContactGroups": [],
       "ExclusionGroups": [],

@@ -47,6 +47,39 @@ public sealed class SyncRuleEngineTests
     }
 
     [Fact]
+    public void CreateTargets_Uses_TargetUserScope_By_Id_Or_Email()
+    {
+        var users = new[]
+        {
+            User("1", "first@example.org", "/Staff"),
+            User("2", "second@example.org", "/Staff"),
+            User("3", "third@example.org", "/Staff")
+        };
+
+        var engine = new SyncRuleEngine(targetUsers: new[] { "1", "second@example.org", " " });
+
+        var targets = engine.CreateTargets(users);
+
+        Assert.Equal(new[] { "1", "2" }, targets.Select(target => target.UserId));
+    }
+
+    [Fact]
+    public void CreateEligibleUsers_Does_Not_Apply_TargetUserScope()
+    {
+        var users = new[]
+        {
+            User("1", "first@example.org", "/Staff"),
+            User("2", "second@example.org", "/Staff")
+        };
+
+        var engine = new SyncRuleEngine(targetUsers: new[] { "1" });
+
+        var eligibleUsers = engine.CreateEligibleUsers(users);
+
+        Assert.Equal(new[] { "1", "2" }, eligibleUsers.Select(user => user.Id));
+    }
+
+    [Fact]
     public void OrganizationUnitRule_Includes_Users_When_No_Inclusion_List_Is_Configured()
     {
         var evaluation = new OrganizationUnitRule().Evaluate(User("1", "person@example.org", "/Any"));

@@ -101,6 +101,40 @@ public sealed class ContactSyncOrchestratorTests
         Assert.Contains(result.Results, syncResult => syncResult.TargetUserId == "user-2" && !syncResult.HasErrors);
     }
 
+    [Fact]
+    public async Task RunAsync_TargetUserScope_Limits_Recipients_But_Not_Directory_Source_Contacts()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            User("source", "source@example.org")
+        });
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(Array.Empty<MeshGroup>(), new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        var syncResult = Assert.Single(result.Results);
+        Assert.Equal("target", syncResult.TargetUserId);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges);
+        Assert.Equal("target", applied.Key);
+        Assert.Contains(applied.Value.Creates, contact => contact.SourceId == "source");
+        Assert.DoesNotContain(applied.Value.Creates, contact => contact.SourceId == "target");
+    }
+
     private static MeshUser User(string id, string email, bool isSuspended = false)
     {
         return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };
