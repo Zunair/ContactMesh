@@ -247,11 +247,6 @@ public sealed class ContactSyncOrchestrator
             return rules.MainContactsGroupLabel.Trim();
         }
 
-        if (!string.IsNullOrWhiteSpace(rules.MainContactsGroupLable))
-        {
-            return rules.MainContactsGroupLable.Trim();
-        }
-
         return DirectoryLabel;
     }
 

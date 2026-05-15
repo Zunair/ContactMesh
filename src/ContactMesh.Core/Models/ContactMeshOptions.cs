@@ -14,7 +14,6 @@ public sealed record SyncRuleOptions
 {
     public string MainContactsGroupEmail { get; init; } = string.Empty;
     public string MainContactsGroupLabel { get; init; } = string.Empty;
-    public string MainContactsGroupLable { get; init; } = string.Empty;
     public IReadOnlyList<string> TargetUsers { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> GlobalUserGroups { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> GlobalExternalContactGroups { get; init; } = Array.Empty<string>();

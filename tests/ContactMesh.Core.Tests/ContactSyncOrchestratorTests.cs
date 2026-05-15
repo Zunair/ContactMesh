@@ -185,7 +185,7 @@ public sealed class ContactSyncOrchestratorTests
                 {
                     TargetUsers = new[] { "target@example.org" },
                     MainContactsGroupEmail = "staff@example.org",
-                    MainContactsGroupLable = "-Directory"
+                    MainContactsGroupLabel = "-Directory"
                 }
             },
             CancellationToken.None);

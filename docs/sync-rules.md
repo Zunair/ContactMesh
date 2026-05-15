@@ -7,7 +7,7 @@ Current rule options:
 - `GlobalUserGroups`: user groups that receive global contacts.
 - `TargetUsers`: optional user IDs or email addresses that limit which users receive managed contacts.
 - `MainContactsGroupEmail`: optional group ID or email whose user members become directory contacts instead of every eligible tenant user.
-- `MainContactsGroupLabel`: label applied to those directory contacts; the legacy `MainContactsGroupLable` spelling is also accepted.
+- `MainContactsGroupLabel`: label applied to those directory contacts.
 - `GlobalExternalContactGroups`: shared external contact groups.
 - `ExclusionGroups`: users or groups that should not receive managed contacts.
 - `ScopedGroupRoots`: group trees used for scoped, group-aware contact visibility.
