@@ -1,19 +1,19 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-05-15",
-  "head": "936761e",
+  "updated": "2026-05-16",
+  "head": "212e080",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
-    "lastKnown": {
-      "commit": "936761e",
-      "build": "pass",
-      "tests": "161 pass, 1 skipped",
-      "warnings": null
-    }
+      "lastKnown": {
+        "commit": "212e080",
+        "build": "pass",
+        "tests": "188 pass, 1 skipped",
+        "warnings": null
+      }
   },
   "bootstrap": {
     "file": "AGENTS.md",
@@ -62,9 +62,23 @@
     { "id": "cleanup-debug-reasons", "commit": "79203d2", "state": "done", "note": "Dry-run cleanup updates now identify the original contact when cleaned fields are blank and stale cleanup reasons list which user-owned detail categories prevented deletion." },
     { "id": "cleanup-debug-values", "commit": "9432c31", "state": "done", "note": "Stale cleanup dry-run reasons now include preserved user-owned values, including metadata key/value pairs, emails, phones, labels, and notes." },
     { "id": "microsoft-cleanup-metadata", "commit": "cb52cb1", "state": "done", "note": "Microsoft365 host planning now treats Graph contactId/changeKey metadata as managed cleanup fields so those provider bookkeeping values do not prevent stale contact deletion." },
-    { "id": "managed-phone-note-cleanup", "commit": "936761e", "state": "done", "note": "Stale cleanup now treats counted notes made only of managed phone types, such as workMobile migration blocks, as managed data instead of user-owned notes." }
+    { "id": "managed-phone-note-cleanup", "commit": "936761e", "state": "done", "note": "Stale cleanup now treats counted notes made only of managed phone types, such as workMobile migration blocks, as managed data instead of user-owned notes." },
+    { "id": "groups-to-sync-by-group", "commit": null, "state": "done-local", "note": "Ported legacy groupsToSyncByGroup behavior as provider-neutral GroupsToSyncByGroup: configured container groups expand direct group members into managed group-email contacts, including member-only group records, with config/docs/Web/test coverage." },
+    { "id": "disable-delete-writes", "commit": null, "state": "done-local", "note": "Added provider-neutral ContactMesh.DisableDeletes so live runs preserve planned delete reporting while skipping contact delete writes, with config/docs/Web/test coverage." },
+    { "id": "group-contact-run-cache", "commit": null, "state": "done-local", "note": "ContactSyncOrchestrator now caches group contact reads per run so shared visible groups are not re-read for every target user; core coverage asserts one provider read across multiple targets." },
+    { "id": "group-contact-prefix", "commit": null, "state": "done-local", "note": "Added configurable provider-neutral group contact display-name prefix with + default, surfaced in config/docs/Web settings, and covered by core/hosting/web tests." },
+    { "id": "group-contact-hyphenated-display", "commit": null, "state": "done-local", "note": "Managed group contact display names now hyphenate whitespace before applying the group prefix, matching legacy names such as +833-Chestnut-Street-(833C) Group." },
+    { "id": "groups-to-sync-by-group-directory-labels", "commit": null, "state": "done-local", "note": "GroupsToSyncByGroup-expanded member groups now apply their group labels to nested directory contacts, porting the legacy Labels -> Location -> Branch contact-label behavior." },
+    { "id": "per-target-progress-logging", "commit": null, "state": "done-local", "note": "ContactSyncOrchestrator now emits provider-neutral per-target progress events, and CLI/Worker stream target start/completion/failure lines during sync runs." },
+    { "id": "dry-run-rule-source-logging", "commit": null, "state": "done-local", "note": "Dry-run output now prints planned contact labels and provider-neutral source-rule details so visible group contacts, visible group member contacts, directory contacts, and GroupsToSyncByGroup contacts can be traced." },
+    { "id": "label-container-scope", "commit": null, "state": "done-local", "note": "Restricted group-derived label creation to GroupsToSyncByGroup member groups; ordinary visible groups no longer create labels, and label groups now use display name before email/id fallback." },
+    { "id": "group-label-stale-cleanup", "commit": null, "state": "done-local", "note": "Planner is now built at runtime inside RunAsync after groups resolve; both ContactMergeEngine and StaleContactCleanupEngine receive all GroupsToSyncByGroup group label values (display name + email + id) as managed labels, so stale ID and email labels written by previous syncs are stripped on the next update. ContactMeshHostFactory passes provider-specific managed metadata keys instead of an injected planner." },
+    { "id": "force-reset-labels", "commit": null, "state": "done-local", "note": "Added ForceResetLabels bool to ContactMeshOptions and ContactMergeOptions. When true, ContactMergeEngine replaces all existing labels with desired labels instead of reconciling, clearing any stale accumulated labels in one run. Surfaced in web settings, docs, and covered by merge engine test." },
+    { "id": "dry-run-labels-removed", "commit": null, "state": "done-local", "note": "Dry-run update lines now include a Labels removed: line when labels are stripped from an existing contact, showing the before/after diff." },
+    { "id": "email-type-normalization", "commit": null, "state": "done-local", "note": "SyncPlanner now accepts a ContactEmailPolicyEngine and applies it to every planned contact (creates and updates). ContactEmailPolicyEngine promotes managed-domain emails from 'other' type to 'work' and deduplicates same-address entries. Wired up in ContactSyncOrchestrator.CreatePlanner using options.ManagedEmailDomains." },
+    { "id": "metadata-idempotency-fix", "commit": null, "state": "done-local", "note": "Fixed SyncPlanner.DictionariesEqual to only check that all existing (provider-persisted) metadata keys are present in merged with correct values. Previously the count equality check treated ephemeral source metadata keys (sourceRule, userId, organizationUnit, groupId, etc.) as changed, triggering spurious Update operations on every run because those keys are never written to or read back from any provider. After the fix, syncs stabilize to NoChange on the second run." }
+    { "id": "phone-format-idempotency", "commit": null, "state": "done-local", "note": "ContactMergeEngine now preserves the provider's stored phone number string when source and existing normalize to the same digits and have the same type. Prevents infinite Update loops when providers (e.g. Microsoft Graph) reformat number strings on storage. Three new ContactMergeEngineTests cover the behaviour." }
   ],
-  "inProgress": [],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
   ],

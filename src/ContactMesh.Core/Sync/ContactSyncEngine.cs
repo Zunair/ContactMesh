@@ -16,11 +16,16 @@ public sealed class ContactSyncEngine
         this.executor = executor ?? new SyncExecutor(contactProvider);
     }
 
-    public async Task<SyncResult> SyncAsync(SyncTarget target, IReadOnlyList<MeshContact> desiredContacts, bool dryRun, CancellationToken cancellationToken)
+    public async Task<SyncResult> SyncAsync(
+        SyncTarget target,
+        IReadOnlyList<MeshContact> desiredContacts,
+        bool dryRun,
+        CancellationToken cancellationToken,
+        bool disableDeletes = false)
     {
         var existingContacts = await this.contactProvider.GetContactsAsync(target.UserId, cancellationToken).ConfigureAwait(false);
         var operations = this.planner.CreatePlan(desiredContacts, existingContacts);
 
-        return await this.executor.ExecuteAsync(target, operations, dryRun, cancellationToken).ConfigureAwait(false);
+        return await this.executor.ExecuteAsync(target, operations, dryRun, cancellationToken, disableDeletes).ConfigureAwait(false);
     }
 }

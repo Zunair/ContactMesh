@@ -13,11 +13,19 @@ public sealed class SyncExecutor
         this.contactProvider = contactProvider;
     }
 
-    public async Task<SyncResult> ExecuteAsync(SyncTarget target, IReadOnlyList<SyncOperation> operations, bool dryRun, CancellationToken cancellationToken)
+    public async Task<SyncResult> ExecuteAsync(
+        SyncTarget target,
+        IReadOnlyList<SyncOperation> operations,
+        bool dryRun,
+        CancellationToken cancellationToken,
+        bool disableDeletes = false)
     {
         if (!dryRun)
         {
-            await this.contactProvider.ApplyChangesAsync(target.UserId, ContactChangeSet.FromOperations(operations), cancellationToken).ConfigureAwait(false);
+            await this.contactProvider.ApplyChangesAsync(
+                target.UserId,
+                ContactChangeSet.FromOperations(operations, disableDeletes),
+                cancellationToken).ConfigureAwait(false);
         }
 
         return new SyncResult
@@ -25,14 +33,15 @@ public sealed class SyncExecutor
             TargetUserId = target.UserId,
             DryRun = dryRun,
             Operations = operations,
-            LogEntries = CreateLogEntries(target, operations, dryRun)
+            LogEntries = CreateLogEntries(target, operations, dryRun, disableDeletes)
         };
     }
 
     private static IReadOnlyList<SyncLogEntry> CreateLogEntries(
         SyncTarget target,
         IReadOnlyList<SyncOperation> operations,
-        bool dryRun)
+        bool dryRun,
+        bool disableDeletes)
     {
         var now = DateTimeOffset.UtcNow;
         var createCount = operations.Count(o => o.OperationType == SyncOperationType.Create);
@@ -48,6 +57,15 @@ public sealed class SyncExecutor
                 target.UserId)
         };
 
+        if (disableDeletes && deleteCount > 0)
+        {
+            entries.Add(new SyncLogEntry(
+                now,
+                SyncLogLevel.Warning,
+                $"Delete writes disabled; {deleteCount} planned delete operation(s) were skipped.",
+                target.UserId));
+        }
+
         if (dryRun)
         {
             entries.Add(new SyncLogEntry(
@@ -59,10 +77,15 @@ public sealed class SyncExecutor
 
         foreach (var operation in operations.Where(operation => operation.OperationType is not SyncOperationType.NoChange))
         {
+            var action = dryRun
+                ? "Dry-run"
+                : disableDeletes && operation.OperationType == SyncOperationType.Delete
+                    ? "Skipped"
+                    : "Applied";
             entries.Add(new SyncLogEntry(
                 now,
                 SyncLogLevel.Information,
-                $"{(dryRun ? "Dry-run" : "Applied")} {FormatOperationType(operation.OperationType)} {DescribeContact(operation)}.",
+                $"{action} {FormatOperationType(operation.OperationType)} {DescribeContact(operation)}.",
                 target.UserId,
                 operation.OperationType,
                 operation.DesiredContact.SourceId ?? operation.ExistingContact?.SourceId,

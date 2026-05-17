@@ -4,9 +4,17 @@ namespace ContactMesh.Core.Sync;
 
 public sealed class GroupContactFactory
 {
-    public MeshContact CreateGroupContact(MeshGroup group, IEnumerable<string>? labels = null)
+    public const string DefaultGroupContactPrefix = "+";
+
+    public MeshContact CreateGroupContact(
+        MeshGroup group,
+        IEnumerable<string>? labels = null,
+        string? prefix = DefaultGroupContactPrefix)
     {
-        var displayName = string.IsNullOrWhiteSpace(group.DisplayName) ? group.Email : group.DisplayName;
+        var baseDisplayName = string.IsNullOrWhiteSpace(group.DisplayName)
+            ? group.Email
+            : HyphenateWhitespace(group.DisplayName);
+        var displayName = ApplyPrefix(baseDisplayName, prefix);
 
         return new MeshContact
         {
@@ -25,5 +33,28 @@ public sealed class GroupContactFactory
                 ["sourceType"] = "group"
             }
         };
+    }
+
+    private static string? ApplyPrefix(string? displayName, string? prefix)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName;
+        }
+
+        var normalizedPrefix = string.IsNullOrWhiteSpace(prefix) ? string.Empty : prefix.Trim();
+        if (normalizedPrefix.Length == 0 || displayName.StartsWith(normalizedPrefix, StringComparison.Ordinal))
+        {
+            return displayName;
+        }
+
+        return $"{normalizedPrefix}{displayName}";
+    }
+
+    private static string HyphenateWhitespace(string displayName)
+    {
+        return string.Join(
+            '-',
+            displayName.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 }

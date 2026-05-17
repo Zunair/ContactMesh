@@ -1,4 +1,5 @@
 using ContactMesh.Core.Abstractions;
+using ContactMesh.Core.Logging;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 using Xunit;
@@ -37,9 +38,41 @@ public sealed class SyncExecutorTests
         Assert.Contains("Dry-run create Directory User.", operationEntry.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_DisableDeletes_Skips_Delete_Writes_But_Reports_Plan()
+    {
+        var provider = new FakeContactProvider();
+        var executor = new SyncExecutor(provider);
+        var staleContact = new MeshContact { SourceId = "stale-1", DisplayName = "Stale Contact" };
+
+        var result = await executor.ExecuteAsync(
+            new SyncTarget { UserId = "user@example.org", UserEmail = "user@example.org" },
+            new[]
+            {
+                new SyncOperation
+                {
+                    OperationType = SyncOperationType.Delete,
+                    DesiredContact = staleContact,
+                    Reason = "Stale managed contact."
+                }
+            },
+            dryRun: false,
+            CancellationToken.None,
+            disableDeletes: true);
+
+        Assert.Equal(1, provider.ApplyCount);
+        Assert.NotNull(provider.LastChanges);
+        Assert.Empty(provider.LastChanges.Deletes);
+        Assert.True(provider.LastChanges.DeleteWritesDisabled);
+        Assert.Equal(1, result.DeleteCount);
+        Assert.Contains(result.LogEntries, entry => entry.Level == SyncLogLevel.Warning && entry.Message.Contains("Delete writes disabled", StringComparison.Ordinal));
+        Assert.Contains(result.LogEntries, entry => entry.OperationType == SyncOperationType.Delete && entry.Message.Contains("Skipped delete Stale Contact.", StringComparison.Ordinal));
+    }
+
     private sealed class FakeContactProvider : IContactProvider
     {
         public int ApplyCount { get; private set; }
+        public ContactChangeSet? LastChanges { get; private set; }
 
         public Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
         {
@@ -49,6 +82,7 @@ public sealed class SyncExecutorTests
         public Task ApplyChangesAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)
         {
             this.ApplyCount++;
+            this.LastChanges = changes;
 
             return Task.CompletedTask;
         }

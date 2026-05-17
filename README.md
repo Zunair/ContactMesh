@@ -71,12 +71,15 @@ The central config shape is:
   "ContactMesh": {
     "Provider": "Google",
     "DryRun": true,
+    "DisableDeletes": false,
     "ManagedEmailDomains": [ "example.org" ],
     "Rules": {
       "GlobalUserGroups": [],
       "MainContactsGroupEmail": "company-directory@example.org",
       "MainContactsGroupLabel": "-Directory",
+      "GroupContactPrefix": "+",
       "GlobalExternalContactGroups": [],
+      "GroupsToSyncByGroup": [],
       "ExclusionGroups": [],
       "ScopedGroupRoots": [],
       "GroupMappings": [],
@@ -89,6 +92,8 @@ The central config shape is:
 
 Provider-specific sections are `GoogleWorkspace` and `Microsoft365`. Keep credentials out of the repository and provide secrets with user secrets, environment variables, mounted files, or your deployment secret store.
 
+Use `GroupsToSyncByGroup` for contact labels: each configured container group's direct subgroups become managed group contacts, and subgroup display names become labels for their members. Regular visible groups control visibility and contact inclusion but do not create labels.
+
 Common overrides:
 
 ```powershell
@@ -97,7 +102,7 @@ $env:Microsoft365__ClientSecret = "<secret>"
 dotnet run --no-build --project .\src\ContactMesh.Cli\ContactMesh.Cli.csproj -- .\appsettings.local.json --ContactMesh:Provider=Microsoft365
 ```
 
-Keep `DryRun` enabled until the generated plan has been reviewed. Setting `ContactMesh:DryRun` to `false` allows provider writes.
+Keep `DryRun` enabled until the generated plan has been reviewed. Setting `ContactMesh:DryRun` to `false` allows provider writes. Set `ContactMesh:DisableDeletes` to `true` when you want live runs to create and update contacts but skip all planned contact delete writes.
 
 ## Run
 

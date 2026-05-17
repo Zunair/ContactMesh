@@ -38,7 +38,7 @@ public sealed class MicrosoftContactBatchWriter
             }
         }
 
-        foreach (var contact in changes.Deletes)
+        foreach (var contact in changes.DeleteWritesDisabled ? Array.Empty<MeshContact>() : changes.Deletes)
         {
             if (contact.Metadata.TryGetValue(MicrosoftContactMapper.ContactIdMetadataKey, out var contactId)
                 && !string.IsNullOrWhiteSpace(contactId))

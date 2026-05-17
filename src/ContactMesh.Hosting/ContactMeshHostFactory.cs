@@ -60,8 +60,7 @@ public static class ContactMeshHostFactory
         return new ContactSyncOrchestrator(
             new GoogleUserProvider(),
             new GoogleGroupProvider(),
-            new GooglePeopleContactProvider(contactClient, labelClient, writer),
-            planner: CreatePlanner(contactMesh));
+            new GooglePeopleContactProvider(contactClient, labelClient, writer));
     }
 
     private static ContactSyncOrchestrator CreateMicrosoft365(ContactMeshOptions contactMesh, Microsoft365Options options, HttpClient httpClient)
@@ -77,13 +76,11 @@ public static class ContactMeshHostFactory
             new MicrosoftUserProvider(directoryClient),
             new MicrosoftGroupProvider(groupClient),
             new MicrosoftContactProvider(contactClient, contactWriter),
-            planner: CreatePlanner(
-                contactMesh,
-                new[]
-                {
-                    MicrosoftContactMapper.ContactIdMetadataKey,
-                    MicrosoftContactMapper.ChangeKeyMetadataKey
-                }));
+            additionalManagedMetadataKeys: new[]
+            {
+                MicrosoftContactMapper.ContactIdMetadataKey,
+                MicrosoftContactMapper.ChangeKeyMetadataKey
+            });
     }
 
     private static ContactSyncOrchestrator CreateScaffolded(ContactMeshOptions contactMesh)
@@ -91,34 +88,7 @@ public static class ContactMeshHostFactory
         return new ContactSyncOrchestrator(
             new EmptyDirectoryProvider(),
             new EmptyGroupProvider(),
-            new EmptyContactProvider(),
-            planner: CreatePlanner(contactMesh));
-    }
-
-    private static SyncPlanner CreatePlanner(ContactMeshOptions contactMesh, IEnumerable<string>? additionalManagedMetadataKeys = null)
-    {
-        var managedMetadataKeys = new StaleContactCleanupOptions()
-            .ManagedMetadataKeys
-            .Concat(additionalManagedMetadataKeys ?? Array.Empty<string>())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        return new SyncPlanner(
-            staleContactCleanupEngine: new StaleContactCleanupEngine(new StaleContactCleanupOptions
-            {
-                ManagedEmailDomains = contactMesh.ManagedEmailDomains,
-                ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ResolveDirectoryLabel(contactMesh.Rules)
-                },
-                ManagedMetadataKeys = managedMetadataKeys
-            }));
-    }
-
-    private static string ResolveDirectoryLabel(SyncRuleOptions rules)
-    {
-        return string.IsNullOrWhiteSpace(rules.MainContactsGroupLabel)
-            ? ContactSyncOrchestrator.DirectoryLabel
-            : rules.MainContactsGroupLabel.Trim();
+            new EmptyContactProvider());
     }
 
     private sealed class EmptyDirectoryProvider : IDirectoryProvider

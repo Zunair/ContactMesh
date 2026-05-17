@@ -41,6 +41,41 @@ public sealed class GoogleContactBatchWriterTests
     }
 
     [Fact]
+    public async Task ApplyAsync_DisableDeletes_Skips_Contact_And_Label_Deletes()
+    {
+        var contactClient = new FakePeopleContactClient();
+        var labelClient = new FakeContactGroupLabelClient(
+            new[]
+            {
+                Label("contactGroups/stale", "Stale", "contact-mesh", "Stale"),
+                Label("contactGroups/directory", "Directory", "contact-mesh", "Directory")
+            });
+        var writer = new GoogleContactBatchWriter(contactClient: contactClient, labelClient: labelClient);
+
+        await writer.ApplyAsync(
+            "user@example.org",
+            new ContactChangeSet
+            {
+                Creates = new[] { Contact("Directory") },
+                Deletes = new[]
+                {
+                    Contact("Directory") with
+                    {
+                        Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            [GoogleContactMapper.ResourceNameMetadataKey] = "people/c789"
+                        }
+                    }
+                },
+                DeleteWritesDisabled = true
+            },
+            CancellationToken.None);
+
+        Assert.DoesNotContain(labelClient.Calls, call => call.StartsWith("delete:", StringComparison.Ordinal));
+        Assert.DoesNotContain(contactClient.Calls, call => call.StartsWith("delete:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ApplyAsync_Skips_Label_Reconciliation_When_No_Label_Client_Is_Configured()
     {
         var writer = new GoogleContactBatchWriter();

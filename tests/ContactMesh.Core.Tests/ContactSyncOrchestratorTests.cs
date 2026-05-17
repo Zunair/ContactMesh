@@ -1,3 +1,4 @@
+using ContactMesh.Core.Logging;
 using ContactMesh.Core.Abstractions;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
@@ -71,7 +72,8 @@ public sealed class ContactSyncOrchestratorTests
         Assert.All(directoryContacts, contact => Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, contact.Labels));
         Assert.All(
             contactProvider.AppliedChanges.Values.SelectMany(changes => changes.Creates).Where(contact => contact.SourceId == "external-1"),
-            contact => Assert.Contains("team@example.org", contact.Labels));
+            contact => Assert.DoesNotContain("team@example.org", contact.Labels));
+        Assert.Equal(1, groupProvider.GroupContactReadCounts["team"]);
     }
 
     [Fact]
@@ -99,6 +101,63 @@ public sealed class ContactSyncOrchestratorTests
         Assert.Equal(1, result.ErrorCount);
         Assert.Contains("Target sync failed for user-1", Assert.Single(result.Errors));
         Assert.Contains(result.Results, syncResult => syncResult.TargetUserId == "user-2" && !syncResult.HasErrors);
+    }
+
+    [Fact]
+    public async Task RunAsync_Reports_Progress_For_Each_Target()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("user-1", "first@example.org"),
+            User("user-2", "second@example.org")
+        });
+        var contactProvider = new CapturingContactProvider
+        {
+            FailingUserId = "user-2"
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(Array.Empty<MeshGroup>(), new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+        var progressUpdates = new List<SyncProgress>();
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions { DryRun = false },
+            CancellationToken.None,
+            (progress, _) =>
+            {
+                progressUpdates.Add(progress);
+                return Task.CompletedTask;
+            });
+
+        Assert.Collection(
+            progressUpdates,
+            progress =>
+            {
+                Assert.Equal(SyncProgressKind.TargetStarted, progress.Kind);
+                Assert.Equal("user-1", progress.TargetUserId);
+                Assert.Equal(1, progress.TargetIndex);
+                Assert.Equal(2, progress.TargetCount);
+            },
+            progress =>
+            {
+                Assert.Equal(SyncProgressKind.TargetCompleted, progress.Kind);
+                Assert.Equal("user-1", progress.TargetUserId);
+                Assert.Equal(1, progress.CreateCount);
+            },
+            progress =>
+            {
+                Assert.Equal(SyncProgressKind.TargetStarted, progress.Kind);
+                Assert.Equal("user-2", progress.TargetUserId);
+                Assert.Equal(2, progress.TargetIndex);
+                Assert.Equal(2, progress.TargetCount);
+            },
+            progress =>
+            {
+                Assert.Equal(SyncProgressKind.TargetFailed, progress.Kind);
+                Assert.Equal("user-2", progress.TargetUserId);
+                Assert.Equal("contact store unavailable", progress.ErrorMessage);
+            });
     }
 
     [Fact]
@@ -202,6 +261,153 @@ public sealed class ContactSyncOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_GroupsToSyncByGroup_Creates_Group_Email_Contacts_From_Container_Members()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org")
+        });
+        var helpGroup = Group(
+            "help",
+            "help@example.org",
+            MeshGroupVisibility.Hidden,
+            MeshGroupVisibility.Hidden);
+        var containerGroup = new MeshGroup
+        {
+            Id = "contact-labels",
+            Email = "contact-labels@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "help",
+                    Email = "help@example.org",
+                    DisplayName = "Help Desk",
+                    Type = MeshGroupMemberType.Group
+                },
+                new MeshGroupMember
+                {
+                    Id = "list-only",
+                    Email = "list-only@example.org",
+                    DisplayName = "List Only",
+                    Type = MeshGroupMemberType.Group
+                },
+                new MeshGroupMember
+                {
+                    Id = "not-a-group",
+                    Email = "not-a-group@example.org",
+                    Type = MeshGroupMemberType.User
+                }
+            }
+        };
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { containerGroup, helpGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    GroupContactPrefix = "#",
+                    GroupsToSyncByGroup = new[] { "contact-labels@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        var helpContact = Assert.Single(applied.Creates, contact => contact.SourceId == "group:help");
+        var listOnlyContact = Assert.Single(applied.Creates, contact => contact.SourceId == "group:list-only");
+
+        Assert.Contains(new ContactEmail("help@example.org", "work", true), helpContact.Emails);
+        Assert.Contains("help@example.org", helpContact.Labels);
+        Assert.Equal("GroupsToSyncByGroup", helpContact.Metadata[ContactSyncOrchestrator.SourceRuleMetadataKey]);
+        Assert.Equal("help@example.org", helpContact.Metadata[ContactSyncOrchestrator.SourceGroupEmailMetadataKey]);
+        Assert.Equal("#List-Only", listOnlyContact.DisplayName);
+        Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "group:not-a-group");
+    }
+
+    [Fact]
+    public async Task RunAsync_GroupsToSyncByGroup_Applies_Container_Member_Group_Label_To_Nested_Directory_Contacts()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            User("branch-user", "branch-user@example.org"),
+            User("outside", "outside@example.org")
+        });
+        var labelsContainer = new MeshGroup
+        {
+            Id = "labels",
+            Email = "labels@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "location",
+                    Email = "location@example.org",
+                    DisplayName = "Location",
+                    Type = MeshGroupMemberType.Group
+                }
+            }
+        };
+        var locationGroup = new MeshGroup
+        {
+            Id = "location",
+            Email = "location@example.org",
+            DisplayName = "Location",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "branch",
+                    Email = "branch@example.org",
+                    DisplayName = "Branch",
+                    Type = MeshGroupMemberType.Group
+                }
+            }
+        };
+        var branchGroup = Group(
+            "branch",
+            "branch@example.org",
+            MeshGroupVisibility.Hidden,
+            MeshGroupVisibility.Hidden,
+            "branch-user");
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(
+                new[] { labelsContainer, locationGroup, branchGroup },
+                new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    GroupsToSyncByGroup = new[] { "labels@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        var branchUserContact = Assert.Single(applied.Creates, contact => contact.SourceId == "branch-user");
+        var outsideContact = Assert.Single(applied.Creates, contact => contact.SourceId == "outside");
+
+        Assert.Contains("Location", branchUserContact.Labels);
+        Assert.DoesNotContain("location@example.org", branchUserContact.Labels);
+        Assert.DoesNotContain("location@example.org", outsideContact.Labels);
+        Assert.Contains(applied.Creates, contact => contact.SourceId == "group:location");
+    }
+
+    [Fact]
     public async Task RunAsync_Deletes_Unmatched_Company_Domain_Contacts_When_Configured()
     {
         var directoryProvider = new FakeDirectoryProvider(new[]
@@ -236,6 +442,124 @@ public sealed class ContactSyncOrchestratorTests
 
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         Assert.Contains(staleContact, applied.Deletes);
+    }
+
+    [Fact]
+    public async Task RunAsync_DisableDeletes_Skips_Delete_Writes_But_Keeps_Delete_Report()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org")
+        });
+        var staleContact = new MeshContact
+        {
+            DisplayName = "Former Employee",
+            CompanyName = "Example",
+            Emails = new[] { new ContactEmail("former@example.org", "work", true) }
+        };
+        var contactProvider = new CapturingContactProvider
+        {
+            ContactsByUserId =
+            {
+                ["target"] = new[] { staleContact }
+            }
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(Array.Empty<MeshGroup>(), new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                DisableDeletes = true,
+                ManagedEmailDomains = new[] { "example.org" }
+            },
+            CancellationToken.None);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        Assert.Empty(applied.Deletes);
+        var syncResult = Assert.Single(result.Results);
+        Assert.Equal(1, syncResult.DeleteCount);
+        Assert.Contains(syncResult.LogEntries, entry => entry.Message.Contains("Delete writes disabled", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_GroupsToSyncByGroup_Cleans_Stale_Group_Id_And_Email_Labels_From_Existing_Contact()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org")
+        });
+        var labelsContainer = new MeshGroup
+        {
+            Id = "labels",
+            Email = "labels@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "dept-id",
+                    Email = "dept@example.org",
+                    DisplayName = "IT Department",
+                    Type = MeshGroupMemberType.Group
+                }
+            }
+        };
+        var deptGroup = new MeshGroup
+        {
+            Id = "dept-id",
+            Email = "dept@example.org",
+            DisplayName = "IT Department",
+            Members = Array.Empty<MeshGroupMember>()
+        };
+
+        // Existing contact has stale labels: the group ID and email from a prior sync
+        var existingGroupContact = new MeshContact
+        {
+            SourceId = "group:dept-id",
+            DisplayName = "+IT-Department",
+            Emails = new[] { new ContactEmail("dept@example.org", "work", true) },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "dept-id",
+                "IT Department",
+                "dept@example.org"
+            }
+        };
+        var contactProvider = new CapturingContactProvider
+        {
+            ContactsByUserId =
+            {
+                ["target"] = new[] { existingGroupContact }
+            }
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(
+                new[] { labelsContainer, deptGroup },
+                new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    GroupsToSyncByGroup = new[] { "labels@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        var groupContact = Assert.Single(applied.Updates, c => c.SourceId == "group:dept-id");
+
+        Assert.Contains("IT Department", groupContact.Labels);
+        Assert.DoesNotContain("dept-id", groupContact.Labels);
+        Assert.DoesNotContain("dept@example.org", groupContact.Labels);
     }
 
     private static MeshUser User(string id, string email, bool isSuspended = false)
@@ -288,6 +612,9 @@ public sealed class ContactSyncOrchestratorTests
         private readonly IReadOnlyList<MeshGroup> groups;
         private readonly IReadOnlyDictionary<string, IReadOnlyList<MeshContact>> contactsByGroupId;
 
+        public IDictionary<string, int> GroupContactReadCounts { get; } =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
         public FakeGroupProvider(
             IReadOnlyList<MeshGroup> groups,
             IReadOnlyDictionary<string, IReadOnlyList<MeshContact>> contactsByGroupId)
@@ -303,6 +630,10 @@ public sealed class ContactSyncOrchestratorTests
 
         public Task<IReadOnlyList<MeshContact>> GetGroupContactsAsync(string groupId, CancellationToken cancellationToken)
         {
+            this.GroupContactReadCounts[groupId] = this.GroupContactReadCounts.TryGetValue(groupId, out var count)
+                ? count + 1
+                : 1;
+
             return Task.FromResult(
                 this.contactsByGroupId.TryGetValue(groupId, out var contacts)
                     ? contacts

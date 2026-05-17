@@ -14,7 +14,13 @@ public sealed class SyncCommand
         TextWriter output,
         CancellationToken cancellationToken)
     {
-        var result = await orchestrator.RunAsync(options, cancellationToken).ConfigureAwait(false);
+        var result = await orchestrator.RunAsync(
+            options,
+            cancellationToken,
+            async (progress, _) =>
+            {
+                await output.WriteLineAsync(SyncProgressFormatter.Format(progress)).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         foreach (var line in SyncRunReportFormatter.Format(result))
         {

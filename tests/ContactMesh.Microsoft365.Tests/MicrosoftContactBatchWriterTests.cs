@@ -64,6 +64,33 @@ public sealed class MicrosoftContactBatchWriterTests
             CancellationToken.None);
     }
 
+    [Fact]
+    public async Task ApplyAsync_DisableDeletes_Skips_Delete_Contacts()
+    {
+        var client = new FakeGraphContactClient();
+        var writer = new MicrosoftContactBatchWriter(client);
+
+        await writer.ApplyAsync(
+            "user@example.org",
+            new ContactChangeSet
+            {
+                Deletes = new[]
+                {
+                    Contact("directory-user-3") with
+                    {
+                        Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-3"
+                        }
+                    }
+                },
+                DeleteWritesDisabled = true
+            },
+            CancellationToken.None);
+
+        Assert.Empty(client.Calls);
+    }
+
     private static MeshContact Contact(string sourceId)
     {
         return new MeshContact

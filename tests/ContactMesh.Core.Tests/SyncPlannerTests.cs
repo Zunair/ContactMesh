@@ -255,4 +255,159 @@ public sealed class SyncPlannerTests
                 ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
             }));
     }
+
+    private static SyncPlanner PlannerWithEmailPolicy()
+    {
+        return new SyncPlanner(
+            emailPolicyEngine: new ContactEmailPolicyEngine(new ContactEmailPolicyOptions
+            {
+                ManagedEmailDomains = new[] { "example.org" }
+            }));
+    }
+
+    [Fact]
+    public void CreatePlan_Upgrades_Other_Typed_Managed_Email_To_Work_On_Create()
+    {
+        var desired = new MeshContact
+        {
+            SourceId = "user-1",
+            Emails = new[] { new ContactEmail("jane@example.org", "other") }
+        };
+
+        var operations = PlannerWithEmailPolicy().CreatePlan(new[] { desired }, Array.Empty<MeshContact>());
+
+        var op = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Create, op.OperationType);
+        var email = Assert.Single(op.DesiredContact.Emails);
+        Assert.Equal("work", email.Type);
+        Assert.True(email.IsPrimary);
+    }
+
+    [Fact]
+    public void CreatePlan_Upgrades_Other_Typed_Managed_Email_To_Work_On_Update()
+    {
+        var desired = new MeshContact
+        {
+            SourceId = "user-1",
+            Emails = new[] { new ContactEmail("jane@example.org", "other") }
+        };
+
+        var existing = new MeshContact
+        {
+            SourceId = "user-1",
+            Emails = new[] { new ContactEmail("jane@example.org", "other") }
+        };
+
+        var operations = PlannerWithEmailPolicy().CreatePlan(new[] { desired }, new[] { existing });
+
+        // Merged contact has same address but email policy upgrades type to "work";
+        // existing still has "other", so the operation is an Update.
+        var op = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, op.OperationType);
+        var email = Assert.Single(op.DesiredContact.Emails);
+        Assert.Equal("work", email.Type);
+    }
+
+    [Fact]
+    public void CreatePlan_Does_Not_Upgrade_Non_Managed_Domain_Email_Type()
+    {
+        var desired = new MeshContact
+        {
+            SourceId = "user-1",
+            Emails = new[] { new ContactEmail("jane@personal.net", "other") }
+        };
+
+        var operations = PlannerWithEmailPolicy().CreatePlan(new[] { desired }, Array.Empty<MeshContact>());
+
+        var op = Assert.Single(operations);
+        var email = Assert.Single(op.DesiredContact.Emails);
+        Assert.Equal("other", email.Type);
+    }
+
+    [Fact]
+    public void CreatePlan_NoChange_When_Merged_Has_Extra_Ephemeral_Metadata_Keys()
+    {
+        // Simulates the Microsoft 365 round-trip: the provider only stores and returns its own
+        // bookkeeping keys (e.g. ContactId, ChangeKey), while the source adds transient keys
+        // (sourceRule, userId, etc.) that are never persisted. After MergeMetadata the merged
+        // contact has more keys than the existing one, but the comparison must not trigger a
+        // spurious Update operation.
+        var desired = Contact("user-1", "Jane Doe") with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["sourceRule"] = "Directory",
+                ["userId"] = "user-1"
+            }
+        };
+
+        var existing = desired with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Provider only returned its own keys; ephemeral source keys are absent.
+                ["providerContactId"] = "abc-123",
+                ["providerChangeKey"] = "AAABBB=="
+            }
+        };
+
+        var operations = new SyncPlanner().CreatePlan(new[] { desired }, new[] { existing });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.NoChange, operation.OperationType);
+    }
+
+    [Fact]
+    public void CreatePlan_Updates_When_Persisted_Metadata_Value_Changes()
+    {
+        // Even with the relaxed comparison, a change in a value that IS present in the existing
+        // contact (e.g. a provider contact ID that got reassigned) must still trigger an Update.
+        var desired = Contact("user-1", "Jane Doe") with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["sourceRule"] = "Directory",
+                ["providerContactId"] = "xyz-999"   // source overwrites the old value
+            }
+        };
+
+        var existing = desired with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["providerContactId"] = "abc-123",  // old value from provider
+                ["providerChangeKey"] = "AAABBB=="
+            }
+        };
+
+        var operations = new SyncPlanner().CreatePlan(new[] { desired }, new[] { existing });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+    }
+
+    [Fact]
+    public void CreatePlan_NoChange_When_Phones_Same_But_Different_Order()
+    {
+        // Microsoft Graph may return phones in a different order than what was written.
+        // The comparison must be order-insensitive to avoid a spurious Update every run.
+        var phone1 = new ContactPhone("267-507-3813", "work");
+        var phone2 = new ContactPhone("267-804-6444", "mobile");
+        var phone3 = new ContactPhone("+12675073780", "work");
+
+        var desired = Contact("user-1", "Jane Doe") with
+        {
+            Phones = new[] { phone1, phone2, phone3 }
+        };
+
+        var existing = desired with
+        {
+            Phones = new[] { phone1, phone3, phone2 }  // same phones, different order
+        };
+
+        var operations = new SyncPlanner().CreatePlan(new[] { desired }, new[] { existing });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.NoChange, operation.OperationType);
+    }
 }

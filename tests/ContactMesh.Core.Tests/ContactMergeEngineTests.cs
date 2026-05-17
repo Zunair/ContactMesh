@@ -62,14 +62,15 @@ public sealed class ContactMergeEngineTests
     }
 
     [Fact]
-    public void Merge_Deduplicates_Source_Phones_By_Normalized_Digits()
+    public void Merge_Deduplicates_Source_Phones_With_Same_Normalized_Number_And_Type()
     {
+        // Two source entries with the same digits and same type collapse to one.
         var source = new MeshContact
         {
             Phones = new[]
             {
                 new ContactPhone("+1 (215) 555-0100", "work", true),
-                new ContactPhone("215-555-0100", "mobile")
+                new ContactPhone("215-555-0100", "work")        // same digits, same type
             }
         };
 
@@ -77,6 +78,27 @@ public sealed class ContactMergeEngineTests
 
         Assert.Single(merged.Phones);
         Assert.Equal("+1 (215) 555-0100", merged.Phones[0].Number);
+    }
+
+    [Fact]
+    public void Merge_Keeps_Both_Phones_When_Same_Number_Has_Different_Types()
+    {
+        // Directory contacts sometimes list the same physical number as both work and mobile.
+        // Both entries must be preserved so no data is lost.
+        var source = new MeshContact
+        {
+            Phones = new[]
+            {
+                new ContactPhone("+12155550100", "work"),
+                new ContactPhone("+12155550100", "mobile")      // same digits, different type
+            }
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, new MeshContact());
+
+        Assert.Equal(2, merged.Phones.Count);
+        Assert.Contains(merged.Phones, p => p.Type == "work");
+        Assert.Contains(merged.Phones, p => p.Type == "mobile");
     }
 
     [Fact]
@@ -173,5 +195,88 @@ public sealed class ContactMergeEngineTests
         Assert.Contains("Directory", merged.Labels);
         Assert.Contains("Sales", merged.Labels);
         Assert.Contains("Personal", merged.Labels);
+    }
+
+    [Fact]
+    public void Merge_ForceResetLabels_Replaces_All_Labels_Including_UserOwned()
+    {
+        var source = new MeshContact
+        {
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
+        };
+
+        var existing = new MeshContact
+        {
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Sales", "Personal", "OldStaleLabel" }
+        };
+
+        var options = new ContactMergeOptions { ForceResetLabels = true };
+        var merged = new ContactMergeEngine(options: options).Merge(source, existing);
+
+        Assert.Single(merged.Labels);
+        Assert.Contains("Directory", merged.Labels);
+        Assert.DoesNotContain("Sales", merged.Labels);
+        Assert.DoesNotContain("Personal", merged.Labels);
+        Assert.DoesNotContain("OldStaleLabel", merged.Labels);
+    }
+
+    [Fact]
+    public void Merge_Preserves_Stored_Phone_Number_Format_When_Normalized_Match()
+    {
+        // When a provider (e.g. Microsoft Graph) rewrites number formatting on storage,
+        // the merge should keep the stored string so the next comparison sees no change.
+        var source = new MeshContact
+        {
+            Phones = new[] { new ContactPhone("+12155550100", "work") }
+        };
+
+        var existing = new MeshContact
+        {
+            // Provider reformatted "+12155550100" to "+1 (215) 555-0100" when it was stored.
+            Phones = new[] { new ContactPhone("+1 (215) 555-0100", "work") }
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, existing);
+
+        var phone = Assert.Single(merged.Phones);
+        Assert.Equal("+1 (215) 555-0100", phone.Number);  // stored format, not source format
+        Assert.Equal("work", phone.Type);
+    }
+
+    [Fact]
+    public void Merge_Uses_Source_Phone_Number_When_No_Stored_Match()
+    {
+        // If the phone is new (not in existing), use the source format as-is.
+        var source = new MeshContact
+        {
+            Phones = new[] { new ContactPhone("+12155550100", "work") }
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, new MeshContact());
+
+        var phone = Assert.Single(merged.Phones);
+        Assert.Equal("+12155550100", phone.Number);
+    }
+
+    [Fact]
+    public void Merge_Uses_Source_Phone_When_Type_Differs_From_Stored()
+    {
+        // If the directory changes a phone's type (e.g. work → mobile), treat it as a new
+        // phone (no stored match) so the update is written through to the provider.
+        var source = new MeshContact
+        {
+            Phones = new[] { new ContactPhone("+12155550100", "mobile") }
+        };
+
+        var existing = new MeshContact
+        {
+            Phones = new[] { new ContactPhone("+1 (215) 555-0100", "work") }  // same number, different type
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, existing);
+
+        var phone = Assert.Single(merged.Phones);
+        Assert.Equal("+12155550100", phone.Number);  // source format (no stored match for mobile)
+        Assert.Equal("mobile", phone.Type);
     }
 }

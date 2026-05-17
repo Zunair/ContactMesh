@@ -18,14 +18,17 @@ public sealed class SettingsPageRendererTests
             {
                 Provider = "Google",
                 DryRun = true,
+                DisableDeletes = true,
                 ManagedEmailDomains = new[] { "example.org" },
                 Rules = new SyncRuleOptions
                 {
                     MainContactsGroupEmail = "company-directory@example.org",
                     MainContactsGroupLabel = "-Directory",
+                    GroupContactPrefix = "#",
                     TargetUsers = new[] { "target@example.org" },
                     GlobalUserGroups = new[] { "all-users" },
                     GlobalExternalContactGroups = new[] { "external" },
+                    GroupsToSyncByGroup = new[] { "contact-labels@example.org" },
                     ExclusionGroups = new[] { "blocked" },
                     ScopedGroupRoots = new[] { "department-root" },
                     IncludedOrganizationUnits = new[] { "/" },
@@ -53,11 +56,15 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("<form method=\"post\" action=\"/settings\">", html);
         Assert.Contains("value=\"Google\"", html);
         Assert.Contains("checked", html);
+        Assert.Contains("Deletes off", html);
+        Assert.Contains("name=\"ContactMesh.DisableDeletes\"", html);
         Assert.Contains("example.org", html);
         Assert.Contains("target@example.org", html);
         Assert.Contains("company-directory@example.org", html);
         Assert.Contains("-Directory", html);
+        Assert.Contains("#", html);
         Assert.Contains("all-users", html);
+        Assert.Contains("contact-labels@example.org", html);
         Assert.Contains("source-group", html);
         Assert.Contains("target-group", html);
         Assert.Contains("service-account.json", html);
@@ -115,6 +122,7 @@ public sealed class SettingsPageRendererTests
 
         Assert.Contains("Saved", html);
         Assert.Contains("Keep this on for live-provider validation", html);
+        Assert.Contains("live runs skip delete writes to providers", html);
         Assert.Contains("Optional user IDs or email addresses that limit who receives managed contacts", html);
         Assert.Contains("append =Ignore to reduce expected noise", html);
         Assert.Contains("Secret value is masked here", html);
@@ -128,10 +136,13 @@ public sealed class SettingsPageRendererTests
         {
             ["ContactMesh.Provider"] = "Microsoft365",
             ["ContactMesh.DryRun"] = "true",
+            ["ContactMesh.DisableDeletes"] = "true",
             ["ContactMesh.ManagedEmailDomains"] = "example.org",
             ["ContactMesh.Rules.MainContactsGroupEmail"] = "company-directory@example.org",
             ["ContactMesh.Rules.MainContactsGroupLabel"] = "-Directory",
+            ["ContactMesh.Rules.GroupContactPrefix"] = "#",
             ["ContactMesh.Rules.TargetUsers"] = "target@example.org",
+            ["ContactMesh.Rules.GroupsToSyncByGroup"] = "contact-labels@example.org",
             ["ContactMesh.Rules.GroupMappings"] = "source@example.org -> target@example.org",
             ["GoogleWorkspace.Scopes"] = GoogleWorkspaceOptions.PeopleContactsScope,
             ["Microsoft365.TenantId"] = "tenant-id",
@@ -152,9 +163,12 @@ public sealed class SettingsPageRendererTests
             var json = await File.ReadAllTextAsync(configPath, TestContext.Current.CancellationToken);
 
             Assert.Contains("\"Provider\": \"Microsoft365\"", json);
+            Assert.Contains("\"DisableDeletes\": true", json);
             Assert.Contains("\"MainContactsGroupEmail\": \"company-directory@example.org\"", json);
             Assert.Contains("\"MainContactsGroupLabel\": \"-Directory\"", json);
+            Assert.Contains("\"GroupContactPrefix\": \"#\"", json);
             Assert.Contains("\"target@example.org\"", json);
+            Assert.Contains("\"contact-labels@example.org\"", json);
             Assert.Contains("\"From\": \"source@example.org\"", json);
             Assert.Contains("\"ClientSecret\": \"existing-secret\"", json);
         }

@@ -22,7 +22,13 @@ public sealed class ContactSyncJob
 
     public async Task<ContactSyncRunResult> RunAsync(CancellationToken cancellationToken)
     {
-        var result = await this.orchestrator.RunAsync(this.options, cancellationToken).ConfigureAwait(false);
+        var result = await this.orchestrator.RunAsync(
+            this.options,
+            cancellationToken,
+            async (progress, _) =>
+            {
+                await this.output.WriteLineAsync(SyncProgressFormatter.Format(progress)).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         foreach (var line in SyncRunReportFormatter.Format(result))
         {

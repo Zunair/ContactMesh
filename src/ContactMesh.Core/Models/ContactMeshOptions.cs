@@ -6,6 +6,8 @@ public sealed record ContactMeshOptions
 
     public string Provider { get; init; } = string.Empty;
     public bool DryRun { get; init; } = true;
+    public bool DisableDeletes { get; init; }
+    public bool ForceResetLabels { get; init; }
     public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
     public SyncRuleOptions Rules { get; init; } = new();
 }
@@ -14,9 +16,11 @@ public sealed record SyncRuleOptions
 {
     public string MainContactsGroupEmail { get; init; } = string.Empty;
     public string MainContactsGroupLabel { get; init; } = string.Empty;
+    public string GroupContactPrefix { get; init; } = "+";
     public IReadOnlyList<string> TargetUsers { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> GlobalUserGroups { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> GlobalExternalContactGroups { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> GroupsToSyncByGroup { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> ExclusionGroups { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> ScopedGroupRoots { get; init; } = Array.Empty<string>();
     public IReadOnlyList<GroupMapping> GroupMappings { get; init; } = Array.Empty<GroupMapping>();

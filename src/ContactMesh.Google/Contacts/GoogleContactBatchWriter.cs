@@ -71,7 +71,7 @@ public sealed class GoogleContactBatchWriter
             }
         }
 
-        foreach (var contact in changes.Deletes)
+        foreach (var contact in changes.DeleteWritesDisabled ? Array.Empty<MeshContact>() : changes.Deletes)
         {
             if (contact.Metadata.TryGetValue(GoogleContactMapper.ResourceNameMetadataKey, out var resourceName)
                 && !string.IsNullOrWhiteSpace(resourceName))
@@ -114,7 +114,7 @@ public sealed class GoogleContactBatchWriter
         var existingLabels = await this.labelClient!.ListAsync(userId, cancellationToken).ConfigureAwait(false);
         var plan = this.labelReconciler.CreatePlan(this.appId, desiredLabels, existingLabels);
 
-        foreach (var staleLabel in plan.LabelsToDelete)
+        foreach (var staleLabel in changes.DeleteWritesDisabled ? Array.Empty<GoogleContactGroupLabel>() : plan.LabelsToDelete)
         {
             if (!string.IsNullOrWhiteSpace(staleLabel.ResourceName))
             {

@@ -23,6 +23,20 @@ public sealed class ContactChangeSetTests
         Assert.Equal(create, Assert.Single(changeSet.Creates));
         Assert.Equal(update, Assert.Single(changeSet.Updates));
         Assert.Equal(delete, Assert.Single(changeSet.Deletes));
+        Assert.False(changeSet.DeleteWritesDisabled);
+    }
+
+    [Fact]
+    public void FromOperations_DisableDeletes_Removes_Delete_Writes_And_Preserves_Flag()
+    {
+        var delete = Contact("delete");
+
+        var changeSet = ContactChangeSet.FromOperations(
+            new[] { Operation(SyncOperationType.Delete, delete) },
+            deleteWritesDisabled: true);
+
+        Assert.Empty(changeSet.Deletes);
+        Assert.True(changeSet.DeleteWritesDisabled);
     }
 
     private static SyncOperation Operation(SyncOperationType operationType, MeshContact contact)

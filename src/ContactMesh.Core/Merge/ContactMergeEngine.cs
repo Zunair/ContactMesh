@@ -26,7 +26,19 @@ public sealed class ContactMergeEngine
 
         var sourcePhones = sourceContact.Phones
             .Where(p => !string.IsNullOrWhiteSpace(p.Number))
-            .DistinctBy(p => this.phoneNormalizer.NormalizeForComparison(p.Number))
+            .DistinctBy(p => (this.phoneNormalizer.NormalizeForComparison(p.Number), p.Type.ToLowerInvariant()))
+            .Select(sourcePhone =>
+            {
+                // Preserve the provider's already-stored number string when the normalized form
+                // matches, so the merged contact compares equal to what the provider returns.
+                // Without this, providers that reformat numbers (e.g. "+12155550100" stored back
+                // as "+1 (215) 555-0100") would trigger a spurious Update on every run.
+                var key = this.phoneNormalizer.NormalizeForComparison(sourcePhone.Number);
+                var stored = existingContact.Phones.FirstOrDefault(p =>
+                    string.Equals(this.phoneNormalizer.NormalizeForComparison(p.Number), key, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(p.Type, sourcePhone.Type, StringComparison.Ordinal));
+                return stored is null ? sourcePhone : sourcePhone with { Number = stored.Number };
+            })
             .ToList();
 
         var sourcePhoneKeys = sourcePhones
@@ -56,6 +68,11 @@ public sealed class ContactMergeEngine
 
     private IReadOnlySet<string> MergeLabels(IReadOnlySet<string> source, IReadOnlySet<string> existing)
     {
+        if (this.options.ForceResetLabels)
+        {
+            return source.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
         if (this.options.ManagedLabels.Count == 0)
         {
             return source.Union(existing, StringComparer.OrdinalIgnoreCase).ToHashSet(StringComparer.OrdinalIgnoreCase);

@@ -8,15 +8,18 @@ public sealed class SyncPlanner
     private readonly ContactMergeEngine mergeEngine;
     private readonly StaleContactCleanupEngine staleContactCleanupEngine;
     private readonly EmailNormalizer emailNormalizer;
+    private readonly ContactEmailPolicyEngine? emailPolicyEngine;
 
     public SyncPlanner(
         ContactMergeEngine? mergeEngine = null,
         StaleContactCleanupEngine? staleContactCleanupEngine = null,
-        EmailNormalizer? emailNormalizer = null)
+        EmailNormalizer? emailNormalizer = null,
+        ContactEmailPolicyEngine? emailPolicyEngine = null)
     {
         this.mergeEngine = mergeEngine ?? new ContactMergeEngine();
         this.staleContactCleanupEngine = staleContactCleanupEngine ?? new StaleContactCleanupEngine();
         this.emailNormalizer = emailNormalizer ?? new EmailNormalizer();
+        this.emailPolicyEngine = emailPolicyEngine;
     }
 
     public IReadOnlyList<SyncOperation> CreatePlan(IReadOnlyList<MeshContact> desiredContacts, IReadOnlyList<MeshContact> existingContacts)
@@ -41,7 +44,7 @@ public sealed class SyncPlanner
                 operations.Add(new SyncOperation
                 {
                     OperationType = SyncOperationType.Create,
-                    DesiredContact = desired,
+                    DesiredContact = this.ApplyEmailPolicy(desired),
                     Reason = "Managed contact does not exist."
                 });
 
@@ -55,7 +58,7 @@ public sealed class SyncPlanner
 
             matchedExistingContacts.Add(existing);
 
-            var merged = this.mergeEngine.Merge(desired, existing);
+            var merged = this.ApplyEmailPolicy(this.mergeEngine.Merge(desired, existing));
             var type = AreEquivalent(merged, existing) ? SyncOperationType.NoChange : SyncOperationType.Update;
 
             operations.Add(new SyncOperation
@@ -119,6 +122,11 @@ public sealed class SyncPlanner
             .ToDictionary(group => group.Key, group => group.First().contact, StringComparer.OrdinalIgnoreCase);
     }
 
+    private MeshContact ApplyEmailPolicy(MeshContact contact)
+    {
+        return this.emailPolicyEngine?.Apply(contact) ?? contact;
+    }
+
     private bool TryFindExistingByEmail(
         MeshContact desired,
         IReadOnlyDictionary<string, MeshContact> existingByEmail,
@@ -161,17 +169,21 @@ public sealed class SyncPlanner
 
     private static bool ContactPhonesEqual(IReadOnlyList<ContactPhone> left, IReadOnlyList<ContactPhone> right)
     {
-        return left.Count == right.Count
-            && left.Zip(right).All(pair =>
-                string.Equals(pair.First.Number, pair.Second.Number, StringComparison.Ordinal)
-                && string.Equals(pair.First.Type, pair.Second.Type, StringComparison.Ordinal)
-                && pair.First.IsPrimary == pair.Second.IsPrimary);
+        if (left.Count != right.Count) return false;
+        var sortedLeft = left.OrderBy(p => p.Type, StringComparer.OrdinalIgnoreCase).ThenBy(p => p.Number, StringComparer.OrdinalIgnoreCase);
+        var sortedRight = right.OrderBy(p => p.Type, StringComparer.OrdinalIgnoreCase).ThenBy(p => p.Number, StringComparer.OrdinalIgnoreCase);
+        return sortedLeft.Zip(sortedRight).All(pair =>
+            string.Equals(pair.First.Number, pair.Second.Number, StringComparison.Ordinal)
+            && string.Equals(pair.First.Type, pair.Second.Type, StringComparison.Ordinal)
+            && pair.First.IsPrimary == pair.Second.IsPrimary);
     }
 
     private static bool DictionariesEqual(IDictionary<string, string> left, IDictionary<string, string> right)
     {
-        return left.Count == right.Count
-            && left.All(item => right.TryGetValue(item.Key, out var rightValue)
-                && string.Equals(item.Value, rightValue, StringComparison.Ordinal));
+        // Only compare metadata keys that exist in `right` (the existing/persisted contact).
+        // Extra keys in `left` (merged) come from ephemeral source metadata that is never written
+        // to or read back from any provider, and must not trigger spurious Update operations.
+        return right.All(item => left.TryGetValue(item.Key, out var leftValue)
+            && string.Equals(item.Value, leftValue, StringComparison.Ordinal));
     }
 }

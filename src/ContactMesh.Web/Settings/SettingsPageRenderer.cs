@@ -47,6 +47,7 @@ public static class SettingsPageRenderer
         html.AppendLine("<div class=\"status-strip\" aria-label=\"Run state\">");
         AppendStatusPill(html, contactMesh.Provider, "Provider");
         AppendStatusPill(html, contactMesh.DryRun ? "Dry run" : "Live writes", "Mode");
+        AppendStatusPill(html, contactMesh.DisableDeletes ? "Deletes off" : "Deletes on", "Deletes");
         html.AppendLine("</div>");
         html.AppendLine("</header>");
         if (!string.IsNullOrWhiteSpace(notice))
@@ -95,6 +96,28 @@ public static class SettingsPageRenderer
 
         html.AppendLine(">");
         html.AppendLine("</label>");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Disable deletes</span>");
+        html.AppendLine("<small>When enabled, ContactMesh still plans delete operations for review, but live runs skip delete writes to providers.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.DisableDeletes\" value=\"true\"");
+        if (options.DisableDeletes)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Force reset labels</span>");
+        html.AppendLine("<small>When enabled, ContactMesh replaces all labels on existing managed contacts instead of reconciling. Use once to clear stale labels accumulated by a previous sync bug, then turn off.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceResetLabels\" value=\"true\"");
+        if (options.ForceResetLabels)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
         html.AppendLine("</div>");
         html.AppendLine("</section>");
     }
@@ -113,10 +136,12 @@ public static class SettingsPageRenderer
         html.AppendLine("<div class=\"rules-layout\">");
         AppendListField(html, "Managed domains", "ContactMesh.ManagedEmailDomains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
         AppendField(html, "Main contacts group", "ContactMesh.Rules.MainContactsGroupEmail", rules.MainContactsGroupEmail, "Optional source group whose user members, including nested group members when the provider supplies them, become directory contacts instead of every eligible tenant user.");
-        AppendField(html, "Main contacts label", "ContactMesh.Rules.MainContactsGroupLabel", ResolveDirectoryLabel(rules), "Label applied to directory contacts from the main contacts group.");
+        AppendField(html, "Main contacts label", "ContactMesh.Rules.MainContactsGroupLabel", ResolveDirectoryLabel(rules), "Compatibility label for directory contacts from the main contacts group; prefer group contact containers for new labels.");
+        AppendField(html, "Group contact prefix", "ContactMesh.Rules.GroupContactPrefix", ResolveGroupContactPrefix(rules), "Prefix added to managed group contact display names; use + by default to distinguish groups from people.");
         AppendListField(html, "Target users", "ContactMesh.Rules.TargetUsers", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
         AppendListField(html, "Global user groups", "ContactMesh.Rules.GlobalUserGroups", "Groups whose user members should receive global managed contacts.", rules.GlobalUserGroups);
         AppendListField(html, "Global external contacts", "ContactMesh.Rules.GlobalExternalContactGroups", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
+        AppendListField(html, "Group contact containers", "ContactMesh.Rules.GroupsToSyncByGroup", "Label containers whose direct group members become managed group-email contacts and display-name labels for their members.", rules.GroupsToSyncByGroup);
         AppendListField(html, "Exclusion groups", "ContactMesh.Rules.ExclusionGroups", "Users or group members that should not receive managed contacts.", rules.ExclusionGroups);
         AppendListField(html, "Scoped group roots", "ContactMesh.Rules.ScopedGroupRoots", "Root groups used for group-aware visibility, so targets receive contacts from groups they are allowed to see.", rules.ScopedGroupRoots);
         AppendListField(html, "Included OUs", "ContactMesh.Rules.IncludedOrganizationUnits", "Organization unit prefixes allowed to receive managed contacts.", rules.IncludedOrganizationUnits);
@@ -316,6 +341,13 @@ public static class SettingsPageRenderer
         }
 
         return ContactSyncOrchestrator.DirectoryLabel;
+    }
+
+    private static string ResolveGroupContactPrefix(SyncRuleOptions rules)
+    {
+        return string.IsNullOrWhiteSpace(rules.GroupContactPrefix)
+            ? GroupContactFactory.DefaultGroupContactPrefix
+            : rules.GroupContactPrefix;
     }
 
     private static string Encode(string value)

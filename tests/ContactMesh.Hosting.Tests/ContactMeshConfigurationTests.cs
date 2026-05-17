@@ -18,12 +18,15 @@ public sealed class ContactMeshConfigurationTests
         {
             ["ContactMesh:Provider"] = "Google",
             ["ContactMesh:DryRun"] = "false",
+            ["ContactMesh:DisableDeletes"] = "true",
             ["ContactMesh:ManagedEmailDomains:0"] = "example.org",
             ["ContactMesh:Rules:TargetUsers:0"] = "target@example.org",
             ["ContactMesh:Rules:MainContactsGroupEmail"] = "company-directory@example.org",
             ["ContactMesh:Rules:MainContactsGroupLabel"] = "-Directory",
+            ["ContactMesh:Rules:GroupContactPrefix"] = "#",
             ["ContactMesh:Rules:GlobalUserGroups:0"] = "all-users",
             ["ContactMesh:Rules:GlobalExternalContactGroups:0"] = "external-users",
+            ["ContactMesh:Rules:GroupsToSyncByGroup:0"] = "contact-labels@example.org",
             ["ContactMesh:Rules:ExclusionGroups:0"] = "blocked",
             ["ContactMesh:Rules:ScopedGroupRoots:0"] = "engineering",
             ["ContactMesh:Rules:GroupMappings:0:From"] = "source-group",
@@ -52,18 +55,23 @@ public sealed class ContactMeshConfigurationTests
 
         Assert.Equal("Google", contactMesh.Provider);
         Assert.False(contactMesh.DryRun);
+        Assert.True(contactMesh.DisableDeletes);
         Assert.Equal("example.org", Assert.Single(contactMesh.ManagedEmailDomains));
         Assert.Equal("target@example.org", Assert.Single(contactMesh.Rules.TargetUsers));
         Assert.Equal("company-directory@example.org", contactMesh.Rules.MainContactsGroupEmail);
         Assert.Equal("-Directory", contactMesh.Rules.MainContactsGroupLabel);
+        Assert.Equal("#", contactMesh.Rules.GroupContactPrefix);
         Assert.Equal("all-users", Assert.Single(contactMesh.Rules.GlobalUserGroups));
+        Assert.Equal("contact-labels@example.org", Assert.Single(contactMesh.Rules.GroupsToSyncByGroup));
         Assert.Equal("source-group", Assert.Single(contactMesh.Rules.GroupMappings).From);
         Assert.Equal("target-group", Assert.Single(contactMesh.Rules.GroupMappings).To);
 
         Assert.Equal("all-users", Assert.Single(rules.GlobalUserGroups));
         Assert.Equal("company-directory@example.org", rules.MainContactsGroupEmail);
         Assert.Equal("-Directory", rules.MainContactsGroupLabel);
+        Assert.Equal("#", rules.GroupContactPrefix);
         Assert.Equal("external-users", Assert.Single(rules.GlobalExternalContactGroups));
+        Assert.Equal("contact-labels@example.org", Assert.Single(rules.GroupsToSyncByGroup));
         Assert.Equal("blocked", Assert.Single(rules.ExclusionGroups));
         Assert.Equal("engineering", Assert.Single(rules.ScopedGroupRoots));
         Assert.Equal("/", Assert.Single(rules.IncludedOrganizationUnits));

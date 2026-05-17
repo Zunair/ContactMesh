@@ -41,14 +41,18 @@ public sealed record SettingsFormModel(
         {
             Provider = Read(form, "ContactMesh.Provider"),
             DryRun = form.ContainsKey("ContactMesh.DryRun"),
+            DisableDeletes = form.ContainsKey("ContactMesh.DisableDeletes"),
+            ForceResetLabels = form.ContainsKey("ContactMesh.ForceResetLabels"),
             ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
             Rules = new SyncRuleOptions
             {
                 MainContactsGroupEmail = Read(form, "ContactMesh.Rules.MainContactsGroupEmail"),
                 MainContactsGroupLabel = Read(form, "ContactMesh.Rules.MainContactsGroupLabel"),
+                GroupContactPrefix = Read(form, "ContactMesh.Rules.GroupContactPrefix"),
                 TargetUsers = Lines(form, "ContactMesh.Rules.TargetUsers"),
                 GlobalUserGroups = Lines(form, "ContactMesh.Rules.GlobalUserGroups"),
                 GlobalExternalContactGroups = Lines(form, "ContactMesh.Rules.GlobalExternalContactGroups"),
+                GroupsToSyncByGroup = Lines(form, "ContactMesh.Rules.GroupsToSyncByGroup"),
                 ExclusionGroups = Lines(form, "ContactMesh.Rules.ExclusionGroups"),
                 ScopedGroupRoots = Lines(form, "ContactMesh.Rules.ScopedGroupRoots"),
                 IncludedOrganizationUnits = Lines(form, "ContactMesh.Rules.IncludedOrganizationUnits"),
