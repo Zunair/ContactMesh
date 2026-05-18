@@ -74,9 +74,9 @@ public static class ContactMeshHostFactory
 
         return new ContactSyncOrchestrator(
             new MicrosoftUserProvider(directoryClient),
-            new MicrosoftGroupProvider(groupClient),
+            new MicrosoftGroupProvider(groupClient, options.GroupTypes),
             new MicrosoftContactProvider(contactClient, contactWriter),
-            additionalManagedMetadataKeys: new[]
+            additionalOperationalMetadataKeys: new[]
             {
                 MicrosoftContactMapper.ContactIdMetadataKey,
                 MicrosoftContactMapper.ChangeKeyMetadataKey

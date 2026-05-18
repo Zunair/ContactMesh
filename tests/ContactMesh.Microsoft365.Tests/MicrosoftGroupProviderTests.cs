@@ -92,6 +92,84 @@ public sealed class MicrosoftGroupProviderTests
         Assert.Equal("external@example.org", Assert.Single(contact.Emails).Address);
     }
 
+    [Fact]
+    public async Task GetGroupsAsync_Returns_All_Types_When_GroupTypes_Not_Configured()
+    {
+        var allTypeGroups = new[]
+        {
+            new MicrosoftGraphGroup { Id = "m365", Mail = "m365@example.org", GroupTypes = new[] { "Unified" }, MailEnabled = true },
+            new MicrosoftGraphGroup { Id = "mail-sec", Mail = "mailsec@example.org", MailEnabled = true, SecurityEnabled = true },
+            new MicrosoftGraphGroup { Id = "dist", Mail = "dist@example.org", MailEnabled = true, SecurityEnabled = false }
+        };
+
+        var provider = new MicrosoftGroupProvider(new FakeGraphGroupClient(allTypeGroups, new Dictionary<string, IReadOnlyList<MicrosoftGraphGroupMember>>(StringComparer.OrdinalIgnoreCase)));
+
+        var groups = await provider.GetGroupsAsync(CancellationToken.None);
+
+        Assert.Equal(3, groups.Count);
+    }
+
+    [Theory]
+    [InlineData("Microsoft365", "m365")]
+    [InlineData("MailEnabledSecurity", "mail-sec")]
+    [InlineData("Distribution", "dist")]
+    public async Task GetGroupsAsync_Filters_To_Configured_GroupType(string allowedType, string expectedGroupId)
+    {
+        var allTypeGroups = new[]
+        {
+            new MicrosoftGraphGroup { Id = "m365", Mail = "m365@example.org", GroupTypes = new[] { "Unified" }, MailEnabled = true },
+            new MicrosoftGraphGroup { Id = "mail-sec", Mail = "mailsec@example.org", MailEnabled = true, SecurityEnabled = true },
+            new MicrosoftGraphGroup { Id = "dist", Mail = "dist@example.org", MailEnabled = true, SecurityEnabled = false }
+        };
+
+        var provider = new MicrosoftGroupProvider(
+            new FakeGraphGroupClient(allTypeGroups, new Dictionary<string, IReadOnlyList<MicrosoftGraphGroupMember>>(StringComparer.OrdinalIgnoreCase)),
+            new[] { allowedType });
+
+        var groups = await provider.GetGroupsAsync(CancellationToken.None);
+
+        var group = Assert.Single(groups);
+        Assert.Equal(expectedGroupId, group.Id);
+    }
+
+    [Fact]
+    public async Task GetGroupsAsync_Filters_To_Multiple_Configured_GroupTypes()
+    {
+        var allTypeGroups = new[]
+        {
+            new MicrosoftGraphGroup { Id = "m365", Mail = "m365@example.org", GroupTypes = new[] { "Unified" }, MailEnabled = true },
+            new MicrosoftGraphGroup { Id = "mail-sec", Mail = "mailsec@example.org", MailEnabled = true, SecurityEnabled = true },
+            new MicrosoftGraphGroup { Id = "dist", Mail = "dist@example.org", MailEnabled = true, SecurityEnabled = false }
+        };
+
+        var provider = new MicrosoftGroupProvider(
+            new FakeGraphGroupClient(allTypeGroups, new Dictionary<string, IReadOnlyList<MicrosoftGraphGroupMember>>(StringComparer.OrdinalIgnoreCase)),
+            new[] { "Microsoft365", "Distribution" });
+
+        var groups = await provider.GetGroupsAsync(CancellationToken.None);
+
+        Assert.Equal(2, groups.Count);
+        Assert.Contains(groups, g => g.Id == "m365");
+        Assert.Contains(groups, g => g.Id == "dist");
+    }
+
+    [Fact]
+    public async Task GetGroupsAsync_GroupType_Matching_Is_Case_Insensitive()
+    {
+        var allTypeGroups = new[]
+        {
+            new MicrosoftGraphGroup { Id = "m365", Mail = "m365@example.org", GroupTypes = new[] { "Unified" }, MailEnabled = true }
+        };
+
+        var provider = new MicrosoftGroupProvider(
+            new FakeGraphGroupClient(allTypeGroups, new Dictionary<string, IReadOnlyList<MicrosoftGraphGroupMember>>(StringComparer.OrdinalIgnoreCase)),
+            new[] { "microsoft365" });
+
+        var groups = await provider.GetGroupsAsync(CancellationToken.None);
+
+        Assert.Single(groups);
+    }
+
     private sealed class FakeGraphGroupClient : IMicrosoftGraphGroupClient
     {
         private readonly IReadOnlyList<MicrosoftGraphGroup> groups;
@@ -121,3 +199,4 @@ public sealed class MicrosoftGroupProviderTests
         }
     }
 }
+

@@ -100,4 +100,37 @@ public sealed class MicrosoftGroupMapperTests
         Assert.Contains(new ContactPhone("+1 215 555 0101", "mobile"), contact.Phones);
         Assert.Equal("contact-1", contact.Metadata[MicrosoftGroupMapper.OrgContactIdMetadataKey]);
     }
+
+    [Theory]
+    [InlineData(true, false, new[] { "Unified" }, MicrosoftGroupType.Microsoft365)]
+    [InlineData(true, true, new string[0], MicrosoftGroupType.MailEnabledSecurity)]
+    [InlineData(true, false, new string[0], MicrosoftGroupType.Distribution)]
+    public void GetGroupType_Classifies_Known_Group_Types(
+        bool mailEnabled,
+        bool securityEnabled,
+        string[] groupTypes,
+        MicrosoftGroupType expectedType)
+    {
+        var group = new MicrosoftGraphGroup
+        {
+            MailEnabled = mailEnabled,
+            SecurityEnabled = securityEnabled,
+            GroupTypes = groupTypes
+        };
+
+        Assert.Equal(expectedType, MicrosoftGroupMapper.GetGroupType(group));
+    }
+
+    [Fact]
+    public void GetGroupType_Returns_Null_For_Non_Mail_Enabled_Security_Group()
+    {
+        var group = new MicrosoftGraphGroup
+        {
+            MailEnabled = false,
+            SecurityEnabled = true,
+            GroupTypes = Array.Empty<string>()
+        };
+
+        Assert.Null(MicrosoftGroupMapper.GetGroupType(group));
+    }
 }

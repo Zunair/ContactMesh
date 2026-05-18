@@ -263,19 +263,25 @@ public sealed class ContactSyncOrchestratorTests
     [Fact]
     public async Task RunAsync_GroupsToSyncByGroup_Creates_Group_Email_Contacts_From_Container_Members()
     {
+        // Hierarchy: container (L1) → support label group (L2) → help / list-only contact groups (L3)
         var directoryProvider = new FakeDirectoryProvider(new[]
         {
             User("target", "target@example.org")
         });
-        var helpGroup = Group(
-            "help",
-            "help@example.org",
-            MeshGroupVisibility.Hidden,
-            MeshGroupVisibility.Hidden);
-        var containerGroup = new MeshGroup
+        // Level 3 contact group – resolved from groups list
+        var helpGroup = new MeshGroup
         {
-            Id = "contact-labels",
-            Email = "contact-labels@example.org",
+            Id = "help",
+            Email = "help@example.org",
+            DisplayName = "Help Desk",
+            Members = Array.Empty<MeshGroupMember>()
+        };
+        // Level 2 label group
+        var supportGroup = new MeshGroup
+        {
+            Id = "support",
+            Email = "support@example.org",
+            DisplayName = "Support",
             Members = new[]
             {
                 new MeshGroupMember
@@ -291,6 +297,22 @@ public sealed class ContactSyncOrchestratorTests
                     Email = "list-only@example.org",
                     DisplayName = "List Only",
                     Type = MeshGroupMemberType.Group
+                }
+            }
+        };
+        // Level 1 container
+        var containerGroup = new MeshGroup
+        {
+            Id = "contact-labels",
+            Email = "contact-labels@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "support",
+                    Email = "support@example.org",
+                    DisplayName = "Support",
+                    Type = MeshGroupMemberType.Group
                 },
                 new MeshGroupMember
                 {
@@ -303,7 +325,7 @@ public sealed class ContactSyncOrchestratorTests
         var contactProvider = new CapturingContactProvider();
         var orchestrator = new ContactSyncOrchestrator(
             directoryProvider,
-            new FakeGroupProvider(new[] { containerGroup, helpGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            new FakeGroupProvider(new[] { containerGroup, supportGroup, helpGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
             contactProvider);
 
         await orchestrator.RunAsync(
@@ -320,25 +342,30 @@ public sealed class ContactSyncOrchestratorTests
             CancellationToken.None);
 
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        // Level 3 groups become the contacts; label comes from Level 2 ("Support")
         var helpContact = Assert.Single(applied.Creates, contact => contact.SourceId == "group:help");
         var listOnlyContact = Assert.Single(applied.Creates, contact => contact.SourceId == "group:list-only");
 
         Assert.Contains(new ContactEmail("help@example.org", "work", true), helpContact.Emails);
-        Assert.Contains("help@example.org", helpContact.Labels);
+        Assert.Contains("Support", helpContact.Labels);
         Assert.Equal("GroupsToSyncByGroup", helpContact.Metadata[ContactSyncOrchestrator.SourceRuleMetadataKey]);
         Assert.Equal("help@example.org", helpContact.Metadata[ContactSyncOrchestrator.SourceGroupEmailMetadataKey]);
         Assert.Equal("#List-Only", listOnlyContact.DisplayName);
+        Assert.Contains("Support", listOnlyContact.Labels);
+        // Level 2 label group and user member of container are not promoted to contacts
+        Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "group:support");
         Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "group:not-a-group");
     }
 
     [Fact]
-    public async Task RunAsync_GroupsToSyncByGroup_Applies_Container_Member_Group_Label_To_Nested_Directory_Contacts()
+    public async Task RunAsync_GroupsToSyncByGroup_Creates_Level3_Group_Contact_With_Level2_Label()
     {
+        // Hierarchy: labels (L1) → location (L2, label="Location") → branch (L3, becomes contact)
+        // Users inside the L3 group are NOT labeled with the L2 label.
         var directoryProvider = new FakeDirectoryProvider(new[]
         {
             User("target", "target@example.org"),
-            User("branch-user", "branch-user@example.org"),
-            User("outside", "outside@example.org")
+            User("branch-user", "branch-user@example.org")
         });
         var labelsContainer = new MeshGroup
         {
@@ -355,6 +382,7 @@ public sealed class ContactSyncOrchestratorTests
                 }
             }
         };
+        // Level 2: label group
         var locationGroup = new MeshGroup
         {
             Id = "location",
@@ -371,6 +399,7 @@ public sealed class ContactSyncOrchestratorTests
                 }
             }
         };
+        // Level 3: contact group (contains users; users are not labeled)
         var branchGroup = Group(
             "branch",
             "branch@example.org",
@@ -398,13 +427,14 @@ public sealed class ContactSyncOrchestratorTests
             CancellationToken.None);
 
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
-        var branchUserContact = Assert.Single(applied.Creates, contact => contact.SourceId == "branch-user");
-        var outsideContact = Assert.Single(applied.Creates, contact => contact.SourceId == "outside");
-
-        Assert.Contains("Location", branchUserContact.Labels);
-        Assert.DoesNotContain("location@example.org", branchUserContact.Labels);
-        Assert.DoesNotContain("location@example.org", outsideContact.Labels);
-        Assert.Contains(applied.Creates, contact => contact.SourceId == "group:location");
+        // L3 group becomes the contact with L2 label
+        var branchContact = Assert.Single(applied.Creates, c => c.SourceId == "group:branch");
+        Assert.Contains("Location", branchContact.Labels);
+        // L2 group is NOT promoted to a contact
+        Assert.DoesNotContain(applied.Creates, c => c.SourceId == "group:location");
+        // Directory users inside L3 are NOT labeled with the L2 label
+        var branchUserContact = Assert.Single(applied.Creates, c => c.SourceId == "branch-user");
+        Assert.DoesNotContain("Location", branchUserContact.Labels);
     }
 
     [Fact]
@@ -492,6 +522,7 @@ public sealed class ContactSyncOrchestratorTests
         {
             User("target", "target@example.org")
         });
+        // Hierarchy: labels (L1) → dept (L2, label="IT Department") → unit (L3, contact)
         var labelsContainer = new MeshGroup
         {
             Id = "labels",
@@ -507,25 +538,43 @@ public sealed class ContactSyncOrchestratorTests
                 }
             }
         };
+        // Level 2 label group
         var deptGroup = new MeshGroup
         {
             Id = "dept-id",
             Email = "dept@example.org",
             DisplayName = "IT Department",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "unit-id",
+                    Email = "unit@example.org",
+                    DisplayName = "IT Unit",
+                    Type = MeshGroupMemberType.Group
+                }
+            }
+        };
+        // Level 3 contact group
+        var unitGroup = new MeshGroup
+        {
+            Id = "unit-id",
+            Email = "unit@example.org",
+            DisplayName = "IT Unit",
             Members = Array.Empty<MeshGroupMember>()
         };
 
         // Existing contact has stale labels: the group ID and email from a prior sync
         var existingGroupContact = new MeshContact
         {
-            SourceId = "group:dept-id",
-            DisplayName = "+IT-Department",
-            Emails = new[] { new ContactEmail("dept@example.org", "work", true) },
+            SourceId = "group:unit-id",
+            DisplayName = "+IT-Unit",
+            Emails = new[] { new ContactEmail("unit@example.org", "work", true) },
             Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "dept-id",
+                "unit-id",
                 "IT Department",
-                "dept@example.org"
+                "unit@example.org"
             }
         };
         var contactProvider = new CapturingContactProvider
@@ -538,7 +587,7 @@ public sealed class ContactSyncOrchestratorTests
         var orchestrator = new ContactSyncOrchestrator(
             directoryProvider,
             new FakeGroupProvider(
-                new[] { labelsContainer, deptGroup },
+                new[] { labelsContainer, deptGroup, unitGroup },
                 new Dictionary<string, IReadOnlyList<MeshContact>>()),
             contactProvider);
 
@@ -555,11 +604,11 @@ public sealed class ContactSyncOrchestratorTests
             CancellationToken.None);
 
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
-        var groupContact = Assert.Single(applied.Updates, c => c.SourceId == "group:dept-id");
+        var groupContact = Assert.Single(applied.Updates, c => c.SourceId == "group:unit-id");
 
         Assert.Contains("IT Department", groupContact.Labels);
-        Assert.DoesNotContain("dept-id", groupContact.Labels);
-        Assert.DoesNotContain("dept@example.org", groupContact.Labels);
+        Assert.DoesNotContain("unit-id", groupContact.Labels);
+        Assert.DoesNotContain("unit@example.org", groupContact.Labels);
     }
 
     private static MeshUser User(string id, string email, bool isSuspended = false)

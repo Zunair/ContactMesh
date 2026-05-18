@@ -21,6 +21,7 @@ public sealed class ContactSyncOrchestrator
     private readonly GroupContactFactory groupContactFactory;
     private readonly GroupMappingEngine groupMappingEngine;
     private readonly IReadOnlyList<string> additionalManagedMetadataKeys;
+    private readonly IReadOnlyList<string> additionalOperationalMetadataKeys;
 
     public ContactSyncOrchestrator(
         IDirectoryProvider directoryProvider,
@@ -29,7 +30,8 @@ public sealed class ContactSyncOrchestrator
         DirectoryContactFactory? directoryContactFactory = null,
         GroupContactFactory? groupContactFactory = null,
         GroupMappingEngine? groupMappingEngine = null,
-        IEnumerable<string>? additionalManagedMetadataKeys = null)
+        IEnumerable<string>? additionalManagedMetadataKeys = null,
+        IEnumerable<string>? additionalOperationalMetadataKeys = null)
     {
         this.directoryProvider = directoryProvider;
         this.groupProvider = groupProvider;
@@ -40,6 +42,9 @@ public sealed class ContactSyncOrchestrator
         this.additionalManagedMetadataKeys = additionalManagedMetadataKeys is null
             ? Array.Empty<string>()
             : additionalManagedMetadataKeys.ToList();
+        this.additionalOperationalMetadataKeys = additionalOperationalMetadataKeys is null
+            ? Array.Empty<string>()
+            : additionalOperationalMetadataKeys.ToList();
     }
 
     public async Task<ContactSyncRunResult> RunAsync(
@@ -52,7 +57,7 @@ public sealed class ContactSyncOrchestrator
         var users = await this.directoryProvider.GetUsersAsync(cancellationToken).ConfigureAwait(false);
         var groups = await this.groupProvider.GetGroupsAsync(cancellationToken).ConfigureAwait(false);
         var mappedGroups = this.groupMappingEngine.ApplyMappings(groups, options.Rules.GroupMappings);
-        var groupContactSourceGroups = ResolveGroupsToSyncByGroup(
+        var groupContactSources = ResolveGroupsToSyncByGroup(
             mappedGroups,
             options.Rules.GroupsToSyncByGroup);
         var excludedUsers = ResolveUserIdsFromGroups(mappedGroups, options.Rules.ExclusionGroups);
@@ -74,7 +79,7 @@ public sealed class ContactSyncOrchestrator
             .ToList();
 
         var results = new List<SyncResult>();
-        var planner = CreatePlanner(options, groupContactSourceGroups, this.additionalManagedMetadataKeys);
+        var planner = CreatePlanner(options, groupContactSources, this.additionalManagedMetadataKeys, this.additionalOperationalMetadataKeys);
         var syncEngine = new ContactSyncEngine(
             this.contactProvider,
             planner,
@@ -88,7 +93,7 @@ public sealed class ContactSyncOrchestrator
             var visibleGroups = ruleEngine.FilterGroupsForTarget(mappedGroups, baseTarget);
             var target = baseTarget with
             {
-                LabelNames = BuildTargetLabels(directoryLabel, groupContactSourceGroups)
+                LabelNames = BuildTargetLabels(directoryLabel, groupContactSources)
             };
 
             await ReportProgressAsync(
@@ -108,7 +113,7 @@ public sealed class ContactSyncOrchestrator
                     target,
                     mappedGroups,
                     visibleGroups,
-                    groupContactSourceGroups,
+                    groupContactSources,
                     ruleEngine,
                     directoryLabel,
                     groupContactPrefix,
@@ -175,7 +180,7 @@ public sealed class ContactSyncOrchestrator
         SyncTarget target,
         IReadOnlyList<MeshGroup> allGroups,
         IReadOnlyList<GroupVisibilityDecision> visibleGroups,
-        IReadOnlyList<MeshGroup> groupContactSourceGroups,
+        IReadOnlyList<GroupContactSource> groupContactSources,
         SyncRuleEngine ruleEngine,
         string directoryLabel,
         string groupContactPrefix,
@@ -187,7 +192,7 @@ public sealed class ContactSyncOrchestrator
             .Select(user => AddMetadata(
                 this.directoryContactFactory.CreateUserContact(
                     user,
-                    BuildDirectoryContactLabels(user, directoryLabel, groupContactSourceGroups, allGroups)),
+                    BuildDirectoryContactLabels(user, directoryLabel)),
                 (SourceRuleMetadataKey, "Directory")))
             .ToList();
 
@@ -214,13 +219,12 @@ public sealed class ContactSyncOrchestrator
             }
         }
 
-        foreach (var group in groupContactSourceGroups)
+        foreach (var entry in groupContactSources)
         {
-            var groupLabels = GetGroupContactLabels(group);
             contacts.Add(AddGroupRuleMetadata(
-                this.groupContactFactory.CreateGroupContact(group, groupLabels, groupContactPrefix),
+                this.groupContactFactory.CreateGroupContact(entry.Group, new[] { entry.LabelName }, groupContactPrefix),
                 "GroupsToSyncByGroup",
-                group));
+                entry.Group));
         }
 
         return ruleEngine.FilterContactsForTarget(DeduplicateContacts(contacts), target);
@@ -287,40 +291,63 @@ public sealed class ContactSyncOrchestrator
         return memberKeys;
     }
 
-    private static IReadOnlyList<MeshGroup> ResolveGroupsToSyncByGroup(
+    // Level 1 = configured container group; Level 2 = direct group members that become the label;
+    // Level 3 = direct group members of each Level-2 group that become the contact entries.
+    private sealed record GroupContactSource(MeshGroup Group, string LabelName);
+
+    private static IReadOnlyList<GroupContactSource> ResolveGroupsToSyncByGroup(
         IReadOnlyList<MeshGroup> groups,
         IReadOnlyList<string> groupIdsOrEmails)
     {
         if (groupIdsOrEmails.Count == 0)
         {
-            return Array.Empty<MeshGroup>();
+            return Array.Empty<GroupContactSource>();
         }
 
-        var groupContacts = new Dictionary<string, MeshGroup>(StringComparer.OrdinalIgnoreCase);
+        var contactSources = new Dictionary<string, GroupContactSource>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var idOrEmail in groupIdsOrEmails.Where(value => !string.IsNullOrWhiteSpace(value)))
         {
+            // Level 1: the configured container group
             var container = groups.FirstOrDefault(group => MatchesGroup(group, idOrEmail.Trim()));
             if (container is null)
             {
                 continue;
             }
 
-            foreach (var member in container.Members.Where(member => member.Type == MeshGroupMemberType.Group))
+            // Level 2: direct group members of the container – their display name becomes the label
+            foreach (var labelMember in container.Members.Where(m => m.Type == MeshGroupMemberType.Group))
             {
-                var group = groups.FirstOrDefault(candidate =>
-                    MatchesGroup(candidate, member.Id) || MatchesGroup(candidate, member.Email))
-                    ?? CreateGroupFromMember(member);
-                if (group is null)
+                var labelGroup = groups.FirstOrDefault(candidate =>
+                    MatchesGroup(candidate, labelMember.Id) || MatchesGroup(candidate, labelMember.Email));
+                var labelName =
+                    labelGroup?.DisplayName ??
+                    labelMember.DisplayName ??
+                    labelMember.Email;
+                var labelSource = labelGroup ?? CreateGroupFromMember(labelMember);
+                if (labelSource is null)
                 {
                     continue;
                 }
 
-                groupContacts.TryAdd(GroupKey(group), group);
+                // Level 3: direct group members of the label group – these become the contact entries
+                foreach (var contactMember in labelSource.Members.Where(m => m.Type == MeshGroupMemberType.Group))
+                {
+                    var contactGroup = groups.FirstOrDefault(candidate =>
+                        MatchesGroup(candidate, contactMember.Id) || MatchesGroup(candidate, contactMember.Email))
+                        ?? CreateGroupFromMember(contactMember);
+                    if (contactGroup is null)
+                    {
+                        continue;
+                    }
+
+                    var key = GroupKey(contactGroup);
+                    contactSources.TryAdd(key, new GroupContactSource(contactGroup, labelName ?? contactGroup.Email));
+                }
             }
         }
 
-        return groupContacts.Values.ToList();
+        return contactSources.Values.ToList();
     }
 
     private static MeshGroup? CreateGroupFromMember(MeshGroupMember member)
@@ -373,19 +400,16 @@ public sealed class ContactSyncOrchestrator
 
     private static IReadOnlySet<string> BuildTargetLabels(
         string directoryLabel,
-        IReadOnlyList<MeshGroup> groupContactSourceGroups)
+        IReadOnlyList<GroupContactSource> groupContactSources)
     {
         var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             directoryLabel
         };
 
-        foreach (var group in groupContactSourceGroups)
+        foreach (var entry in groupContactSources)
         {
-            foreach (var label in GetGroupContactLabels(group))
-            {
-                labels.Add(label);
-            }
+            labels.Add(entry.LabelName);
         }
 
         return labels;
@@ -393,77 +417,14 @@ public sealed class ContactSyncOrchestrator
 
     private static IReadOnlySet<string> BuildDirectoryContactLabels(
         MeshUser user,
-        string directoryLabel,
-        IReadOnlyList<MeshGroup> groupContactSourceGroups,
-        IReadOnlyList<MeshGroup> allGroups)
+        string directoryLabel)
     {
-        var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        // Level-3 group members (users inside GroupsToSyncByGroup contact groups) are not labeled;
+        // only the directory label applies to directory-sourced contacts.
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             directoryLabel
         };
-
-        foreach (var group in groupContactSourceGroups)
-        {
-            if (!ContainsUserMember(group, user, allGroups))
-            {
-                continue;
-            }
-
-            foreach (var label in GetGroupContactLabels(group))
-            {
-                labels.Add(label);
-            }
-        }
-
-        return labels;
-    }
-
-    private static bool ContainsUserMember(MeshGroup rootGroup, MeshUser user, IReadOnlyList<MeshGroup> allGroups)
-    {
-        var visitedGroupKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pendingGroups = new Stack<MeshGroup>();
-        pendingGroups.Push(rootGroup);
-
-        while (pendingGroups.Count > 0)
-        {
-            var group = pendingGroups.Pop();
-            if (!visitedGroupKeys.Add(GroupKey(group)))
-            {
-                continue;
-            }
-
-            foreach (var member in group.Members)
-            {
-                if (member.Type == MeshGroupMemberType.User && MatchesUser(member, user))
-                {
-                    return true;
-                }
-
-                if (member.Type != MeshGroupMemberType.Group)
-                {
-                    continue;
-                }
-
-                var childGroup = allGroups.FirstOrDefault(candidate =>
-                    MatchesGroup(candidate, member.Id) || MatchesGroup(candidate, member.Email));
-                if (childGroup is not null)
-                {
-                    pendingGroups.Push(childGroup);
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static IReadOnlyList<string> GetGroupContactLabels(MeshGroup group)
-    {
-        return new[] { group.DisplayName, group.Email, group.Id }
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value!)
-            .Take(1)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private static string ResolveDirectoryLabel(SyncRuleOptions rules)
@@ -485,17 +446,19 @@ public sealed class ContactSyncOrchestrator
 
     private static SyncPlanner CreatePlanner(
         ContactMeshOptions options,
-        IReadOnlyList<MeshGroup> groupContactSourceGroups,
-        IReadOnlyList<string> additionalManagedMetadataKeys)
+        IReadOnlyList<GroupContactSource> groupContactSources,
+        IReadOnlyList<string> additionalManagedMetadataKeys,
+        IReadOnlyList<string> additionalOperationalMetadataKeys)
     {
         var managedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ResolveDirectoryLabel(options.Rules)
         };
 
-        foreach (var group in groupContactSourceGroups)
+        foreach (var entry in groupContactSources)
         {
-            foreach (var value in new[] { group.DisplayName, group.Email, group.Id })
+            managedLabels.Add(entry.LabelName);
+            foreach (var value in new[] { entry.Group.Email, entry.Group.Id })
             {
                 if (!string.IsNullOrWhiteSpace(value))
                 {
@@ -509,6 +472,9 @@ public sealed class ContactSyncOrchestrator
             .Concat(additionalManagedMetadataKeys)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var operationalMetadataKeys = additionalOperationalMetadataKeys
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         return new SyncPlanner(
             mergeEngine: new ContactMergeEngine(options: new ContactMergeOptions
             {
@@ -519,7 +485,9 @@ public sealed class ContactSyncOrchestrator
             {
                 ManagedEmailDomains = options.ManagedEmailDomains,
                 ManagedLabels = managedLabels,
-                ManagedMetadataKeys = managedMetadataKeys
+                ManagedMetadataKeys = managedMetadataKeys,
+                ForceResetLabels = options.ForceResetLabels,
+                OperationalMetadataKeys = operationalMetadataKeys
             }),
             emailPolicyEngine: new ContactEmailPolicyEngine(new ContactEmailPolicyOptions
             {
@@ -531,12 +499,6 @@ public sealed class ContactSyncOrchestrator
     {
         return string.Equals(group.Id, idOrEmail, StringComparison.OrdinalIgnoreCase)
             || string.Equals(group.Email, idOrEmail, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool MatchesUser(MeshGroupMember member, MeshUser user)
-    {
-        return string.Equals(member.Id, user.Id, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(member.Email, user.Email, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GroupKey(MeshGroup group)

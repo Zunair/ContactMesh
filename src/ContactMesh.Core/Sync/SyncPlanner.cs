@@ -78,10 +78,14 @@ public sealed class SyncPlanner
             && this.staleContactCleanupEngine.HasManagedEmail(contact)))
         {
             var cleanup = this.staleContactCleanupEngine.Clean(staleContact);
+            var operationType = cleanup.ShouldDelete
+                ? SyncOperationType.Delete
+                : AreEquivalent(cleanup.Contact, staleContact) ? SyncOperationType.NoChange
+                : SyncOperationType.Update;
 
             operations.Add(new SyncOperation
             {
-                OperationType = cleanup.ShouldDelete ? SyncOperationType.Delete : SyncOperationType.Update,
+                OperationType = operationType,
                 DesiredContact = cleanup.Contact,
                 ExistingContact = staleContact,
                 Reason = cleanup.Reason
@@ -98,10 +102,14 @@ public sealed class SyncPlanner
             && !matchedExistingSourceIds.Contains(c.SourceId!)))
         {
             var cleanup = this.staleContactCleanupEngine.Clean(staleContact);
+            var operationType = cleanup.ShouldDelete
+                ? SyncOperationType.Delete
+                : AreEquivalent(cleanup.Contact, staleContact) ? SyncOperationType.NoChange
+                : SyncOperationType.Update;
 
             operations.Add(new SyncOperation
             {
-                OperationType = cleanup.ShouldDelete ? SyncOperationType.Delete : SyncOperationType.Update,
+                OperationType = operationType,
                 DesiredContact = cleanup.Contact,
                 ExistingContact = staleContact,
                 Reason = cleanup.Reason

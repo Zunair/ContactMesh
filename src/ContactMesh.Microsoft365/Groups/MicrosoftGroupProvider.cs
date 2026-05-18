@@ -6,10 +6,16 @@ namespace ContactMesh.Microsoft365.Groups;
 public sealed class MicrosoftGroupProvider : IGroupProvider
 {
     private readonly IMicrosoftGraphGroupClient? client;
+    private readonly IReadOnlySet<string> allowedGroupTypes;
 
-    public MicrosoftGroupProvider(IMicrosoftGraphGroupClient? client = null)
+    public MicrosoftGroupProvider(
+        IMicrosoftGraphGroupClient? client = null,
+        IReadOnlyList<string>? allowedGroupTypes = null)
     {
         this.client = client;
+        this.allowedGroupTypes = allowedGroupTypes is { Count: > 0 }
+            ? new HashSet<string>(allowedGroupTypes, StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<IReadOnlyList<MeshGroup>> GetGroupsAsync(CancellationToken cancellationToken)
@@ -23,7 +29,9 @@ public sealed class MicrosoftGroupProvider : IGroupProvider
         var groups = new List<MeshGroup>();
 
         foreach (var graphGroup in graphGroups.Where(group =>
-            !string.IsNullOrWhiteSpace(group.Id) && !string.IsNullOrWhiteSpace(group.Mail)))
+            !string.IsNullOrWhiteSpace(group.Id) &&
+            !string.IsNullOrWhiteSpace(group.Mail) &&
+            this.IsAllowedGroupType(group)))
         {
             var members = await this.client.ListGroupMembersAsync(graphGroup.Id!, cancellationToken)
                 .ConfigureAwait(false);
@@ -49,5 +57,16 @@ public sealed class MicrosoftGroupProvider : IGroupProvider
             .Where(member => !string.IsNullOrWhiteSpace(member.Id) && !string.IsNullOrWhiteSpace(member.Mail))
             .Select(MicrosoftGroupMapper.ToMeshContact)
             .ToList();
+    }
+
+    private bool IsAllowedGroupType(MicrosoftGraphGroup group)
+    {
+        if (this.allowedGroupTypes.Count == 0)
+        {
+            return true;
+        }
+
+        var groupType = MicrosoftGroupMapper.GetGroupType(group);
+        return groupType.HasValue && this.allowedGroupTypes.Contains(groupType.Value.ToString());
     }
 }

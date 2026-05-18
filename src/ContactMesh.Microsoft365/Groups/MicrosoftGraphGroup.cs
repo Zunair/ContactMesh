@@ -1,5 +1,12 @@
 namespace ContactMesh.Microsoft365.Groups;
 
+public enum MicrosoftGroupType
+{
+    Microsoft365,
+    MailEnabledSecurity,
+    Distribution
+}
+
 public sealed record MicrosoftGraphGroup
 {
     public string? Id { get; init; }

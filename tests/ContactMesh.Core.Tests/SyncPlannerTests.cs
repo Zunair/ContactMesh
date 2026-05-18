@@ -213,8 +213,8 @@ public sealed class SyncPlannerTests
 
         var operation = Assert.Single(operations);
         Assert.Equal(SyncOperationType.Update, operation.OperationType);
-        Assert.Null(operation.DesiredContact.DisplayName);
-        Assert.Null(operation.DesiredContact.CompanyName);
+        Assert.Equal("Jane Doe", operation.DesiredContact.DisplayName);
+        Assert.Equal("Example", operation.DesiredContact.CompanyName);
         Assert.Empty(operation.DesiredContact.Emails);
         Assert.Equal("Keep this context.", operation.DesiredContact.Notes);
         Assert.Contains("notes", operation.Reason, StringComparison.Ordinal);

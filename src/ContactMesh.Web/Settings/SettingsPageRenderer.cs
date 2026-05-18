@@ -176,6 +176,7 @@ public static class SettingsPageRenderer
         AppendDetailInput(html, "Client ID", "Microsoft365.ClientId", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
         AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
         AppendDetailTextarea(html, "Scopes", "Microsoft365.Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", microsoft365.Scopes);
+        AppendDetailTextarea(html, "Group types", "Microsoft365.GroupTypes", "Limits which group types are loaded from Graph. One value per line: Microsoft365, MailEnabledSecurity, Distribution. Leave empty to load all types.", microsoft365.GroupTypes);
         html.AppendLine("</section>");
 
         html.AppendLine("</div>");

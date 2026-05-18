@@ -35,7 +35,8 @@ public sealed record SettingsFormModel(
             ClientSecret = string.IsNullOrWhiteSpace(microsoftClientSecret)
                 ? currentMicrosoft365.ClientSecret
                 : microsoftClientSecret,
-            Scopes = Lines(form, "Microsoft365.Scopes")
+            Scopes = Lines(form, "Microsoft365.Scopes"),
+            GroupTypes = Lines(form, "Microsoft365.GroupTypes")
         };
         var contactMesh = new ContactMeshOptions
         {

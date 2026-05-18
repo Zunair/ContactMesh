@@ -14,4 +14,10 @@ public sealed record Microsoft365Options
     public string? ClientId { get; init; }
     public string? ClientSecret { get; init; }
     public IReadOnlyList<string> Scopes { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Group types to load from Microsoft Graph. Accepted values: Microsoft365, MailEnabledSecurity, Distribution.
+    /// When empty (the default), all mail-enabled group types are loaded.
+    /// </summary>
+    public IReadOnlyList<string> GroupTypes { get; init; } = Array.Empty<string>();
 }

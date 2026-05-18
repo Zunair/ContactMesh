@@ -18,20 +18,17 @@ public sealed class StaleContactCleanupEngine
         var cleaned = contact with
         {
             SourceId = null,
-            DisplayName = null,
-            GivenName = null,
-            FamilyName = null,
-            CompanyName = null,
-            Department = null,
-            JobTitle = null,
             Notes = IsManagedPhoneNote(contact.Notes) ? null : contact.Notes,
             Emails = contact.Emails.Where(email => !IsManagedEmail(email)).ToList(),
             Phones = contact.Phones.Where(phone => !IsManagedPhone(phone)).ToList(),
-            Labels = contact.Labels
-                .Where(label => !this.options.ManagedLabels.Contains(label))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase),
+            Labels = this.options.ForceResetLabels
+                ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                : contact.Labels
+                    .Where(label => !this.options.ManagedLabels.Contains(label))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
             Metadata = contact.Metadata
-                .Where(item => !this.options.ManagedMetadataKeys.Contains(item.Key))
+                .Where(item => this.options.OperationalMetadataKeys.Contains(item.Key)
+                               || !this.options.ManagedMetadataKeys.Contains(item.Key))
                 .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase)
         };
 
@@ -99,16 +96,16 @@ public sealed class StaleContactCleanupEngine
             });
     }
 
-    private static bool HasUserOwnedData(MeshContact contact)
+    private bool HasUserOwnedData(MeshContact contact)
     {
         return contact.Emails.Count > 0
             || contact.Phones.Count > 0
             || contact.Labels.Count > 0
-            || contact.Metadata.Count > 0
+            || contact.Metadata.Any(item => !this.options.OperationalMetadataKeys.Contains(item.Key))
             || !string.IsNullOrWhiteSpace(contact.Notes);
     }
 
-    private static string DescribeUserOwnedData(MeshContact contact)
+    private string DescribeUserOwnedData(MeshContact contact)
     {
         var details = new List<string>();
 
@@ -132,11 +129,15 @@ public sealed class StaleContactCleanupEngine
             details.Add($"labels={FormatList(contact.Labels.Order(StringComparer.OrdinalIgnoreCase))}");
         }
 
-        if (contact.Metadata.Count > 0)
+        var userMetadata = contact.Metadata
+            .Where(item => !this.options.OperationalMetadataKeys.Contains(item.Key))
+            .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(item => $"{item.Key}={item.Value}")
+            .ToList();
+
+        if (userMetadata.Count > 0)
         {
-            details.Add($"metadata={FormatList(contact.Metadata
-                .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
-                .Select(item => $"{item.Key}={item.Value}"))}");
+            details.Add($"metadata={FormatList(userMetadata)}");
         }
 
         return string.Join(", ", details);

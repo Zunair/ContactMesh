@@ -72,6 +72,32 @@ public static class MicrosoftGroupMapper
         };
     }
 
+    /// <summary>
+    /// Classifies a Graph group as Microsoft365, MailEnabledSecurity, or Distribution.
+    /// Returns null for non-mail-enabled groups (security-only groups without an email address).
+    /// </summary>
+    public static MicrosoftGroupType? GetGroupType(MicrosoftGraphGroup group)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+
+        if (group.GroupTypes.Any(t => string.Equals(t, "Unified", StringComparison.OrdinalIgnoreCase)))
+        {
+            return MicrosoftGroupType.Microsoft365;
+        }
+
+        if (group.MailEnabled == true && group.SecurityEnabled == true)
+        {
+            return MicrosoftGroupType.MailEnabledSecurity;
+        }
+
+        if (group.MailEnabled == true)
+        {
+            return MicrosoftGroupType.Distribution;
+        }
+
+        return null;
+    }
+
     public static bool IsOrgContact(MicrosoftGraphGroupMember member)
     {
         ArgumentNullException.ThrowIfNull(member);
