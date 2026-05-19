@@ -110,6 +110,14 @@ For old managed contacts that have the same phone number in multiple fields, set
 
 For old managed contacts whose organization email appears under Other email, set `ContactMesh:ForceNormalizeEmailTypes` to `true`, review the dry-run, run once with writes enabled, then set it back to `false`.
 
+For focused Microsoft 365 contact diagnostics, configure `Microsoft365:ContactDiagnostic` or pass CLI arguments to `m365-contact-email-slot`:
+
+```powershell
+dotnet run --project .\src\ContactMesh.Cli -- m365-contact-email-slot --user zfayaz@example.org --contact zfadmin@example.org
+```
+
+Add `--apply` only when you want the diagnostic command to clear the contact's primary/secondary/tertiary email slots and write back one primary work email.
+
 ## Run
 
 Run commands assume `dotnet build ContactMesh.sln -m:1` has completed.

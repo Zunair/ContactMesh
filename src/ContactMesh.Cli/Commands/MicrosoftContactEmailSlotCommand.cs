@@ -15,19 +15,32 @@ public sealed class MicrosoftContactEmailSlotCommand
         TextWriter output,
         CancellationToken cancellationToken)
     {
-        var userId = GetValue(args, "--user") ?? GetSingleTargetUser(contactMeshOptions);
-        var contactEmail = GetValue(args, "--contact");
-        var contactId = GetValue(args, "--contact-id");
-        var workEmail = GetValue(args, "--work-email") ?? contactEmail;
-        var apply = args.Any(arg => string.Equals(arg, "--apply", StringComparison.OrdinalIgnoreCase));
+        var diagnostic = options.ContactDiagnostic;
+        var userId = GetValue(args, "--user") ?? diagnostic.User ?? GetSingleTargetUser(contactMeshOptions);
+        var contactEmails = GetValues(args, "--contact");
+        if (contactEmails.Count == 0)
+        {
+            contactEmails = diagnostic.Contacts;
+        }
+
+        var contactIds = GetValues(args, "--contact-id");
+        if (contactIds.Count == 0)
+        {
+            contactIds = diagnostic.ContactIds;
+        }
+
+        var workEmail = GetValue(args, "--work-email") ?? diagnostic.WorkEmail;
+        var apply = args.Any(arg => string.Equals(arg, "--apply", StringComparison.OrdinalIgnoreCase)) || diagnostic.Apply;
 
         if (string.IsNullOrWhiteSpace(userId)
-            || (string.IsNullOrWhiteSpace(contactEmail) && string.IsNullOrWhiteSpace(contactId))
-            || string.IsNullOrWhiteSpace(workEmail))
+            || (contactEmails.Count == 0 && contactIds.Count == 0)
+            || (contactIds.Count > 0 && string.IsNullOrWhiteSpace(workEmail)))
         {
             await output.WriteLineAsync(
                 $"Usage: {Name} [--user <mailbox>] (--contact <email-to-find> | --contact-id <graph-id>) [--work-email <email-to-write>] [--apply]").ConfigureAwait(false);
             await output.WriteLineAsync("--user can be omitted when ContactMesh:Rules:TargetUsers contains exactly one mailbox.").ConfigureAwait(false);
+            await output.WriteLineAsync("Command arguments can also be supplied with Microsoft365:ContactDiagnostic config.").ConfigureAwait(false);
+            await output.WriteLineAsync("--work-email is required for --contact-id lookups, because the email cannot be inferred from the id.").ConfigureAwait(false);
             await output.WriteLineAsync("Without --apply, this command only reads and prints the matching contact.").ConfigureAwait(false);
             return 2;
         }
@@ -38,20 +51,60 @@ public sealed class MicrosoftContactEmailSlotCommand
         var contactClient = new MicrosoftGraphContactClient(httpClient, accessTokenProvider);
         var resetter = new MicrosoftContactEmailSlotResetter(contactClient);
 
-        var result = string.IsNullOrWhiteSpace(contactId)
-            ? await resetter.ResetAsync(
+        var exitCode = 0;
+
+        foreach (var contactEmail in contactEmails)
+        {
+            var result = await resetter.ResetAsync(
                 userId,
-                contactEmail!,
-                workEmail,
-                apply,
-                cancellationToken).ConfigureAwait(false)
-            : await resetter.ResetByIdAsync(
-                userId,
-                contactId,
-                workEmail,
+                contactEmail,
+                workEmail ?? contactEmail,
                 apply,
                 cancellationToken).ConfigureAwait(false);
 
+            var resultCode = await WriteResultAsync(
+                output,
+                userId,
+                contactEmail,
+                null,
+                workEmail ?? contactEmail,
+                apply,
+                result).ConfigureAwait(false);
+            exitCode = Math.Max(exitCode, resultCode);
+        }
+
+        foreach (var contactId in contactIds)
+        {
+            var result = await resetter.ResetByIdAsync(
+                userId,
+                contactId,
+                workEmail!,
+                apply,
+                cancellationToken).ConfigureAwait(false);
+
+            var resultCode = await WriteResultAsync(
+                output,
+                userId,
+                null,
+                contactId,
+                workEmail!,
+                apply,
+                result).ConfigureAwait(false);
+            exitCode = Math.Max(exitCode, resultCode);
+        }
+
+        return exitCode;
+    }
+
+    private static async Task<int> WriteResultAsync(
+        TextWriter output,
+        string userId,
+        string? contactEmail,
+        string? contactId,
+        string workEmail,
+        bool apply,
+        MicrosoftContactEmailSlotResetResult result)
+    {
         await output.WriteLineAsync($"Mailbox: {userId}").ConfigureAwait(false);
         await output.WriteLineAsync($"Contact lookup email: {contactEmail ?? "(not used)"}").ConfigureAwait(false);
         await output.WriteLineAsync($"Contact lookup id: {contactId ?? "(not used)"}").ConfigureAwait(false);
@@ -97,6 +150,21 @@ public sealed class MicrosoftContactEmailSlotCommand
         }
 
         return null;
+    }
+
+    private static IReadOnlyList<string> GetValues(IReadOnlyList<string> args, string name)
+    {
+        var values = new List<string>();
+        for (var i = 0; i < args.Count - 1; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(args[i + 1]))
+            {
+                values.Add(args[i + 1]);
+            }
+        }
+
+        return values;
     }
 
     private static string? GetSingleTargetUser(ContactMeshOptions options)

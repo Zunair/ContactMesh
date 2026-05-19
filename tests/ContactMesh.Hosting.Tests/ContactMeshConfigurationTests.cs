@@ -41,7 +41,12 @@ public sealed class ContactMeshConfigurationTests
             ["Microsoft365:TenantId"] = "tenant-id",
             ["Microsoft365:ClientId"] = "client-id",
             ["Microsoft365:ClientSecret"] = "client-secret",
-            ["Microsoft365:Scopes:0"] = "https://graph.microsoft.com/.default"
+            ["Microsoft365:Scopes:0"] = "https://graph.microsoft.com/.default",
+            ["Microsoft365:ContactDiagnostic:User"] = "target@example.org",
+            ["Microsoft365:ContactDiagnostic:Contacts:0"] = "contact@example.org",
+            ["Microsoft365:ContactDiagnostic:ContactIds:0"] = "contact-id",
+            ["Microsoft365:ContactDiagnostic:WorkEmail"] = "work@example.org",
+            ["Microsoft365:ContactDiagnostic:Apply"] = "true"
         };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(values)
@@ -89,6 +94,11 @@ public sealed class ContactMeshConfigurationTests
         Assert.Equal("client-id", microsoft365.ClientId);
         Assert.Equal("client-secret", microsoft365.ClientSecret);
         Assert.Equal("https://graph.microsoft.com/.default", Assert.Single(microsoft365.Scopes));
+        Assert.Equal("target@example.org", microsoft365.ContactDiagnostic.User);
+        Assert.Equal("contact@example.org", Assert.Single(microsoft365.ContactDiagnostic.Contacts));
+        Assert.Equal("contact-id", Assert.Single(microsoft365.ContactDiagnostic.ContactIds));
+        Assert.Equal("work@example.org", microsoft365.ContactDiagnostic.WorkEmail);
+        Assert.True(microsoft365.ContactDiagnostic.Apply);
     }
 
     [Fact]
