@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-19",
-  "head": "dcca9b2",
+  "head": "9897534",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -82,7 +82,8 @@
     { "id": "groups-to-sync-by-group-3level", "commit": null, "state": "done-local", "note": "GroupsToSyncByGroup now uses a 3-level hierarchy: L1=container, L2=label groups (display name becomes the contact label), L3=contact groups (become the group-email contacts). Directory users inside L3 groups are not labeled. Removed ContainsUserMember/MatchesUser dead code. Introduced private GroupContactSource(Group, LabelName) record. Tests updated." },
     { "id": "stale-contact-write-fix", "commit": null, "state": "done-local", "note": "Fixed perpetual stale-contact update loop: (1) OperationalMetadataKeys added to StaleContactCleanupOptions so provider write-essential keys (contactId, changeKey) are preserved in the cleaned contact but excluded from HasUserOwnedData — previously they were stripped, making every Graph PATCH a no-op. (2) ForceResetLabels added to StaleContactCleanupOptions and propagated from ContactMeshOptions so app-created labels from now-removed groups are cleared, allowing group contacts with no other user-owned data to be deleted. (3) Name fields (DisplayName, GivenName, etc.) are no longer nulled in cleanup because PATCH omits nulls and Graph keeps old values, causing perpetual mismatch. (4) AreEquivalent check added to both stale loops in SyncPlanner so a contact that is already in the cleaned state emits NoChange instead of a spurious Update. ContactMeshHostFactory now passes contactId/changeKey as additionalOperationalMetadataKeys instead of additionalManagedMetadataKeys." },
     { "id": "one-time-phone-dedup-cleanup", "commit": "866fc85", "state": "done", "note": "Added ContactMesh.ForceDeduplicatePhones as an opt-in one-time cleanup switch. When enabled, ContactMergeEngine collapses duplicate managed phone numbers across different phone types while default sync behavior still preserves those distinct fields. Surfaced in Web settings, samples, docs, and covered by core/hosting/web tests." },
-    { "id": "one-time-email-type-cleanup", "commit": "dcca9b2", "state": "done", "note": "Added ContactMesh.ForceNormalizeEmailTypes as an opt-in one-time cleanup switch. When enabled, ContactEmailPolicyEngine promotes the selected email to primary work email so legacy managed contacts stop showing organization addresses under Other email. Surfaced in Web settings, samples, docs, and covered by core/hosting/web tests." }
+    { "id": "one-time-email-type-cleanup", "commit": "dcca9b2", "state": "done", "note": "Added ContactMesh.ForceNormalizeEmailTypes as an opt-in one-time cleanup switch. When enabled, ContactEmailPolicyEngine promotes the selected email to primary work email so legacy managed contacts stop showing organization addresses under Other email. Surfaced in Web settings, samples, docs, and covered by core/hosting/web tests." },
+    { "id": "microsoft-email-slot-fields", "commit": null, "state": "done-local", "note": "Microsoft Graph contacts now select, read, and write primaryEmailAddress/secondaryEmailAddress/tertiaryEmailAddress instead of only the generic emailAddresses collection. Generic emailAddresses remains a read fallback. This should place managed org email into Outlook's primary email slot instead of Other email." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

@@ -11,6 +11,9 @@ public sealed record MicrosoftGraphContact
     public string? CompanyName { get; init; }
     public string? Department { get; init; }
     public string? JobTitle { get; init; }
+    public MicrosoftGraphEmailAddress? PrimaryEmailAddress { get; init; }
+    public MicrosoftGraphEmailAddress? SecondaryEmailAddress { get; init; }
+    public MicrosoftGraphEmailAddress? TertiaryEmailAddress { get; init; }
     public IReadOnlyList<MicrosoftGraphEmailAddress> EmailAddresses { get; init; } = Array.Empty<MicrosoftGraphEmailAddress>();
     public IReadOnlyList<string> BusinessPhones { get; init; } = Array.Empty<string>();
     public string? MobilePhone { get; init; }

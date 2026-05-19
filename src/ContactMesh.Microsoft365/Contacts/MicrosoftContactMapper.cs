@@ -45,10 +45,7 @@ public static class MicrosoftContactMapper
             Department = contact.Department,
             JobTitle = contact.JobTitle,
             Notes = contact.PersonalNotes,
-            Emails = contact.EmailAddresses
-                .Where(email => !string.IsNullOrWhiteSpace(email.Address))
-                .Select((email, index) => new ContactEmail(email.Address.Trim(), "work", index == 0))
-                .ToList(),
+            Emails = ToMeshEmails(contact).ToList(),
             Phones = ToMeshPhones(contact).ToList(),
             Labels = contact.Categories
                 .Where(category => !string.IsNullOrWhiteSpace(category))
@@ -60,6 +57,8 @@ public static class MicrosoftContactMapper
     public static MicrosoftGraphContact ToMicrosoftGraphContact(MeshContact contact)
     {
         ArgumentNullException.ThrowIfNull(contact);
+
+        var emailSlots = ToGraphEmailSlots(contact.Emails, contact.DisplayName);
 
         return new MicrosoftGraphContact
         {
@@ -73,10 +72,10 @@ public static class MicrosoftContactMapper
             Department = contact.Department,
             JobTitle = contact.JobTitle,
             PersonalNotes = contact.Notes,
-            EmailAddresses = contact.Emails
-                .Where(email => !string.IsNullOrWhiteSpace(email.Address))
-                .Select(email => new MicrosoftGraphEmailAddress(email.Address.Trim(), contact.DisplayName))
-                .ToList(),
+            PrimaryEmailAddress = emailSlots.ElementAtOrDefault(0),
+            SecondaryEmailAddress = emailSlots.ElementAtOrDefault(1),
+            TertiaryEmailAddress = emailSlots.ElementAtOrDefault(2),
+            EmailAddresses = Array.Empty<MicrosoftGraphEmailAddress>(),
             BusinessPhones = contact.Phones
                 .Where(phone => !string.IsNullOrWhiteSpace(phone.Number)
                     && !string.Equals(phone.Type, "mobile", StringComparison.OrdinalIgnoreCase))
@@ -105,6 +104,57 @@ public static class MicrosoftContactMapper
         {
             yield return new ContactPhone(contact.MobilePhone.Trim(), "mobile");
         }
+    }
+
+    private static IEnumerable<ContactEmail> ToMeshEmails(MicrosoftGraphContact contact)
+    {
+        var slotEmails = new[]
+        {
+            contact.PrimaryEmailAddress,
+            contact.SecondaryEmailAddress,
+            contact.TertiaryEmailAddress
+        };
+
+        if (slotEmails.Any(email => email is not null && !string.IsNullOrWhiteSpace(email.Address)))
+        {
+            foreach (var (email, index) in slotEmails.Select((email, index) => (email, index)))
+            {
+                if (!string.IsNullOrWhiteSpace(email?.Address))
+                {
+                    yield return new ContactEmail(email.Address.Trim(), index == 0 ? "work" : "other", index == 0);
+                }
+            }
+
+            yield break;
+        }
+
+        foreach (var (email, index) in contact.EmailAddresses.Select((email, index) => (email, index)))
+        {
+            if (!string.IsNullOrWhiteSpace(email.Address))
+            {
+                yield return new ContactEmail(email.Address.Trim(), "work", index == 0);
+            }
+        }
+    }
+
+    private static MicrosoftGraphEmailAddress? ToGraphEmail(ContactEmail? email, string? displayName)
+    {
+        return string.IsNullOrWhiteSpace(email?.Address)
+            ? null
+            : new MicrosoftGraphEmailAddress(email.Address.Trim(), displayName);
+    }
+
+    private static IReadOnlyList<MicrosoftGraphEmailAddress> ToGraphEmailSlots(
+        IReadOnlyList<ContactEmail> emails,
+        string? displayName)
+    {
+        return emails
+            .Where(email => !string.IsNullOrWhiteSpace(email.Address))
+            .OrderByDescending(email => email.IsPrimary)
+            .DistinctBy(email => email.Address.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .Select(email => ToGraphEmail(email, displayName)!)
+            .ToList();
     }
 
     private static string? TryGetMetadata(MeshContact contact, string key)

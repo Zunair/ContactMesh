@@ -8,7 +8,7 @@ namespace ContactMesh.Microsoft365.Contacts;
 
 public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
 {
-    private const string ContactSelectFields = "id,changeKey,displayName,givenName,surname,companyName,department,jobTitle,emailAddresses,businessPhones,mobilePhone,categories,personalNotes";
+    private const string ContactSelectFields = "id,changeKey,displayName,givenName,surname,companyName,department,jobTitle,primaryEmailAddress,secondaryEmailAddress,tertiaryEmailAddress,emailAddresses,businessPhones,mobilePhone,categories,personalNotes";
     private static readonly Uri DefaultBaseAddress = new("https://graph.microsoft.com/");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -205,10 +205,10 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
             CompanyName = contact.CompanyName,
             Department = contact.Department,
             JobTitle = contact.JobTitle,
-            EmailAddresses = (contact.EmailAddresses ?? Enumerable.Empty<EmailAddressResource>())
-                .Where(email => !string.IsNullOrWhiteSpace(email.Address))
-                .Select(email => new MicrosoftGraphEmailAddress(email.Address!, email.Name))
-                .ToList(),
+            PrimaryEmailAddress = ToMicrosoftGraphEmailAddress(contact.PrimaryEmailAddress),
+            SecondaryEmailAddress = ToMicrosoftGraphEmailAddress(contact.SecondaryEmailAddress),
+            TertiaryEmailAddress = ToMicrosoftGraphEmailAddress(contact.TertiaryEmailAddress),
+            EmailAddresses = ToEmailAddresses(contact).ToList(),
             BusinessPhones = (contact.BusinessPhones ?? Enumerable.Empty<string>())
                 .Where(phone => !string.IsNullOrWhiteSpace(phone))
                 .Select(phone => phone.Trim())
@@ -232,14 +232,10 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
             CompanyName = contact.CompanyName,
             Department = contact.Department,
             JobTitle = contact.JobTitle,
-            EmailAddresses = contact.EmailAddresses
-                .Where(email => !string.IsNullOrWhiteSpace(email.Address))
-                .Select(email => new EmailAddressResource
-                {
-                    Address = email.Address,
-                    Name = email.Name
-                })
-                .ToList(),
+            PrimaryEmailAddress = ToEmailAddressResource(contact.PrimaryEmailAddress),
+            SecondaryEmailAddress = ToEmailAddressResource(contact.SecondaryEmailAddress),
+            TertiaryEmailAddress = ToEmailAddressResource(contact.TertiaryEmailAddress),
+            EmailAddresses = null,
             BusinessPhones = contact.BusinessPhones
                 .Where(phone => !string.IsNullOrWhiteSpace(phone))
                 .Select(phone => phone.Trim())
@@ -273,6 +269,57 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         return string.IsNullOrWhiteSpace(sourceId) ? null : sourceId;
     }
 
+    private static IEnumerable<MicrosoftGraphEmailAddress> ToEmailAddresses(ContactResource contact)
+    {
+        foreach (var email in new[]
+        {
+            contact.PrimaryEmailAddress,
+            contact.SecondaryEmailAddress,
+            contact.TertiaryEmailAddress
+        })
+        {
+            var mapped = ToMicrosoftGraphEmailAddress(email);
+            if (mapped is not null)
+            {
+                yield return mapped;
+            }
+        }
+
+        if (contact.PrimaryEmailAddress is not null
+            || contact.SecondaryEmailAddress is not null
+            || contact.TertiaryEmailAddress is not null)
+        {
+            yield break;
+        }
+
+        foreach (var email in contact.EmailAddresses ?? Enumerable.Empty<EmailAddressResource>())
+        {
+            var mapped = ToMicrosoftGraphEmailAddress(email);
+            if (mapped is not null)
+            {
+                yield return mapped;
+            }
+        }
+    }
+
+    private static MicrosoftGraphEmailAddress? ToMicrosoftGraphEmailAddress(EmailAddressResource? email)
+    {
+        return string.IsNullOrWhiteSpace(email?.Address)
+            ? null
+            : new MicrosoftGraphEmailAddress(email.Address.Trim(), email.Name);
+    }
+
+    private static EmailAddressResource? ToEmailAddressResource(MicrosoftGraphEmailAddress? email)
+    {
+        return string.IsNullOrWhiteSpace(email?.Address)
+            ? null
+            : new EmailAddressResource
+            {
+                Address = email.Address.Trim(),
+                Name = email.Name
+            };
+    }
+
     private sealed class GraphCollectionResponse<T>
     {
         public List<T>? Value { get; init; }
@@ -291,6 +338,9 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         public string? CompanyName { get; init; }
         public string? Department { get; init; }
         public string? JobTitle { get; init; }
+        public EmailAddressResource? PrimaryEmailAddress { get; init; }
+        public EmailAddressResource? SecondaryEmailAddress { get; init; }
+        public EmailAddressResource? TertiaryEmailAddress { get; init; }
         public List<EmailAddressResource>? EmailAddresses { get; init; }
         public List<string>? BusinessPhones { get; init; }
         public string? MobilePhone { get; init; }

@@ -28,6 +28,8 @@ public sealed class MicrosoftGraphContactClientTests
                           "companyName": "Example",
                           "department": "Engineering",
                           "jobTitle": "Director",
+                          "primaryEmailAddress": { "name": "Jane Doe", "address": "jane.primary@example.org" },
+                          "secondaryEmailAddress": { "name": "Jane Doe", "address": "jane.secondary@example.org" },
                           "emailAddresses": [ { "name": "Jane Doe", "address": "jane@example.org" } ],
                           "businessPhones": [ "+1 215 555 0100" ],
                           "mobilePhone": "+1 215 555 0101",
@@ -58,7 +60,9 @@ public sealed class MicrosoftGraphContactClientTests
         Assert.Equal("change-1", contact.ChangeKey);
         Assert.Equal("directory-user-1", contact.SourceId);
         Assert.Equal("Jane Doe", contact.DisplayName);
-        Assert.Equal("jane@example.org", Assert.Single(contact.EmailAddresses).Address);
+        Assert.Equal("jane.primary@example.org", contact.PrimaryEmailAddress?.Address);
+        Assert.Equal("jane.secondary@example.org", contact.SecondaryEmailAddress?.Address);
+        Assert.Equal(new[] { "jane.primary@example.org", "jane.secondary@example.org" }, contact.EmailAddresses.Select(email => email.Address));
         Assert.Equal("+1 215 555 0100", Assert.Single(contact.BusinessPhones));
         Assert.Equal("Directory", Assert.Single(contact.Categories));
         Assert.Equal("Bearer graph-token", handler.Requests[0].Authorization);
@@ -92,7 +96,7 @@ public sealed class MicrosoftGraphContactClientTests
                 DisplayName = "Jane Doe",
                 GivenName = "Jane",
                 Surname = "Doe",
-                EmailAddresses = new[] { new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe") },
+                PrimaryEmailAddress = new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe"),
                 BusinessPhones = new[] { "+1 215 555 0100" },
                 MobilePhone = "+1 215 555 0101",
                 Categories = new[] { "Directory" },
@@ -116,7 +120,8 @@ public sealed class MicrosoftGraphContactClientTests
         using (var document = JsonDocument.Parse(handler.Requests[0].Body))
         {
             Assert.Equal("Jane Doe", document.RootElement.GetProperty("displayName").GetString());
-            Assert.Equal("jane@example.org", document.RootElement.GetProperty("emailAddresses")[0].GetProperty("address").GetString());
+            Assert.Equal("jane@example.org", document.RootElement.GetProperty("primaryEmailAddress").GetProperty("address").GetString());
+            Assert.False(document.RootElement.TryGetProperty("emailAddresses", out _));
             Assert.Equal("Directory", document.RootElement.GetProperty("categories")[0].GetString());
             Assert.Equal(
                 MicrosoftContactMapper.SourceIdExtendedPropertyId,

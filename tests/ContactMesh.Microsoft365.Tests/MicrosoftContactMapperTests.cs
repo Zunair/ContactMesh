@@ -34,11 +34,8 @@ public sealed class MicrosoftContactMapperTests
             CompanyName = "Example",
             Department = "Engineering",
             JobTitle = "Director",
-            EmailAddresses = new[]
-            {
-                new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe"),
-                new MicrosoftGraphEmailAddress("j.doe@example.org", "Jane Doe")
-            },
+            PrimaryEmailAddress = new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe"),
+            SecondaryEmailAddress = new MicrosoftGraphEmailAddress("j.doe@example.org", "Jane Doe"),
             BusinessPhones = new[] { "+1 215 555 0100" },
             MobilePhone = "+1 215 555 0101",
             Categories = new[] { "Directory" },
@@ -52,8 +49,10 @@ public sealed class MicrosoftContactMapperTests
         Assert.Equal("change-1", contact.Metadata[MicrosoftContactMapper.ChangeKeyMetadataKey]);
         Assert.Equal("managed", contact.Notes);
         Assert.Equal("jane@example.org", contact.Emails[0].Address);
+        Assert.Equal("work", contact.Emails[0].Type);
         Assert.True(contact.Emails[0].IsPrimary);
         Assert.False(contact.Emails[1].IsPrimary);
+        Assert.Equal("other", contact.Emails[1].Type);
         Assert.Contains(new ContactPhone("+1 215 555 0100", "work"), contact.Phones);
         Assert.Contains(new ContactPhone("+1 215 555 0101", "mobile"), contact.Phones);
         Assert.Contains("Directory", contact.Labels);
@@ -72,7 +71,11 @@ public sealed class MicrosoftContactMapperTests
             Department = "Engineering",
             JobTitle = "Director",
             Notes = "managed",
-            Emails = new[] { new ContactEmail("jane@example.org", "work", true) },
+            Emails = new[]
+            {
+                new ContactEmail("jane.alt@example.org", "other"),
+                new ContactEmail("jane@example.org", "work", true)
+            },
             Phones = new[]
             {
                 new ContactPhone("+1 215 555 0100", "work"),
@@ -90,7 +93,10 @@ public sealed class MicrosoftContactMapperTests
         Assert.Equal("change-1", contact.ChangeKey);
         Assert.Equal("directory-user-1", contact.SourceId);
         Assert.Equal("Doe", contact.Surname);
-        Assert.Equal("jane@example.org", Assert.Single(contact.EmailAddresses).Address);
+        Assert.Equal("jane@example.org", contact.PrimaryEmailAddress?.Address);
+        Assert.Equal("jane.alt@example.org", contact.SecondaryEmailAddress?.Address);
+        Assert.Null(contact.TertiaryEmailAddress);
+        Assert.Empty(contact.EmailAddresses);
         Assert.Equal("+1 215 555 0100", Assert.Single(contact.BusinessPhones));
         Assert.Equal("+1 215 555 0101", contact.MobilePhone);
         Assert.Equal("Directory", Assert.Single(contact.Categories));
