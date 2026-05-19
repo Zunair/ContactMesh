@@ -108,6 +108,17 @@ public static class SettingsPageRenderer
         html.AppendLine(">");
         html.AppendLine("</label>");
         html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Force deduplicate phones</span>");
+        html.AppendLine("<small>When enabled, ContactMesh collapses repeated phone numbers on managed contacts even when old fields used different phone types. Use once to clean legacy duplicates, then turn off.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceDeduplicatePhones\" value=\"true\"");
+        if (options.ForceDeduplicatePhones)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
         html.AppendLine("<span>Force reset labels</span>");
         html.AppendLine("<small>When enabled, ContactMesh replaces all labels on existing managed contacts instead of reconciling. Use once to clear stale labels accumulated by a previous sync bug, then turn off.</small>");
         html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceResetLabels\" value=\"true\"");

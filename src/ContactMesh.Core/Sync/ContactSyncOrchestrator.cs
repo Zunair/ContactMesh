@@ -479,7 +479,8 @@ public sealed class ContactSyncOrchestrator
             mergeEngine: new ContactMergeEngine(options: new ContactMergeOptions
             {
                 ManagedLabels = managedLabels,
-                ForceResetLabels = options.ForceResetLabels
+                ForceResetLabels = options.ForceResetLabels,
+                ForceDeduplicatePhones = options.ForceDeduplicatePhones
             }),
             staleContactCleanupEngine: new StaleContactCleanupEngine(new StaleContactCleanupOptions
             {

@@ -41,6 +41,13 @@ public sealed class ContactMergeEngine
             })
             .ToList();
 
+        if (this.options.ForceDeduplicatePhones)
+        {
+            sourcePhones = sourcePhones
+                .DistinctBy(p => this.phoneNormalizer.NormalizeForComparison(p.Number), StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         var sourcePhoneKeys = sourcePhones
             .Select(p => this.phoneNormalizer.NormalizeForComparison(p.Number))
             .Where(k => !string.IsNullOrWhiteSpace(k))

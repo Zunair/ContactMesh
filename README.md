@@ -72,6 +72,7 @@ The central config shape is:
     "Provider": "Google",
     "DryRun": true,
     "DisableDeletes": false,
+    "ForceDeduplicatePhones": false,
     "ManagedEmailDomains": [ "example.org" ],
     "Rules": {
       "GlobalUserGroups": [],
@@ -103,6 +104,8 @@ dotnet run --no-build --project .\src\ContactMesh.Cli\ContactMesh.Cli.csproj -- 
 ```
 
 Keep `DryRun` enabled until the generated plan has been reviewed. Setting `ContactMesh:DryRun` to `false` allows provider writes. Set `ContactMesh:DisableDeletes` to `true` when you want live runs to create and update contacts but skip all planned contact delete writes.
+
+For old managed contacts that have the same phone number in multiple fields, set `ContactMesh:ForceDeduplicatePhones` to `true`, review the dry-run, run the cleanup once with writes enabled, then set it back to `false`.
 
 ## Run
 

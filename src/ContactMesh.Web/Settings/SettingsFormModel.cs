@@ -44,6 +44,7 @@ public sealed record SettingsFormModel(
             DryRun = form.ContainsKey("ContactMesh.DryRun"),
             DisableDeletes = form.ContainsKey("ContactMesh.DisableDeletes"),
             ForceResetLabels = form.ContainsKey("ContactMesh.ForceResetLabels"),
+            ForceDeduplicatePhones = form.ContainsKey("ContactMesh.ForceDeduplicatePhones"),
             ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
             Rules = new SyncRuleOptions
             {

@@ -19,6 +19,7 @@ public sealed class SettingsPageRendererTests
                 Provider = "Google",
                 DryRun = true,
                 DisableDeletes = true,
+                ForceDeduplicatePhones = true,
                 ManagedEmailDomains = new[] { "example.org" },
                 Rules = new SyncRuleOptions
                 {
@@ -58,6 +59,7 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("checked", html);
         Assert.Contains("Deletes off", html);
         Assert.Contains("name=\"ContactMesh.DisableDeletes\"", html);
+        Assert.Contains("name=\"ContactMesh.ForceDeduplicatePhones\"", html);
         Assert.Contains("example.org", html);
         Assert.Contains("target@example.org", html);
         Assert.Contains("company-directory@example.org", html);
@@ -123,6 +125,7 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("Saved", html);
         Assert.Contains("Keep this on for live-provider validation", html);
         Assert.Contains("live runs skip delete writes to providers", html);
+        Assert.Contains("Use once to clean legacy duplicates", html);
         Assert.Contains("Optional user IDs or email addresses that limit who receives managed contacts", html);
         Assert.Contains("append =Ignore to reduce expected noise", html);
         Assert.Contains("Secret value is masked here", html);
@@ -137,6 +140,7 @@ public sealed class SettingsPageRendererTests
             ["ContactMesh.Provider"] = "Microsoft365",
             ["ContactMesh.DryRun"] = "true",
             ["ContactMesh.DisableDeletes"] = "true",
+            ["ContactMesh.ForceDeduplicatePhones"] = "true",
             ["ContactMesh.ManagedEmailDomains"] = "example.org",
             ["ContactMesh.Rules.MainContactsGroupEmail"] = "company-directory@example.org",
             ["ContactMesh.Rules.MainContactsGroupLabel"] = "-Directory",
@@ -164,6 +168,7 @@ public sealed class SettingsPageRendererTests
 
             Assert.Contains("\"Provider\": \"Microsoft365\"", json);
             Assert.Contains("\"DisableDeletes\": true", json);
+            Assert.Contains("\"ForceDeduplicatePhones\": true", json);
             Assert.Contains("\"MainContactsGroupEmail\": \"company-directory@example.org\"", json);
             Assert.Contains("\"MainContactsGroupLabel\": \"-Directory\"", json);
             Assert.Contains("\"GroupContactPrefix\": \"#\"", json);

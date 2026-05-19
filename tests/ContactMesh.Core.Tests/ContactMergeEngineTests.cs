@@ -102,6 +102,34 @@ public sealed class ContactMergeEngineTests
     }
 
     [Fact]
+    public void Merge_ForceDeduplicatePhones_Collapses_Same_Number_With_Different_Types()
+    {
+        var source = new MeshContact
+        {
+            Phones = new[]
+            {
+                new ContactPhone("+12155550100", "work"),
+                new ContactPhone("+12155550100", "mobile")
+            }
+        };
+        var existing = new MeshContact
+        {
+            Phones = new[]
+            {
+                new ContactPhone("+1 (215) 555-0100", "work"),
+                new ContactPhone("+1 (215) 555-0100", "mobile")
+            }
+        };
+
+        var options = new ContactMergeOptions { ForceDeduplicatePhones = true };
+        var merged = new ContactMergeEngine(options: options).Merge(source, existing);
+
+        var phone = Assert.Single(merged.Phones);
+        Assert.Equal("+1 (215) 555-0100", phone.Number);
+        Assert.Equal("work", phone.Type);
+    }
+
+    [Fact]
     public void Merge_Source_Metadata_Overwrites_Existing_Metadata()
     {
         var source = new MeshContact
