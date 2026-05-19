@@ -117,11 +117,25 @@ public static class MicrosoftContactMapper
 
         if (slotEmails.Any(email => email is not null && !string.IsNullOrWhiteSpace(email.Address)))
         {
+            var emailTypes = contact.EmailAddresses
+                .Where(email => !string.IsNullOrWhiteSpace(email.Address))
+                .GroupBy(email => email.Address.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(email => email.Type).FirstOrDefault(type => !string.IsNullOrWhiteSpace(type)),
+                    StringComparer.OrdinalIgnoreCase);
+
             foreach (var (email, index) in slotEmails.Select((email, index) => (email, index)))
             {
                 if (!string.IsNullOrWhiteSpace(email?.Address))
                 {
-                    yield return new ContactEmail(email.Address.Trim(), index == 0 ? "work" : "other", index == 0);
+                    var address = email.Address.Trim();
+                    yield return new ContactEmail(
+                        address,
+                        ToMeshEmailType(
+                            emailTypes.TryGetValue(address, out var type) ? type : email.Type,
+                            index == 0 ? "work" : "other"),
+                        index == 0);
                 }
             }
 
@@ -132,9 +146,23 @@ public static class MicrosoftContactMapper
         {
             if (!string.IsNullOrWhiteSpace(email.Address))
             {
-                yield return new ContactEmail(email.Address.Trim(), "work", index == 0);
+                yield return new ContactEmail(
+                    email.Address.Trim(),
+                    ToMeshEmailType(email.Type, index == 0 ? "work" : "other"),
+                    index == 0);
             }
         }
+    }
+
+    private static string ToMeshEmailType(string? graphType, string fallback)
+    {
+        return graphType?.Trim().ToLowerInvariant() switch
+        {
+            "work" or "main" => "work",
+            "personal" => "home",
+            "other" => "other",
+            _ => fallback
+        };
     }
 
     private static MicrosoftGraphEmailAddress? ToGraphEmail(ContactEmail? email, string? displayName)

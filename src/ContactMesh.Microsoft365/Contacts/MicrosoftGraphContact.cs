@@ -21,4 +21,4 @@ public sealed record MicrosoftGraphContact
     public string? PersonalNotes { get; init; }
 }
 
-public sealed record MicrosoftGraphEmailAddress(string Address, string? Name = null);
+public sealed record MicrosoftGraphEmailAddress(string Address, string? Name = null, string? Type = null);

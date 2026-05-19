@@ -36,6 +36,11 @@ public sealed class MicrosoftContactMapperTests
             JobTitle = "Director",
             PrimaryEmailAddress = new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe"),
             SecondaryEmailAddress = new MicrosoftGraphEmailAddress("j.doe@example.org", "Jane Doe"),
+            EmailAddresses = new[]
+            {
+                new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe", "work"),
+                new MicrosoftGraphEmailAddress("j.doe@example.org", "Jane Doe", "personal")
+            },
             BusinessPhones = new[] { "+1 215 555 0100" },
             MobilePhone = "+1 215 555 0101",
             Categories = new[] { "Directory" },
@@ -52,10 +57,32 @@ public sealed class MicrosoftContactMapperTests
         Assert.Equal("work", contact.Emails[0].Type);
         Assert.True(contact.Emails[0].IsPrimary);
         Assert.False(contact.Emails[1].IsPrimary);
-        Assert.Equal("other", contact.Emails[1].Type);
+        Assert.Equal("home", contact.Emails[1].Type);
         Assert.Contains(new ContactPhone("+1 215 555 0100", "work"), contact.Phones);
         Assert.Contains(new ContactPhone("+1 215 555 0101", "mobile"), contact.Phones);
         Assert.Contains("Directory", contact.Labels);
+    }
+
+    [Fact]
+    public void ToMeshContact_Uses_Generic_Email_Types_When_Slots_Are_Absent()
+    {
+        var contact = MicrosoftContactMapper.ToMeshContact(new MicrosoftGraphContact
+        {
+            Id = "contact-1",
+            DisplayName = "Jane Doe",
+            EmailAddresses = new[]
+            {
+                new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe", "unknown"),
+                new MicrosoftGraphEmailAddress("jane.personal@example.net", "Jane Doe", "personal")
+            }
+        });
+
+        Assert.Equal("jane@example.org", contact.Emails[0].Address);
+        Assert.Equal("work", contact.Emails[0].Type);
+        Assert.True(contact.Emails[0].IsPrimary);
+        Assert.Equal("jane.personal@example.net", contact.Emails[1].Address);
+        Assert.Equal("home", contact.Emails[1].Type);
+        Assert.False(contact.Emails[1].IsPrimary);
     }
 
     [Fact]

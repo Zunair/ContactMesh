@@ -30,7 +30,7 @@ public sealed class MicrosoftGraphContactClientTests
                           "jobTitle": "Director",
                           "primaryEmailAddress": { "name": "Jane Doe", "address": "jane.primary@example.org" },
                           "secondaryEmailAddress": { "name": "Jane Doe", "address": "jane.secondary@example.org" },
-                          "emailAddresses": [ { "name": "Jane Doe", "address": "jane@example.org" } ],
+                          "emailAddresses": [ { "name": "Jane Doe", "address": "jane@example.org", "type": "personal" } ],
                           "businessPhones": [ "+1 215 555 0100" ],
                           "mobilePhone": "+1 215 555 0101",
                           "categories": [ "Directory" ],
@@ -62,7 +62,9 @@ public sealed class MicrosoftGraphContactClientTests
         Assert.Equal("Jane Doe", contact.DisplayName);
         Assert.Equal("jane.primary@example.org", contact.PrimaryEmailAddress?.Address);
         Assert.Equal("jane.secondary@example.org", contact.SecondaryEmailAddress?.Address);
-        Assert.Equal(new[] { "jane.primary@example.org", "jane.secondary@example.org" }, contact.EmailAddresses.Select(email => email.Address));
+        var genericEmail = Assert.Single(contact.EmailAddresses);
+        Assert.Equal("jane@example.org", genericEmail.Address);
+        Assert.Equal("personal", genericEmail.Type);
         Assert.Equal("+1 215 555 0100", Assert.Single(contact.BusinessPhones));
         Assert.Equal("Directory", Assert.Single(contact.Categories));
         Assert.Equal("Bearer graph-token", handler.Requests[0].Authorization);

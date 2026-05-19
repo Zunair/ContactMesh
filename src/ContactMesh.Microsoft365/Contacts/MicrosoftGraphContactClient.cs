@@ -56,6 +56,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
 
             await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
 
+            //var payload1 = await response.Content.ReadAsStringAsync();
             var payload = await response.Content.ReadFromJsonAsync<GraphCollectionResponse<ContactResource>>(
                 JsonOptions,
                 cancellationToken).ConfigureAwait(false);
@@ -208,7 +209,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
             PrimaryEmailAddress = ToMicrosoftGraphEmailAddress(contact.PrimaryEmailAddress),
             SecondaryEmailAddress = ToMicrosoftGraphEmailAddress(contact.SecondaryEmailAddress),
             TertiaryEmailAddress = ToMicrosoftGraphEmailAddress(contact.TertiaryEmailAddress),
-            EmailAddresses = ToEmailAddresses(contact).ToList(),
+            EmailAddresses = ToEmailAddresses(contact.EmailAddresses).ToList(),
             BusinessPhones = (contact.BusinessPhones ?? Enumerable.Empty<string>())
                 .Where(phone => !string.IsNullOrWhiteSpace(phone))
                 .Select(phone => phone.Trim())
@@ -269,30 +270,9 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         return string.IsNullOrWhiteSpace(sourceId) ? null : sourceId;
     }
 
-    private static IEnumerable<MicrosoftGraphEmailAddress> ToEmailAddresses(ContactResource contact)
+    private static IEnumerable<MicrosoftGraphEmailAddress> ToEmailAddresses(IEnumerable<EmailAddressResource>? emails)
     {
-        foreach (var email in new[]
-        {
-            contact.PrimaryEmailAddress,
-            contact.SecondaryEmailAddress,
-            contact.TertiaryEmailAddress
-        })
-        {
-            var mapped = ToMicrosoftGraphEmailAddress(email);
-            if (mapped is not null)
-            {
-                yield return mapped;
-            }
-        }
-
-        if (contact.PrimaryEmailAddress is not null
-            || contact.SecondaryEmailAddress is not null
-            || contact.TertiaryEmailAddress is not null)
-        {
-            yield break;
-        }
-
-        foreach (var email in contact.EmailAddresses ?? Enumerable.Empty<EmailAddressResource>())
+        foreach (var email in emails ?? Enumerable.Empty<EmailAddressResource>())
         {
             var mapped = ToMicrosoftGraphEmailAddress(email);
             if (mapped is not null)
@@ -306,7 +286,10 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
     {
         return string.IsNullOrWhiteSpace(email?.Address)
             ? null
-            : new MicrosoftGraphEmailAddress(email.Address.Trim(), email.Name);
+            : new MicrosoftGraphEmailAddress(
+                email.Address.Trim(),
+                email.Name,
+                string.IsNullOrWhiteSpace(email.Type) ? null : email.Type.Trim());
     }
 
     private static EmailAddressResource? ToEmailAddressResource(MicrosoftGraphEmailAddress? email)
@@ -363,6 +346,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
     {
         public string? Name { get; init; }
         public string? Address { get; init; }
+        public string? Type { get; init; }
     }
 
     private sealed class SingleValueExtendedPropertyResource
