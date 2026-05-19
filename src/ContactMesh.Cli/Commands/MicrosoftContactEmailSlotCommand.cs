@@ -16,7 +16,7 @@ public sealed class MicrosoftContactEmailSlotCommand
         CancellationToken cancellationToken)
     {
         var diagnostic = options.ContactDiagnostic;
-        var userId = GetValue(args, "--user") ?? diagnostic.User ?? GetSingleTargetUser(contactMeshOptions);
+        var userId = FirstConfigured(GetValue(args, "--user"), diagnostic.User) ?? GetSingleTargetUser(contactMeshOptions);
         var contactEmails = GetValues(args, "--contact");
         if (contactEmails.Count == 0)
         {
@@ -29,7 +29,7 @@ public sealed class MicrosoftContactEmailSlotCommand
             contactIds = diagnostic.ContactIds;
         }
 
-        var workEmail = GetValue(args, "--work-email") ?? diagnostic.WorkEmail;
+        var workEmail = FirstConfigured(GetValue(args, "--work-email"), diagnostic.WorkEmail);
         var apply = args.Any(arg => string.Equals(arg, "--apply", StringComparison.OrdinalIgnoreCase)) || diagnostic.Apply;
 
         if (string.IsNullOrWhiteSpace(userId)
@@ -58,7 +58,7 @@ public sealed class MicrosoftContactEmailSlotCommand
             var result = await resetter.ResetAsync(
                 userId,
                 contactEmail,
-                workEmail ?? contactEmail,
+                FirstConfigured(workEmail, contactEmail)!,
                 apply,
                 cancellationToken).ConfigureAwait(false);
 
@@ -67,7 +67,7 @@ public sealed class MicrosoftContactEmailSlotCommand
                 userId,
                 contactEmail,
                 null,
-                workEmail ?? contactEmail,
+                FirstConfigured(workEmail, contactEmail)!,
                 apply,
                 result).ConfigureAwait(false);
             exitCode = Math.Max(exitCode, resultCode);
@@ -165,6 +165,11 @@ public sealed class MicrosoftContactEmailSlotCommand
         }
 
         return values;
+    }
+
+    private static string? FirstConfigured(params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 
     private static string? GetSingleTargetUser(ContactMeshOptions options)
