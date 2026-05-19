@@ -59,6 +59,13 @@ public sealed class ContactEmailPolicyEngine
             return managedIndex;
         }
 
+        if (this.options.ForceNormalizeEmailTypes && emails.Count > 0)
+        {
+            return FindPrimaryEmailIndex(emails) is var primaryIndex && primaryIndex >= 0
+                ? primaryIndex
+                : 0;
+        }
+
         return FindPrimaryEmailIndex(emails);
     }
 

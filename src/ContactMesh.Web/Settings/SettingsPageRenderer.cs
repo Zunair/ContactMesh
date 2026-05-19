@@ -119,6 +119,17 @@ public static class SettingsPageRenderer
         html.AppendLine(">");
         html.AppendLine("</label>");
         html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Force normalize email types</span>");
+        html.AppendLine("<small>When enabled, ContactMesh rewrites the selected email as primary work email so legacy managed contacts no longer show the organization address under Other email. Use once, then turn off.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceNormalizeEmailTypes\" value=\"true\"");
+        if (options.ForceNormalizeEmailTypes)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
         html.AppendLine("<span>Force reset labels</span>");
         html.AppendLine("<small>When enabled, ContactMesh replaces all labels on existing managed contacts instead of reconciling. Use once to clear stale labels accumulated by a previous sync bug, then turn off.</small>");
         html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceResetLabels\" value=\"true\"");

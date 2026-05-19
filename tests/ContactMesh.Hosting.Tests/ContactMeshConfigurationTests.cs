@@ -20,6 +20,7 @@ public sealed class ContactMeshConfigurationTests
             ["ContactMesh:DryRun"] = "false",
             ["ContactMesh:DisableDeletes"] = "true",
             ["ContactMesh:ForceDeduplicatePhones"] = "true",
+            ["ContactMesh:ForceNormalizeEmailTypes"] = "true",
             ["ContactMesh:ManagedEmailDomains:0"] = "example.org",
             ["ContactMesh:Rules:TargetUsers:0"] = "target@example.org",
             ["ContactMesh:Rules:MainContactsGroupEmail"] = "company-directory@example.org",
@@ -58,6 +59,7 @@ public sealed class ContactMeshConfigurationTests
         Assert.False(contactMesh.DryRun);
         Assert.True(contactMesh.DisableDeletes);
         Assert.True(contactMesh.ForceDeduplicatePhones);
+        Assert.True(contactMesh.ForceNormalizeEmailTypes);
         Assert.Equal("example.org", Assert.Single(contactMesh.ManagedEmailDomains));
         Assert.Equal("target@example.org", Assert.Single(contactMesh.Rules.TargetUsers));
         Assert.Equal("company-directory@example.org", contactMesh.Rules.MainContactsGroupEmail);

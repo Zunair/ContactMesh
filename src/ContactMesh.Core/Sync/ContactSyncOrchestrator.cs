@@ -492,7 +492,8 @@ public sealed class ContactSyncOrchestrator
             }),
             emailPolicyEngine: new ContactEmailPolicyEngine(new ContactEmailPolicyOptions
             {
-                ManagedEmailDomains = options.ManagedEmailDomains
+                ManagedEmailDomains = options.ManagedEmailDomains,
+                ForceNormalizeEmailTypes = options.ForceNormalizeEmailTypes
             }));
     }
 

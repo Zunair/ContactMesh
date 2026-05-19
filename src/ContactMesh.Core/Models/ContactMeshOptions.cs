@@ -9,6 +9,7 @@ public sealed record ContactMeshOptions
     public bool DisableDeletes { get; init; }
     public bool ForceResetLabels { get; init; }
     public bool ForceDeduplicatePhones { get; init; }
+    public bool ForceNormalizeEmailTypes { get; init; }
     public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
     public SyncRuleOptions Rules { get; init; } = new();
 }
