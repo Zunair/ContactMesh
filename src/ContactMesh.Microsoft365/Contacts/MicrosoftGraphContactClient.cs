@@ -338,12 +338,22 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         public string? CompanyName { get; init; }
         public string? Department { get; init; }
         public string? JobTitle { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public EmailAddressResource? PrimaryEmailAddress { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public EmailAddressResource? SecondaryEmailAddress { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public EmailAddressResource? TertiaryEmailAddress { get; init; }
+
         public List<EmailAddressResource>? EmailAddresses { get; init; }
         public List<string>? BusinessPhones { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public string? MobilePhone { get; init; }
+
         public List<string>? Categories { get; init; }
         public string? PersonalNotes { get; init; }
         public List<SingleValueExtendedPropertyResource>? SingleValueExtendedProperties { get; init; }

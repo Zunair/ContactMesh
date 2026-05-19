@@ -121,6 +121,8 @@ public sealed class MicrosoftGraphContactClientTests
         {
             Assert.Equal("Jane Doe", document.RootElement.GetProperty("displayName").GetString());
             Assert.Equal("jane@example.org", document.RootElement.GetProperty("primaryEmailAddress").GetProperty("address").GetString());
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("secondaryEmailAddress").ValueKind);
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("tertiaryEmailAddress").ValueKind);
             Assert.False(document.RootElement.TryGetProperty("emailAddresses", out _));
             Assert.Equal("Directory", document.RootElement.GetProperty("categories")[0].GetString());
             Assert.Equal(
@@ -136,6 +138,10 @@ public sealed class MicrosoftGraphContactClientTests
         using (var document = JsonDocument.Parse(handler.Requests[1].Body))
         {
             Assert.Equal("Jane Doe", document.RootElement.GetProperty("displayName").GetString());
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("primaryEmailAddress").ValueKind);
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("secondaryEmailAddress").ValueKind);
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("tertiaryEmailAddress").ValueKind);
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("mobilePhone").ValueKind);
             Assert.False(document.RootElement.TryGetProperty("id", out _));
             Assert.False(document.RootElement.TryGetProperty("changeKey", out _));
         }
