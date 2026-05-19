@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-19",
-  "head": "fa4e278",
+  "head": "e070379",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -85,7 +85,8 @@
     { "id": "one-time-email-type-cleanup", "commit": "dcca9b2", "state": "done", "note": "Added ContactMesh.ForceNormalizeEmailTypes as an opt-in one-time cleanup switch. When enabled, ContactEmailPolicyEngine promotes the selected email to primary work email so legacy managed contacts stop showing organization addresses under Other email. Surfaced in Web settings, samples, docs, and covered by core/hosting/web tests." },
     { "id": "microsoft-email-slot-fields", "commit": "d1788c3", "state": "done", "note": "Microsoft Graph contacts now select, read, and write primaryEmailAddress/secondaryEmailAddress/tertiaryEmailAddress instead of only the generic emailAddresses collection. Generic emailAddresses remains a read fallback. This should place managed org email into Outlook's primary email slot instead of Other email." },
     { "id": "microsoft-clear-stale-contact-slots", "commit": "0a5cc60", "state": "done", "note": "Microsoft Graph contact PATCH/POST payloads now explicitly serialize null primary/secondary/tertiary email slots and mobilePhone when absent, matching Graph's documented clear-by-null update behavior. This lets one-email/one-phone managed updates clear stale Outlook Other email and mobile fields instead of preserving omitted values." },
-    { "id": "microsoft-email-address-type-read", "commit": "fa4e278", "state": "done", "note": "Microsoft Graph contact reads now capture the extra emailAddresses[].type value when Graph returns it and map it back to the matching primary/secondary/tertiary slot address so Core can compare email address, primary flag, and type more accurately without adding a Microsoft Graph SDK dependency." }
+    { "id": "microsoft-email-address-type-read", "commit": "fa4e278", "state": "done", "note": "Microsoft Graph contact reads now capture the extra emailAddresses[].type value when Graph returns it and map it back to the matching primary/secondary/tertiary slot address so Core can compare email address, primary flag, and type more accurately without adding a Microsoft Graph SDK dependency." },
+    { "id": "microsoft-single-contact-email-slot-test", "commit": null, "state": "done-local", "note": "Added a focused Microsoft365 CLI diagnostic command, m365-contact-email-slot, that reads exactly one contact by email or Graph id and optionally performs a two-step live reset: clear primary/secondary/tertiary email slots, then write one primary work email. Live probe of zftest@mhphope.org in zfayaz@mhphope.org showed Graph returns a primaryEmailAddress plus a mirrored emailAddresses[] entry even after reset; attempting to write emailAddresses[].type=work to v1 failed because Graph rejects type on microsoft.graph.completeEmailAddress." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

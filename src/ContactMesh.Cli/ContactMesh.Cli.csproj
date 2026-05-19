@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ContactMesh.Core\ContactMesh.Core.csproj" />
     <ProjectReference Include="..\ContactMesh.Hosting\ContactMesh.Hosting.csproj" />
+    <ProjectReference Include="..\ContactMesh.Microsoft365\ContactMesh.Microsoft365.csproj" />
   </ItemGroup>
 </Project>
