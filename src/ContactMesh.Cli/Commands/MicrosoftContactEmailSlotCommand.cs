@@ -31,13 +31,14 @@ public sealed class MicrosoftContactEmailSlotCommand
 
         var workEmail = FirstConfigured(GetValue(args, "--work-email"), diagnostic.WorkEmail);
         var apply = args.Any(arg => string.Equals(arg, "--apply", StringComparison.OrdinalIgnoreCase)) || diagnostic.Apply;
+        var betaEmailType = GetValue(args, "--beta-email-type");
 
         if (string.IsNullOrWhiteSpace(userId)
             || (contactEmails.Count == 0 && contactIds.Count == 0)
             || (contactIds.Count > 0 && string.IsNullOrWhiteSpace(workEmail)))
         {
             await output.WriteLineAsync(
-                $"Usage: {Name} [--user <mailbox>] (--contact <email-to-find> | --contact-id <graph-id>) [--work-email <email-to-write>] [--apply]").ConfigureAwait(false);
+                $"Usage: {Name} [--user <mailbox>] (--contact <email-to-find> | --contact-id <graph-id>) [--work-email <email-to-write>] [--apply] [--beta-email-type <work|personal|other|main|unknown>]").ConfigureAwait(false);
             await output.WriteLineAsync("--user can be omitted when ContactMesh:Rules:TargetUsers contains exactly one mailbox.").ConfigureAwait(false);
             await output.WriteLineAsync("Command arguments can also be supplied with Microsoft365:ContactDiagnostic config.").ConfigureAwait(false);
             await output.WriteLineAsync("--work-email is required for --contact-id lookups, because the email cannot be inferred from the id.").ConfigureAwait(false);
@@ -70,6 +71,20 @@ public sealed class MicrosoftContactEmailSlotCommand
                 FirstConfigured(workEmail, contactEmail)!,
                 apply,
                 result).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(betaEmailType))
+            {
+                resultCode = Math.Max(
+                    resultCode,
+                    await ApplyBetaEmailTypeAsync(
+                        output,
+                        contactClient,
+                        userId,
+                        result,
+                        FirstConfigured(workEmail, contactEmail)!,
+                        betaEmailType,
+                        cancellationToken).ConfigureAwait(false));
+            }
+
             exitCode = Math.Max(exitCode, resultCode);
         }
 
@@ -90,6 +105,20 @@ public sealed class MicrosoftContactEmailSlotCommand
                 workEmail!,
                 apply,
                 result).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(betaEmailType))
+            {
+                resultCode = Math.Max(
+                    resultCode,
+                    await ApplyBetaEmailTypeAsync(
+                        output,
+                        contactClient,
+                        userId,
+                        result,
+                        workEmail!,
+                        betaEmailType,
+                        cancellationToken).ConfigureAwait(false));
+            }
+
             exitCode = Math.Max(exitCode, resultCode);
         }
 
@@ -136,6 +165,43 @@ public sealed class MicrosoftContactEmailSlotCommand
             await WriteContactAsync(output, "After", contact).ConfigureAwait(false);
         }
 
+        return 0;
+    }
+
+    private static async Task<int> ApplyBetaEmailTypeAsync(
+        TextWriter output,
+        MicrosoftGraphContactClient contactClient,
+        string userId,
+        MicrosoftContactEmailSlotResetResult result,
+        string workEmail,
+        string betaEmailType,
+        CancellationToken cancellationToken)
+    {
+        if (result.Matches.Count != 1)
+        {
+            await output.WriteLineAsync("Skipping beta email type write because the lookup did not match exactly one contact.").ConfigureAwait(false);
+            return result.Matches.Count == 0 ? 3 : 4;
+        }
+
+        var contact = result.Matches[0];
+        if (string.IsNullOrWhiteSpace(contact.Id))
+        {
+            await output.WriteLineAsync("Skipping beta email type write because the matched contact has no Graph id.").ConfigureAwait(false);
+            return 5;
+        }
+
+        await contactClient.UpdateEmailAddressesBetaAsync(
+            userId,
+            contact.Id,
+            new[]
+            {
+                new MicrosoftGraphEmailAddress(workEmail, contact.DisplayName, betaEmailType)
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        await output.WriteLineAsync($"Beta emailAddresses[] write sent with type={betaEmailType}.").ConfigureAwait(false);
+        var betaContact = await contactClient.GetContactBetaAsync(userId, contact.Id, cancellationToken).ConfigureAwait(false);
+        await WriteContactAsync(output, "Beta after", betaContact).ConfigureAwait(false);
         return 0;
     }
 

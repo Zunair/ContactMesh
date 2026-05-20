@@ -9,6 +9,7 @@ namespace ContactMesh.Microsoft365.Contacts;
 public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
 {
     private const string ContactSelectFields = "id,changeKey,displayName,givenName,surname,companyName,department,jobTitle,primaryEmailAddress,secondaryEmailAddress,tertiaryEmailAddress,emailAddresses,businessPhones,mobilePhone,categories,personalNotes";
+    private const string BetaContactSelectFields = "id,displayName,emailAddresses";
     private static readonly Uri DefaultBaseAddress = new("https://graph.microsoft.com/");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -70,6 +71,35 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         return contacts;
     }
 
+    public async Task<MicrosoftGraphContact> GetContactBetaAsync(
+        string userId,
+        string contactId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contactId);
+
+        var requestUri = this.BuildUri(
+            $"beta/users/{EscapePathSegment(userId)}/contacts/{EscapePathSegment(contactId)}",
+            new Dictionary<string, string?>
+            {
+                ["$select"] = BetaContactSelectFields
+            });
+
+        using var request = await this.CreateRequestAsync(HttpMethod.Get, requestUri, cancellationToken)
+            .ConfigureAwait(false);
+        using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
+
+        var contact = await response.Content.ReadFromJsonAsync<ContactResource>(
+            JsonOptions,
+            cancellationToken).ConfigureAwait(false);
+
+        return ToMicrosoftGraphContact(contact ?? new ContactResource());
+    }
+
+
     public Task CreateAsync(
         string userId,
         MicrosoftGraphContact contact,
@@ -106,6 +136,38 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
             HttpMethod.Patch,
             requestUri,
             ToContactResource(contact),
+            cancellationToken);
+    }
+
+    public Task UpdateEmailAddressesBetaAsync(
+        string userId,
+        string contactId,
+        IReadOnlyList<MicrosoftGraphEmailAddress> emailAddresses,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contactId);
+        ArgumentNullException.ThrowIfNull(emailAddresses);
+
+        var requestUri = this.BuildUri(
+            $"beta/users/{EscapePathSegment(userId)}/contacts/{EscapePathSegment(contactId)}",
+            new Dictionary<string, string?>());
+
+        return this.SendJsonAsync(
+            HttpMethod.Patch,
+            requestUri,
+            new BetaContactEmailAddressResource
+            {
+                EmailAddresses = emailAddresses
+                    .Where(email => !string.IsNullOrWhiteSpace(email.Address))
+                    .Select(email => new EmailAddressResource
+                    {
+                        Address = email.Address.Trim(),
+                        Name = email.Name,
+                        Type = string.IsNullOrWhiteSpace(email.Type) ? "unknown" : email.Type.Trim()
+                    })
+                    .ToList()
+            },
             cancellationToken);
     }
 
@@ -345,8 +407,15 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
     private sealed class EmailAddressResource
     {
         public string? Name { get; init; }
+
         public string? Address { get; init; }
+
         public string? Type { get; init; }
+    }
+
+    private sealed class BetaContactEmailAddressResource
+    {
+        public List<EmailAddressResource> EmailAddresses { get; init; } = new();
     }
 
     private sealed class SingleValueExtendedPropertyResource

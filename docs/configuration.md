@@ -51,6 +51,7 @@ Set `ContactMesh:ForceDeduplicatePhones` to `true` for a one-time legacy cleanup
 Set `ContactMesh:ForceNormalizeEmailTypes` to `true` for a one-time legacy cleanup when organization email addresses show under Other email. Review the dry-run, run once with writes enabled, then set it back to `false`.
 
 For focused Microsoft 365 contact diagnostics, configure `Microsoft365:ContactDiagnostic` and run `m365-contact-email-slot`. `User` is the target mailbox whose Contacts folder should be inspected, `Contacts` are contact email addresses to find, `ContactIds` are Graph contact ids to inspect directly, `WorkEmail` is required when updating by id, and `Apply` controls whether the command performs the two-step email-slot reset. Leave `Apply` as `false` for a report-only dry run.
+The command also accepts `--beta-email-type <type>` for testing Microsoft Graph beta typed email writes against one matched contact. Keep this as a diagnostic path unless the beta API behavior is intentionally adopted.
 
 `GroupsToSyncByGroup` is the label-container setting. Put one or more container group emails or ids there; each direct subgroup becomes a managed group contact and the subgroup display name becomes the contact label for members of that subgroup, including nested members. Ordinary visible groups affect who can see contacts, but they do not create labels.
 

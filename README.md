@@ -117,6 +117,7 @@ dotnet run --project .\src\ContactMesh.Cli -- m365-contact-email-slot --user zfa
 ```
 
 Add `--apply` only when you want the diagnostic command to clear the contact's primary/secondary/tertiary email slots and write back one primary work email.
+For beta-only email type testing, add `--beta-email-type work`; this calls `/beta` with a typed `emailAddresses[]` payload and then reads the beta projection back.
 
 ## Run
 

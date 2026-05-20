@@ -185,6 +185,57 @@ public sealed class MicrosoftGraphContactClientTests
         Assert.Contains("ErrorItemNotFound", ex.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task UpdateEmailAddressesBetaAsync_Writes_Typed_EmailAddresses_To_Beta_Endpoint()
+    {
+        var handler = new RecordingHandler(new HttpResponseMessage(HttpStatusCode.OK));
+        var client = CreateClient(handler);
+
+        await client.UpdateEmailAddressesBetaAsync(
+            "user@example.org",
+            "contact-1",
+            new[]
+            {
+                new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe", "work")
+            },
+            CancellationToken.None);
+
+        Assert.Equal(HttpMethod.Patch, handler.Requests[0].Method);
+        Assert.Equal("https://graph.test/beta/users/user%40example.org/contacts/contact-1", handler.Requests[0].RequestUri?.ToString());
+        using var document = JsonDocument.Parse(handler.Requests[0].Body);
+        var email = Assert.Single(document.RootElement.GetProperty("emailAddresses").EnumerateArray());
+        Assert.Equal("jane@example.org", email.GetProperty("address").GetString());
+        Assert.Equal("Jane Doe", email.GetProperty("name").GetString());
+        Assert.Equal("work", email.GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task GetContactBetaAsync_Reads_Typed_EmailAddresses_From_Beta_Endpoint()
+    {
+        var handler = new RecordingHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """
+                    {
+                      "id": "contact-1",
+                      "displayName": "Jane Doe",
+                      "emailAddresses": [
+                        { "name": "Jane Doe", "address": "jane@example.org", "type": "work" }
+                      ]
+                    }
+                    """)
+            });
+        var client = CreateClient(handler);
+
+        var contact = await client.GetContactBetaAsync("user@example.org", "contact-1", CancellationToken.None);
+
+        Assert.Equal("https://graph.test/beta/users/user%40example.org/contacts/contact-1?%24select=id%2CdisplayName%2CemailAddresses", handler.Requests[0].RequestUri?.ToString());
+        var email = Assert.Single(contact.EmailAddresses);
+        Assert.Equal("jane@example.org", email.Address);
+        Assert.Equal("work", email.Type);
+    }
+
     private static MicrosoftGraphContactClient CreateClient(RecordingHandler handler)
     {
         return new MicrosoftGraphContactClient(

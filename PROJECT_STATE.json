@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-19",
-  "head": "c66234e",
+  "head": "5902745",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -88,7 +88,8 @@
     { "id": "microsoft-email-address-type-read", "commit": "fa4e278", "state": "done", "note": "Microsoft Graph contact reads now capture the extra emailAddresses[].type value when Graph returns it and map it back to the matching primary/secondary/tertiary slot address so Core can compare email address, primary flag, and type more accurately without adding a Microsoft Graph SDK dependency." },
     { "id": "microsoft-single-contact-email-slot-test", "commit": "7f39a00", "state": "done", "note": "Added a focused Microsoft365 CLI diagnostic command, m365-contact-email-slot, that reads exactly one contact by email or Graph id and optionally performs a two-step live reset: clear primary/secondary/tertiary email slots, then write one primary work email. Live probe of zftest@mhphope.org in zfayaz@mhphope.org showed Graph returns a primaryEmailAddress plus a mirrored emailAddresses[] entry even after reset; attempting to write emailAddresses[].type=work to v1 failed because Graph rejects type on microsoft.graph.completeEmailAddress." },
     { "id": "microsoft-contact-diagnostic-config", "commit": "80c4963", "state": "done", "note": "Added Microsoft365.ContactDiagnostic config for the m365-contact-email-slot command so focused contact reports/resets can be run from config. Supports User, Contacts, ContactIds, WorkEmail, and Apply, with CLI args still overriding config. Live dry-run for target mailbox zfayaz@mhphope.org and contact zfadmin@mhphope.org found one match, with Graph reporting the address in secondaryEmailAddress plus a mirrored emailAddresses[] entry." },
-    { "id": "microsoft-contact-diagnostic-blank-config-fix", "commit": "c66234e", "state": "done", "note": "Fixed m365-contact-email-slot so blank ContactDiagnostic config values, such as WorkEmail, are treated as missing values and do not override CLI/contact fallback values. Live report after moving zfadmin@mhphope.org back to Other in Outlook showed Graph now stores it in secondaryEmailAddress with primaryEmailAddress null." }
+    { "id": "microsoft-contact-diagnostic-blank-config-fix", "commit": "c66234e", "state": "done", "note": "Fixed m365-contact-email-slot so blank ContactDiagnostic config values, such as WorkEmail, are treated as missing values and do not override CLI/contact fallback values. Live report after moving zfadmin@mhphope.org back to Other in Outlook showed Graph now stores it in secondaryEmailAddress with primaryEmailAddress null." },
+    { "id": "microsoft-beta-typed-email-diagnostic", "commit": null, "state": "done-local", "note": "Added beta-only typed email diagnostic support to m365-contact-email-slot via --beta-email-type. It PATCHes /beta/users/{user}/contacts/{contactId} with typed emailAddresses[] and reads beta back with id/displayName/emailAddresses. Live test for target zfayaz@mhphope.org/contact zfadmin@mhphope.org: v1 reset restored primaryEmailAddress; beta PATCH accepted type=work; beta GET returned emailAddresses[] type=work; v1 subsequently projected the contact as primaryEmailAddress with no type." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
