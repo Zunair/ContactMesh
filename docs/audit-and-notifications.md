@@ -36,7 +36,7 @@ Both features bind from the application configuration under `ContactMesh`.
 | `Enabled` | `true` | When `false`, no audit files are written. |
 | `Directory` | `logs/audit` | Resolved relative to the current working directory when not rooted. Created automatically. |
 | `IncludeNoChange` | `false` | When `true`, per-target no-change rows are included in the detail CSV. |
-| `IncludeDryRunPlannedAsWrites` | `false` | Reserved. Detail rows are labelled `Planned` for dry-run and `Written` for live writes regardless. |
+| `IncludeDryRunPlannedAsWrites` | `false` | When `true`, dry-run rows in the detail CSV use `Status=Written` instead of `Planned` so downstream dashboards count them the same as live writes. Audit CSVs are written for dry-runs regardless of this flag. |
 
 ### `Notifications`
 
@@ -69,11 +69,14 @@ Both files are UTF-8 with a BOM so they open cleanly in Excel.
 `Timestamp, Provider, RunId, DryRun, TargetUserId, Operation, Status, SourceId, DisplayName, PrimaryEmail, Labels, LabelsRemoved, ChangedFields, SourceRule, Reason`
 
 * `Status` is `NoChange`, `Planned` (dry-run) or `Written` (live).
+* When `AuditLog:IncludeDryRunPlannedAsWrites` is `true`, dry-run rows use `Written` instead of `Planned`.
 * Warnings and errors emitted by a target are appended as additional rows where the level appears in `Operation` and `Status`, with the message in `Reason`.
 
 ### Summary CSV columns
 
-`Provider, RunId, HostKind, ConfigPath, StartedAt, CompletedAt, DurationSeconds, DryRun, Outcome, TargetCount, CreateCount, UpdateCount, DeleteCount, NoChangeCount, WriteCount, WarningCount, ErrorCount, FailureMessage, Warnings, Errors, DetailCsvPath`
+`RowType, Provider, RunId, HostKind, ConfigPath, StartedAt, CompletedAt, DurationSeconds, DryRun, TargetUserId, Outcome, TargetCount, CreateCount, UpdateCount, DeleteCount, NoChangeCount, WriteCount, WarningCount, ErrorCount, FailureMessage, Warnings, Errors, DetailCsvPath`
+
+The summary CSV contains one row per run (`RowType=Run`) plus one row per sync target (`RowType=Target`). The Run row carries aggregate totals and the run-level context fields (`HostKind`, `ConfigPath`, `StartedAt`, `CompletedAt`, `DurationSeconds`, `FailureMessage`, `DetailCsvPath`); these are blank on Target rows. Target rows carry per-user counts and that user's individual warnings and errors.
 
 `Outcome` is `Success` or `Failure`. A run is considered a failure when an
 unhandled exception escaped the orchestrator or `HasErrors` is true on the result.

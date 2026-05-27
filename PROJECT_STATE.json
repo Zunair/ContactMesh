@@ -11,7 +11,7 @@
       "lastKnown": {
         "commit": null,
         "build": "pass",
-        "tests": "226 pass, 1 skipped",
+        "tests": "227 pass, 1 skipped",
         "warnings": null
       }
   },
@@ -92,7 +92,10 @@
     { "id": "microsoft-beta-typed-email-diagnostic", "commit": "3c3dab0", "state": "done", "note": "Added beta-only typed email diagnostic support to m365-contact-email-slot via --beta-email-type. It PATCHes /beta/users/{user}/contacts/{contactId} with typed emailAddresses[] and reads beta back with id/displayName/emailAddresses. Live test for target zfayaz@mhphope.org/contact zfadmin@mhphope.org: v1 reset restored primaryEmailAddress; beta PATCH accepted type=work; beta GET returned emailAddresses[] type=work; v1 subsequently projected the contact as primaryEmailAddress with no type." },
     { "id": "run-audit-csv-and-email-notifications", "commit": null, "state": "done-local", "note": "Added per-run dual CSV audit logs (detail + summary) via provider-neutral RunAuditWriter, and success/failure email notifications via Microsoft Graph sendMail. New ContactMesh:AuditLog and ContactMesh:Notifications options bind through host config; runs route through ContactSyncRunPipeline used by CLI/Worker; dispatcher skips on dry-run (including early dry-run failures), missing sender, or empty recipients; failure mails attach summary+detail CSVs truncated to MaxAttachmentBytes. Docs added at docs/audit-and-notifications.md and referenced from configuration.md; samples updated for Microsoft365 (enabled) and Google (sender stays null). 14 new tests in Core/Microsoft365." },
     { "id": "web-notification-test-email", "commit": null, "state": "done-local", "note": "Settings dashboard now surfaces ContactMesh:Notifications settings and provides a Send test email action at /settings/test-email. The test uses current form values without saving, sends one Microsoft Graph sendMail message to distinct success+failure recipients, and renders sent/skipped/failed notice feedback. Hosting has a NotificationTestEmailService with fake-handler coverage; Web renderer/form tests cover notification fields and persistence." },
-    { "id": "web-notification-permission-guidance", "commit": null, "state": "done-local", "note": "Settings dashboard notification test panel now tells admins the Microsoft 365 app registration needs Microsoft Graph Application permission Mail.Send with admin consent, not Delegated permission, and notes Exchange Application Access Policy sender scope. MicrosoftGraphMailNotificationSender now enriches 403 ErrorAccessDenied sendMail failures with the same guidance; docs and tests updated." }
+    { "id": "web-notification-permission-guidance", "commit": null, "state": "done-local", "note": "Settings dashboard notification test panel now tells admins the Microsoft 365 app registration needs Microsoft Graph Application permission Mail.Send with admin consent, not Delegated permission, and notes Exchange Application Access Policy sender scope. MicrosoftGraphMailNotificationSender now enriches 403 ErrorAccessDenied sendMail failures with the same guidance; docs and tests updated." },
+    { "id": "audit-log-web-ui", "commit": null, "state": "done-local", "note": "AuditLog section added to Web settings UI with editable Enabled, Directory, IncludeNoChange, and IncludeDryRunPlannedAsWrites fields; nav link added between Notifications and Rules. SettingsFormModel.FromForm now binds ContactMesh.AuditLog.* so saves no longer silently reset Directory to default; Coalesce helper preserves blank-vs-missing distinction." },
+    { "id": "audit-dry-run-planned-as-writes", "commit": null, "state": "done-local", "note": "Wired IncludeDryRunPlannedAsWrites in RunAuditWriter.ResolveStatus: when true and dry-run, operation rows use Status=Written instead of Planned so downstream dashboards count them the same as live writes. Previously the option was declared but never read. docs/audit-and-notifications.md updated to describe actual behaviour." },
+    { "id": "audit-skip-empty-detail-csv", "commit": null, "state": "done-local", "note": "RunAuditWriter now skips creating the -detail.csv when there are no rows to write (all operations excluded by IncludeNoChange filter, no warnings, no errors). DetailCsvPath is empty string in that case. Pipeline log line and notification email body both omit the detail reference. New test Writer_Skips_Detail_File_When_No_Rows_To_Write added; total 227 pass, 1 skipped." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
@@ -102,6 +105,6 @@
   ],
   "next": [
     "Implement Docker hosted worker mode.",
-    "Optionally surface AuditLog/Notifications in Web settings UI."
+    "Implement Docker hosted worker mode."
   ]
 }

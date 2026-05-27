@@ -78,7 +78,10 @@ public sealed class ContactSyncRunPipeline
                 artifacts = await this.auditWriter.WriteAsync(result, context, cancellationToken).ConfigureAwait(false);
                 if (artifacts is not null)
                 {
-                    await output.WriteLineAsync($"Audit detail: {artifacts.DetailCsvPath}").ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(artifacts.DetailCsvPath))
+                    {
+                        await output.WriteLineAsync($"Audit detail: {artifacts.DetailCsvPath}").ConfigureAwait(false);
+                    }
                     await output.WriteLineAsync($"Audit summary: {artifacts.SummaryCsvPath}").ConfigureAwait(false);
                 }
             }

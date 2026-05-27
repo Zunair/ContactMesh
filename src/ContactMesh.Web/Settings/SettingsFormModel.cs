@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ContactMesh.Core.Audit;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Notifications;
 using ContactMesh.Google.Auth;
@@ -48,6 +49,13 @@ public sealed record SettingsFormModel(
             ForceDeduplicatePhones = form.ContainsKey("ContactMesh.ForceDeduplicatePhones"),
             ForceNormalizeEmailTypes = form.ContainsKey("ContactMesh.ForceNormalizeEmailTypes"),
             ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
+            AuditLog = new AuditLogOptions
+            {
+                Enabled = form.ContainsKey("ContactMesh.AuditLog.Enabled"),
+                Directory = Coalesce(Read(form, "ContactMesh.AuditLog.Directory"), new AuditLogOptions().Directory),
+                IncludeNoChange = form.ContainsKey("ContactMesh.AuditLog.IncludeNoChange"),
+                IncludeDryRunPlannedAsWrites = form.ContainsKey("ContactMesh.AuditLog.IncludeDryRunPlannedAsWrites")
+            },
             Notifications = new NotificationOptions
             {
                 Enabled = form.ContainsKey("ContactMesh.Notifications.Enabled"),
@@ -110,6 +118,11 @@ public sealed record SettingsFormModel(
     private static int ReadInt(IFormCollection form, string key, int fallback)
     {
         return int.TryParse(Read(form, key), out var value) ? value : fallback;
+    }
+
+    private static string Coalesce(string value, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value;
     }
 
     private static IReadOnlyList<GroupMapping> Mappings(IFormCollection form, string key)

@@ -28,6 +28,7 @@ public sealed class RunAuditWriter
 
     private static readonly string[] SummaryHeaders = new[]
     {
+        "RowType",
         "Provider",
         "RunId",
         "HostKind",
@@ -36,6 +37,7 @@ public sealed class RunAuditWriter
         "CompletedAt",
         "DurationSeconds",
         "DryRun",
+        "TargetUserId",
         "Outcome",
         "TargetCount",
         "CreateCount",
@@ -78,16 +80,51 @@ public sealed class RunAuditWriter
         var detailPath = Path.Combine(directory, baseName + "-detail.csv");
         var summaryPath = Path.Combine(directory, baseName + "-summary.csv");
 
-        await WriteDetailAsync(result, context, detailPath, cancellationToken).ConfigureAwait(false);
-        await WriteSummaryAsync(result, context, summaryPath, detailPath, cancellationToken).ConfigureAwait(false);
+        var hasDetailRows = HasDetailRows(result);
+        var effectiveDetailPath = hasDetailRows ? detailPath : string.Empty;
 
-        var detailInfo = new FileInfo(detailPath);
+        if (hasDetailRows)
+        {
+            await WriteDetailAsync(result, context, detailPath, cancellationToken).ConfigureAwait(false);
+        }
+
+        await WriteSummaryAsync(result, context, summaryPath, effectiveDetailPath, cancellationToken).ConfigureAwait(false);
+
+        var detailInfo = hasDetailRows ? new FileInfo(detailPath) : null;
         var summaryInfo = new FileInfo(summaryPath);
         return new RunAuditArtifacts(
-            detailPath,
+            effectiveDetailPath,
             summaryPath,
-            detailInfo.Exists ? detailInfo.Length : 0,
+            detailInfo is { Exists: true } ? detailInfo.Length : 0,
             summaryInfo.Exists ? summaryInfo.Length : 0);
+    }
+
+    private bool HasDetailRows(ContactSyncRunResult? result)
+    {
+        if (result is null)
+        {
+            return false;
+        }
+
+        foreach (var target in result.Results)
+        {
+            if (target.Errors.Count > 0 || target.Warnings.Count > 0)
+            {
+                return true;
+            }
+
+            foreach (var operation in target.Operations)
+            {
+                if (!this.options.IncludeNoChange && operation.OperationType == SyncOperationType.NoChange)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string ResolveDirectory(string configured)
@@ -148,7 +185,7 @@ public sealed class RunAuditWriter
                     continue;
                 }
 
-                var row = BuildDetailRow(context, dryRun, target, operation);
+                var row = BuildDetailRow(context, dryRun, target, operation, this.options.IncludeDryRunPlannedAsWrites);
                 await writer.WriteLineAsync(JoinCsv(row)).ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -182,11 +219,14 @@ public sealed class RunAuditWriter
         var outcome = DetermineOutcome(result, context);
         var duration = (context.CompletedAt - context.StartedAt).TotalSeconds;
         var summary = result?.Summary;
-        var warnings = result is null ? Array.Empty<string>() : result.Warnings.ToArray();
-        var errors = result is null ? Array.Empty<string>() : result.Errors.ToArray();
+        var runWarnings = result is null ? Array.Empty<string>() : result.Warnings.ToArray();
+        var runErrors = result is null ? Array.Empty<string>() : result.Errors.ToArray();
+        var dryRun = (result?.DryRun ?? context.DryRun) ? "true" : "false";
 
-        var row = new[]
+        // Run-level aggregate row
+        var runRow = new[]
         {
+            "Run",
             context.Provider,
             context.RunId,
             context.HostKind ?? string.Empty,
@@ -194,7 +234,8 @@ public sealed class RunAuditWriter
             context.StartedAt.ToString("o", CultureInfo.InvariantCulture),
             context.CompletedAt.ToString("o", CultureInfo.InvariantCulture),
             duration.ToString("F3", CultureInfo.InvariantCulture),
-            (result?.DryRun ?? context.DryRun) ? "true" : "false",
+            dryRun,
+            string.Empty,
             outcome,
             (summary?.TargetCount ?? 0).ToString(CultureInfo.InvariantCulture),
             (summary?.CreateCount ?? 0).ToString(CultureInfo.InvariantCulture),
@@ -205,12 +246,50 @@ public sealed class RunAuditWriter
             (summary?.WarningCount ?? 0).ToString(CultureInfo.InvariantCulture),
             (summary?.ErrorCount ?? 0).ToString(CultureInfo.InvariantCulture),
             context.Failure?.Message ?? string.Empty,
-            string.Join(" | ", warnings),
-            string.Join(" | ", errors),
+            string.Join(" | ", runWarnings),
+            string.Join(" | ", runErrors),
             detailPath
         };
 
-        await writer.WriteLineAsync(JoinCsv(row)).ConfigureAwait(false);
+        await writer.WriteLineAsync(JoinCsv(runRow)).ConfigureAwait(false);
+
+        // Per-target rows
+        if (result is not null)
+        {
+            foreach (var target in result.Results)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var targetOutcome = target.HasErrors ? "Failure" : "Success";
+                var targetRow = new[]
+                {
+                    "Target",
+                    context.Provider,
+                    context.RunId,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    dryRun,
+                    target.TargetUserId,
+                    targetOutcome,
+                    string.Empty,
+                    target.CreateCount.ToString(CultureInfo.InvariantCulture),
+                    target.UpdateCount.ToString(CultureInfo.InvariantCulture),
+                    target.DeleteCount.ToString(CultureInfo.InvariantCulture),
+                    target.NoChangeCount.ToString(CultureInfo.InvariantCulture),
+                    target.WriteCount.ToString(CultureInfo.InvariantCulture),
+                    target.WarningCount.ToString(CultureInfo.InvariantCulture),
+                    target.ErrorCount.ToString(CultureInfo.InvariantCulture),
+                    string.Empty,
+                    string.Join(" | ", target.Warnings),
+                    string.Join(" | ", target.Errors),
+                    string.Empty
+                };
+
+                await writer.WriteLineAsync(JoinCsv(targetRow)).ConfigureAwait(false);
+            }
+        }
     }
 
     internal static string DetermineOutcome(ContactSyncRunResult? result, RunAuditContext context)
@@ -232,9 +311,10 @@ public sealed class RunAuditWriter
         RunAuditContext context,
         string dryRun,
         SyncResult target,
-        SyncOperation operation)
+        SyncOperation operation,
+        bool includeDryRunPlannedAsWrites)
     {
-        var status = ResolveStatus(target.DryRun, operation.OperationType);
+        var status = ResolveStatus(target.DryRun, operation.OperationType, includeDryRunPlannedAsWrites);
         var sourceId = operation.DesiredContact.SourceId ?? operation.ExistingContact?.SourceId ?? string.Empty;
         var displayName = operation.DesiredContact.DisplayName ?? operation.ExistingContact?.DisplayName ?? string.Empty;
         var primaryEmail = ResolvePrimaryEmail(operation.DesiredContact)
@@ -298,14 +378,19 @@ public sealed class RunAuditWriter
         };
     }
 
-    private static string ResolveStatus(bool dryRun, SyncOperationType operationType)
+    private static string ResolveStatus(bool dryRun, SyncOperationType operationType, bool includeDryRunPlannedAsWrites)
     {
         if (operationType == SyncOperationType.NoChange)
         {
             return "NoChange";
         }
 
-        return dryRun ? "Planned" : "Written";
+        if (!dryRun || includeDryRunPlannedAsWrites)
+        {
+            return "Written";
+        }
+
+        return "Planned";
     }
 
     private static string? ResolvePrimaryEmail(MeshContact? contact)

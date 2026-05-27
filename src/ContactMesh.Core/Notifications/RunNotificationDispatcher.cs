@@ -132,7 +132,10 @@ public sealed class RunNotificationDispatcher
         if (artifacts is not null)
         {
             builder.AppendLine();
-            builder.AppendLine($"Audit CSV (detail): {artifacts.DetailCsvPath} ({artifacts.DetailCsvBytes} bytes)");
+            if (!string.IsNullOrEmpty(artifacts.DetailCsvPath))
+            {
+                builder.AppendLine($"Audit CSV (detail): {artifacts.DetailCsvPath} ({artifacts.DetailCsvBytes} bytes)");
+            }
             builder.AppendLine($"Audit CSV (summary): {artifacts.SummaryCsvPath} ({artifacts.SummaryCsvBytes} bytes)");
         }
 

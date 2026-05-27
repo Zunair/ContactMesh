@@ -94,7 +94,12 @@ public sealed class RunAuditWriterTests : IDisposable
 
         var summary = await File.ReadAllTextAsync(artifacts.SummaryCsvPath, TestContext.Current.CancellationToken);
         Assert.Contains("Microsoft365", summary);
+        // Run row
+        Assert.Contains("Run,Microsoft365", summary);
         Assert.Contains(",Success,", summary);
+        // Target row for target-1
+        Assert.Contains("Target,Microsoft365", summary);
+        Assert.Contains(",target-1,", summary);
         Assert.Contains(",1,1,0,0,1,1,", summary, StringComparison.Ordinal);
     }
 
@@ -141,7 +146,7 @@ public sealed class RunAuditWriterTests : IDisposable
 
         Assert.NotNull(artifacts);
         var summary = await File.ReadAllTextAsync(artifacts!.SummaryCsvPath, TestContext.Current.CancellationToken);
-        Assert.Contains(",true,Failure,", summary);
+        Assert.Contains(",true,,Failure,", summary);
     }
 
     [Fact]
@@ -159,6 +164,50 @@ public sealed class RunAuditWriterTests : IDisposable
         var artifacts = await writer.WriteAsync(new ContactSyncRunResult(), context, TestContext.Current.CancellationToken);
 
         Assert.Null(artifacts);
+    }
+
+    [Fact]
+    public async Task Writer_Skips_Detail_File_When_No_Rows_To_Write()
+    {
+        var options = new AuditLogOptions { Directory = this.root, IncludeNoChange = false };
+        var writer = new RunAuditWriter(options);
+
+        var result = new ContactSyncRunResult
+        {
+            DryRun = false,
+            Results = new[]
+            {
+                new SyncResult
+                {
+                    TargetUserId = "target-1",
+                    DryRun = false,
+                    Operations = new[]
+                    {
+                        new SyncOperation
+                        {
+                            OperationType = SyncOperationType.NoChange,
+                            DesiredContact = new MeshContact { SourceId = "user:bob" }
+                        }
+                    }
+                }
+            }
+        };
+
+        var context = new RunAuditContext
+        {
+            Provider = "Microsoft365",
+            RunId = "run-empty",
+            StartedAt = DateTimeOffset.UtcNow,
+            CompletedAt = DateTimeOffset.UtcNow
+        };
+
+        var artifacts = await writer.WriteAsync(result, context, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(artifacts);
+        Assert.Equal(string.Empty, artifacts!.DetailCsvPath);
+        Assert.Equal(0, artifacts.DetailCsvBytes);
+        Assert.True(File.Exists(artifacts.SummaryCsvPath));
+        Assert.Empty(Directory.GetFiles(this.root, "*-detail.csv"));
     }
 
     [Fact]

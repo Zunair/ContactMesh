@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using ContactMesh.Core.Audit;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Notifications;
 using ContactMesh.Core.Sync;
@@ -36,6 +37,7 @@ public static class SettingsPageRenderer
         html.AppendLine("<nav>");
         html.AppendLine("<a href=\"#runtime\">Runtime</a>");
         html.AppendLine("<a href=\"#notifications\">Notifications</a>");
+        html.AppendLine("<a href=\"#audit\">Audit log</a>");
         html.AppendLine("<a href=\"#rules\">Rules</a>");
         html.AppendLine("<a href=\"#providers\">Providers</a>");
         html.AppendLine("</nav>");
@@ -62,6 +64,7 @@ public static class SettingsPageRenderer
         html.AppendLine("<form method=\"post\" action=\"/settings\">");
         AppendRuntimeSection(html, contactMesh, configPath);
         AppendNotificationsSection(html, contactMesh.Notifications);
+        AppendAuditLogSection(html, contactMesh.AuditLog);
         AppendRulesSection(html, contactMesh.Rules, contactMesh.ManagedEmailDomains);
         AppendProvidersSection(html, googleWorkspace, microsoft365);
         html.AppendLine("<div class=\"save-bar\">");
@@ -196,6 +199,57 @@ public static class SettingsPageRenderer
         html.AppendLine("<p class=\"description\">Sends one test message to all configured success and failure recipients using the current form values. This does not save settings.</p>");
         html.AppendLine("<button type=\"submit\" formaction=\"/settings/test-email\">Send test email</button>");
         html.AppendLine("</section>");
+        html.AppendLine("</div>");
+        html.AppendLine("</section>");
+    }
+
+    private static void AppendAuditLogSection(StringBuilder html, AuditLogOptions options)
+    {
+        html.AppendLine("<section id=\"audit\" class=\"band\">");
+        html.AppendLine("<div class=\"band-header\">");
+        html.AppendLine("<h2>Audit log</h2>");
+        html.AppendLine("<span class=\"muted\">ContactMesh:AuditLog</span>");
+        html.AppendLine("</div>");
+        html.AppendLine("<div class=\"settings-grid\">");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Write per-run CSV audit logs</span>");
+        html.AppendLine("<small>When enabled, every run writes a detail CSV and a summary CSV to the configured directory. Disabling stops both files but does not affect notifications.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.Enabled\" value=\"true\"");
+        if (options.Enabled)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        AppendField(
+            html,
+            "Audit log directory",
+            "ContactMesh.AuditLog.Directory",
+            options.Directory,
+            "Folder where per-run CSV files are written. Relative paths resolve from the running process's current working directory; absolute paths are used as-is. The directory is created if missing.");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Include no-change rows</span>");
+        html.AppendLine("<small>When enabled, the detail CSV includes one row per target contact that did not change. Useful for full-state audits, but increases file size significantly.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.IncludeNoChange\" value=\"true\"");
+        if (options.IncludeNoChange)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Treat dry-run rows as Written</span>");
+        html.AppendLine("<small>When enabled, dry-run detail rows use Status=Written instead of Planned so downstream dashboards count them the same as live writes. Audit CSVs are written for dry-runs regardless of this flag.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.IncludeDryRunPlannedAsWrites\" value=\"true\"");
+        if (options.IncludeDryRunPlannedAsWrites)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
         html.AppendLine("</div>");
         html.AppendLine("</section>");
     }
