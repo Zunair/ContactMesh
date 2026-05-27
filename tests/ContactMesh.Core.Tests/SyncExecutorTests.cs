@@ -29,6 +29,7 @@ public sealed class SyncExecutorTests
             CancellationToken.None);
 
         Assert.Equal(0, provider.ApplyCount);
+        Assert.Equal("user@example.org", result.TargetUserEmail);
         Assert.Contains(result.LogEntries, entry => entry.Message.Contains("Planned 1 operation(s)", StringComparison.Ordinal));
         Assert.Contains(result.LogEntries, entry => entry.Message.Contains("Dry run enabled", StringComparison.Ordinal));
         var operationEntry = result.LogEntries.Single(entry => entry.OperationType == SyncOperationType.Create);

@@ -37,6 +37,7 @@ public sealed class RunAuditWriterTests : IDisposable
                 new SyncResult
                 {
                     TargetUserId = "target-1",
+                    TargetUserEmail = "target-1@example.com",
                     DryRun = false,
                     Operations = new[]
                     {
@@ -85,21 +86,25 @@ public sealed class RunAuditWriterTests : IDisposable
 
         var detail = await File.ReadAllTextAsync(artifacts.DetailCsvPath, TestContext.Current.CancellationToken);
         Assert.Contains("Operation,Status", detail);
+        Assert.Contains("TargetUserId,TargetUserEmail,Operation", detail);
+        Assert.Contains("target-1,target-1@example.com,Create", detail);
         Assert.Contains("Create,Written", detail);
         Assert.Contains("user:alice", detail);
         Assert.Contains("alice@example.com", detail);
         Assert.Contains("Adopting new contact", detail);
         Assert.DoesNotContain("user:bob", detail);
         Assert.Contains("minor-warning", detail);
+        Assert.Contains("target-1,target-1@example.com,Warning,Warning", detail);
 
         var summary = await File.ReadAllTextAsync(artifacts.SummaryCsvPath, TestContext.Current.CancellationToken);
         Assert.Contains("Microsoft365", summary);
+        Assert.Contains("TargetUserId,TargetUserEmail,Outcome", summary);
         // Run row
         Assert.Contains("Run,Microsoft365", summary);
         Assert.Contains(",Success,", summary);
         // Target row for target-1
         Assert.Contains("Target,Microsoft365", summary);
-        Assert.Contains(",target-1,", summary);
+        Assert.Contains(",target-1,target-1@example.com,", summary);
         Assert.Contains(",1,1,0,0,1,1,", summary, StringComparison.Ordinal);
     }
 
@@ -146,7 +151,7 @@ public sealed class RunAuditWriterTests : IDisposable
 
         Assert.NotNull(artifacts);
         var summary = await File.ReadAllTextAsync(artifacts!.SummaryCsvPath, TestContext.Current.CancellationToken);
-        Assert.Contains(",true,,Failure,", summary);
+        Assert.Contains(",true,,,Failure,", summary);
     }
 
     [Fact]
@@ -180,6 +185,7 @@ public sealed class RunAuditWriterTests : IDisposable
                 new SyncResult
                 {
                     TargetUserId = "target-1",
+                    TargetUserEmail = "target-1@example.com",
                     DryRun = false,
                     Operations = new[]
                     {
@@ -224,6 +230,7 @@ public sealed class RunAuditWriterTests : IDisposable
                 new SyncResult
                 {
                     TargetUserId = "target,with,commas",
+                    TargetUserEmail = "target@example.com",
                     DryRun = true,
                     Operations = new[]
                     {
@@ -252,7 +259,7 @@ public sealed class RunAuditWriterTests : IDisposable
             artifacts!.DetailCsvPath,
             Encoding.UTF8,
             TestContext.Current.CancellationToken);
-        Assert.Contains("\"target,with,commas\"", detail);
+        Assert.Contains("\"target,with,commas\",target@example.com", detail);
         Assert.Contains("\"Name \"\"quoted\"\"\"", detail);
         Assert.Contains("\"line1\nline2\"", detail);
     }

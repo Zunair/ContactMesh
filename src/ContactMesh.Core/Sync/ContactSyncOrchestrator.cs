@@ -623,6 +623,7 @@ public sealed class ContactSyncOrchestrator
         return new SyncResult
         {
             TargetUserId = target.UserId,
+            TargetUserEmail = target.UserEmail,
             DryRun = dryRun,
             Errors = new[] { message },
             LogEntries = new[]

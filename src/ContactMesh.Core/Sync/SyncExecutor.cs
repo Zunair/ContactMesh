@@ -31,6 +31,7 @@ public sealed class SyncExecutor
         return new SyncResult
         {
             TargetUserId = target.UserId,
+            TargetUserEmail = target.UserEmail,
             DryRun = dryRun,
             Operations = operations,
             LogEntries = CreateLogEntries(target, operations, dryRun, disableDeletes)

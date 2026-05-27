@@ -66,7 +66,7 @@ Both files are UTF-8 with a BOM so they open cleanly in Excel.
 
 ### Detail CSV columns
 
-`Timestamp, Provider, RunId, DryRun, TargetUserId, Operation, Status, SourceId, DisplayName, PrimaryEmail, Labels, LabelsRemoved, ChangedFields, SourceRule, Reason`
+`Timestamp, Provider, RunId, DryRun, TargetUserId, TargetUserEmail, Operation, Status, SourceId, DisplayName, PrimaryEmail, Labels, LabelsRemoved, ChangedFields, SourceRule, Reason`
 
 * `Status` is `NoChange`, `Planned` (dry-run) or `Written` (live).
 * When `AuditLog:IncludeDryRunPlannedAsWrites` is `true`, dry-run rows use `Written` instead of `Planned`.
@@ -74,7 +74,7 @@ Both files are UTF-8 with a BOM so they open cleanly in Excel.
 
 ### Summary CSV columns
 
-`RowType, Provider, RunId, HostKind, ConfigPath, StartedAt, CompletedAt, DurationSeconds, DryRun, TargetUserId, Outcome, TargetCount, CreateCount, UpdateCount, DeleteCount, NoChangeCount, WriteCount, WarningCount, ErrorCount, FailureMessage, Warnings, Errors, DetailCsvPath`
+`RowType, Provider, RunId, HostKind, ConfigPath, StartedAt, CompletedAt, DurationSeconds, DryRun, TargetUserId, TargetUserEmail, Outcome, TargetCount, CreateCount, UpdateCount, DeleteCount, NoChangeCount, WriteCount, WarningCount, ErrorCount, FailureMessage, Warnings, Errors, DetailCsvPath`
 
 The summary CSV contains one row per run (`RowType=Run`) plus one row per sync target (`RowType=Target`). The Run row carries aggregate totals and the run-level context fields (`HostKind`, `ConfigPath`, `StartedAt`, `CompletedAt`, `DurationSeconds`, `FailureMessage`, `DetailCsvPath`); these are blank on Target rows. Target rows carry per-user counts and that user's individual warnings and errors.
 

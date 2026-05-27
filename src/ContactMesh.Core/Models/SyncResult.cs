@@ -5,6 +5,7 @@ namespace ContactMesh.Core.Models;
 public sealed record SyncResult
 {
     public required string TargetUserId { get; init; }
+    public string TargetUserEmail { get; init; } = string.Empty;
     public bool DryRun { get; init; }
     public IReadOnlyList<SyncOperation> Operations { get; init; } = Array.Empty<SyncOperation>();
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
