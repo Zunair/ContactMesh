@@ -25,6 +25,8 @@ public sealed class ContactMeshAppHost : IDisposable
 
     public ContactSyncOrchestrator Orchestrator => this.Services.GetRequiredService<ContactSyncOrchestrator>();
 
+    public ContactSyncRunPipeline Pipeline => this.Services.GetRequiredService<ContactSyncRunPipeline>();
+
     public static ContactMeshAppHost Build(string[] args)
     {
         var configPath = ContactMeshConfiguration.ResolveConfigPath(args);

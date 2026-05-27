@@ -1,3 +1,6 @@
+using ContactMesh.Core.Audit;
+using ContactMesh.Core.Notifications;
+
 namespace ContactMesh.Core.Models;
 
 public sealed record ContactMeshOptions
@@ -12,6 +15,8 @@ public sealed record ContactMeshOptions
     public bool ForceNormalizeEmailTypes { get; init; }
     public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
     public SyncRuleOptions Rules { get; init; } = new();
+    public AuditLogOptions AuditLog { get; init; } = new();
+    public NotificationOptions Notifications { get; init; } = new();
 }
 
 public sealed record SyncRuleOptions

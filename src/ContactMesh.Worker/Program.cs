@@ -9,5 +9,5 @@ Console.WriteLine($"Provider: {options.Provider}");
 Console.WriteLine($"Dry run: {options.DryRun}");
 Console.WriteLine($"Config: {appHost.ConfigPath}");
 
-var job = new ContactSyncJob(options, appHost.Orchestrator);
+var job = new ContactSyncJob(options, appHost.Pipeline, appHost.ConfigPath);
 await job.RunAsync(CancellationToken.None).ConfigureAwait(false);

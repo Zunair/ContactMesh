@@ -1,40 +1,30 @@
-using ContactMesh.Core.Logging;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
+using ContactMesh.Hosting;
 
 namespace ContactMesh.Worker.Jobs;
 
 public sealed class ContactSyncJob
 {
     private readonly ContactMeshOptions options;
-    private readonly ContactSyncOrchestrator orchestrator;
+    private readonly ContactSyncRunPipeline pipeline;
+    private readonly string? configPath;
     private readonly TextWriter output;
 
     public ContactSyncJob(
         ContactMeshOptions options,
-        ContactSyncOrchestrator orchestrator,
+        ContactSyncRunPipeline pipeline,
+        string? configPath = null,
         TextWriter? output = null)
     {
         this.options = options;
-        this.orchestrator = orchestrator;
+        this.pipeline = pipeline;
+        this.configPath = configPath;
         this.output = output ?? Console.Out;
     }
 
-    public async Task<ContactSyncRunResult> RunAsync(CancellationToken cancellationToken)
+    public Task<ContactSyncRunResult?> RunAsync(CancellationToken cancellationToken)
     {
-        var result = await this.orchestrator.RunAsync(
-            this.options,
-            cancellationToken,
-            async (progress, _) =>
-            {
-                await this.output.WriteLineAsync(SyncProgressFormatter.Format(progress)).ConfigureAwait(false);
-            }).ConfigureAwait(false);
-
-        foreach (var line in SyncRunReportFormatter.Format(result))
-        {
-            await this.output.WriteLineAsync(line).ConfigureAwait(false);
-        }
-
-        return result;
+        return this.pipeline.RunAsync(this.options, this.output, hostKind: "Worker", this.configPath, cancellationToken);
     }
 }

@@ -1,7 +1,7 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-05-19",
+  "updated": "2026-05-27",
   "head": "3c3dab0",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
@@ -9,9 +9,9 @@
     "build": "dotnet build ContactMesh.sln -m:1",
     "test": "dotnet test ContactMesh.sln -m:1 --no-build",
       "lastKnown": {
-        "commit": "212e080",
+        "commit": null,
         "build": "pass",
-        "tests": "199 pass, 1 skipped",
+        "tests": "223 pass, 1 skipped",
         "warnings": null
       }
   },
@@ -89,7 +89,8 @@
     { "id": "microsoft-single-contact-email-slot-test", "commit": "7f39a00", "state": "done", "note": "Added a focused Microsoft365 CLI diagnostic command, m365-contact-email-slot, that reads exactly one contact by email or Graph id and optionally performs a two-step live reset: clear primary/secondary/tertiary email slots, then write one primary work email. Live probe of zftest@mhphope.org in zfayaz@mhphope.org showed Graph returns a primaryEmailAddress plus a mirrored emailAddresses[] entry even after reset; attempting to write emailAddresses[].type=work to v1 failed because Graph rejects type on microsoft.graph.completeEmailAddress." },
     { "id": "microsoft-contact-diagnostic-config", "commit": "80c4963", "state": "done", "note": "Added Microsoft365.ContactDiagnostic config for the m365-contact-email-slot command so focused contact reports/resets can be run from config. Supports User, Contacts, ContactIds, WorkEmail, and Apply, with CLI args still overriding config. Live dry-run for target mailbox zfayaz@mhphope.org and contact zfadmin@mhphope.org found one match, with Graph reporting the address in secondaryEmailAddress plus a mirrored emailAddresses[] entry." },
     { "id": "microsoft-contact-diagnostic-blank-config-fix", "commit": "c66234e", "state": "done", "note": "Fixed m365-contact-email-slot so blank ContactDiagnostic config values, such as WorkEmail, are treated as missing values and do not override CLI/contact fallback values. Live report after moving zfadmin@mhphope.org back to Other in Outlook showed Graph now stores it in secondaryEmailAddress with primaryEmailAddress null." },
-    { "id": "microsoft-beta-typed-email-diagnostic", "commit": "3c3dab0", "state": "done", "note": "Added beta-only typed email diagnostic support to m365-contact-email-slot via --beta-email-type. It PATCHes /beta/users/{user}/contacts/{contactId} with typed emailAddresses[] and reads beta back with id/displayName/emailAddresses. Live test for target zfayaz@mhphope.org/contact zfadmin@mhphope.org: v1 reset restored primaryEmailAddress; beta PATCH accepted type=work; beta GET returned emailAddresses[] type=work; v1 subsequently projected the contact as primaryEmailAddress with no type." }
+    { "id": "microsoft-beta-typed-email-diagnostic", "commit": "3c3dab0", "state": "done", "note": "Added beta-only typed email diagnostic support to m365-contact-email-slot via --beta-email-type. It PATCHes /beta/users/{user}/contacts/{contactId} with typed emailAddresses[] and reads beta back with id/displayName/emailAddresses. Live test for target zfayaz@mhphope.org/contact zfadmin@mhphope.org: v1 reset restored primaryEmailAddress; beta PATCH accepted type=work; beta GET returned emailAddresses[] type=work; v1 subsequently projected the contact as primaryEmailAddress with no type." },
+    { "id": "run-audit-csv-and-email-notifications", "commit": null, "state": "done-local", "note": "Added per-run dual CSV audit logs (detail + summary) via provider-neutral RunAuditWriter, and success/failure email notifications via Microsoft Graph sendMail. New ContactMesh:AuditLog and ContactMesh:Notifications options bind through host config; runs route through ContactSyncRunPipeline used by CLI/Worker; dispatcher skips on dry-run (including early dry-run failures), missing sender, or empty recipients; failure mails attach summary+detail CSVs truncated to MaxAttachmentBytes. Docs added at docs/audit-and-notifications.md and referenced from configuration.md; samples updated for Microsoft365 (enabled) and Google (sender stays null). 14 new tests in Core/Microsoft365." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
@@ -98,6 +99,7 @@
     { "id": "push-origin", "state": "blocked", "note": "Remote origin is configured but user said push later." }
   ],
   "next": [
-    "Implement Docker hosted worker mode."
+    "Implement Docker hosted worker mode.",
+    "Optionally surface AuditLog/Notifications in Web settings UI."
   ]
 }

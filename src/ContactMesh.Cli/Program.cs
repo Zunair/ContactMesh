@@ -27,5 +27,5 @@ if (string.Equals(commandName, MicrosoftContactEmailSlotCommand.Name, StringComp
 else
 {
     var command = new SyncCommand();
-    await command.RunAsync(options, appHost.Orchestrator, Console.Out, CancellationToken.None).ConfigureAwait(false);
+    await command.RunAsync(options, appHost.Pipeline, appHost.ConfigPath, Console.Out, CancellationToken.None).ConfigureAwait(false);
 }

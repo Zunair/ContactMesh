@@ -1,5 +1,7 @@
 using ContactMesh.Core.Abstractions;
+using ContactMesh.Core.Audit;
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Notifications;
 using ContactMesh.Core.Sync;
 using ContactMesh.Google.Auth;
 using ContactMesh.Google.Contacts;
@@ -9,6 +11,7 @@ using ContactMesh.Microsoft365.Auth;
 using ContactMesh.Microsoft365.Contacts;
 using ContactMesh.Microsoft365.Directory;
 using ContactMesh.Microsoft365.Groups;
+using ContactMesh.Microsoft365.Notifications;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -22,8 +25,45 @@ public static class ContactMeshHostFactory
         services.AddContactMeshOptions(configuration);
         services.AddSingleton<HttpClient>();
         services.AddSingleton(Create);
+        services.AddSingleton(CreateAuditWriter);
+        services.AddSingleton(CreateNotificationDispatcher);
+        services.AddSingleton<ContactSyncRunPipeline>();
 
         return services;
+    }
+
+    private static RunAuditWriter CreateAuditWriter(IServiceProvider services)
+    {
+        var contactMesh = services.GetRequiredService<IOptions<ContactMeshOptions>>().Value;
+        return new RunAuditWriter(contactMesh.AuditLog);
+    }
+
+    private static IRunNotificationSender? CreateNotificationSender(IServiceProvider services)
+    {
+        var contactMesh = services.GetRequiredService<IOptions<ContactMeshOptions>>().Value;
+        if (!contactMesh.Notifications.Enabled)
+        {
+            return null;
+        }
+
+        var providerKey = contactMesh.Provider.Trim().ToUpperInvariant();
+        if (providerKey is "MICROSOFT365" or "MICROSOFT")
+        {
+            var microsoft365 = services.GetRequiredService<IOptions<Microsoft365Options>>().Value;
+            var httpClient = services.GetRequiredService<HttpClient>();
+            var graphClientFactory = new MicrosoftGraphClientFactory(microsoft365);
+            var accessTokenProvider = graphClientFactory.CreateAccessTokenProvider(httpClient);
+            return new MicrosoftGraphMailNotificationSender(httpClient, accessTokenProvider);
+        }
+
+        return null;
+    }
+
+    private static RunNotificationDispatcher CreateNotificationDispatcher(IServiceProvider services)
+    {
+        var contactMesh = services.GetRequiredService<IOptions<ContactMeshOptions>>().Value;
+        var sender = CreateNotificationSender(services);
+        return new RunNotificationDispatcher(contactMesh.Notifications, sender);
     }
 
     public static ContactSyncOrchestrator Create(IServiceProvider services)

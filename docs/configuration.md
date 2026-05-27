@@ -56,3 +56,7 @@ The command also accepts `--beta-email-type <type>` for testing Microsoft Graph 
 `GroupsToSyncByGroup` is the label-container setting. Put one or more container group emails or ids there; each direct subgroup becomes a managed group contact and the subgroup display name becomes the contact label for members of that subgroup, including nested members. Ordinary visible groups affect who can see contacts, but they do not create labels.
 
 Keep secrets out of repository files. Use environment variables, user secrets, mounted files, or your hosting platform's secret store.
+
+## Run audit logs and email notifications
+
+`ContactMesh:AuditLog` writes a per-run detail and summary CSV to disk for every sync run. `ContactMesh:Notifications` sends a success or failure summary email (Microsoft 365 only) after each non-dry-run. See [audit-and-notifications.md](audit-and-notifications.md) for the full schema and options reference.
