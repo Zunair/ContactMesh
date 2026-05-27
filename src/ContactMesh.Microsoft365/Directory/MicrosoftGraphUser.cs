@@ -14,4 +14,5 @@ public sealed record MicrosoftGraphUser
     public IReadOnlyList<string> BusinessPhones { get; init; } = Array.Empty<string>();
     public string? MobilePhone { get; init; }
     public bool? AccountEnabled { get; init; }
+    public string? UserType { get; init; }
 }

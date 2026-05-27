@@ -186,6 +186,22 @@ public sealed class MicrosoftGraphContactClientTests
     }
 
     [Fact]
+    public async Task ListAsync_Returns_Empty_For_MailboxNotEnabledForRESTAPI()
+    {
+        var handler = new RecordingHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                ReasonPhrase = "Not Found",
+                Content = JsonContent("""{ "error": { "code": "MailboxNotEnabledForRESTAPI", "message": "The mailbox is either inactive, soft-deleted, or is hosted on-premise." } }""")
+            });
+        var client = CreateClient(handler);
+
+        var contacts = await client.ListAsync("svc-account@example.org", CancellationToken.None);
+
+        Assert.Empty(contacts);
+    }
+
+    [Fact]
     public async Task UpdateEmailAddressesBetaAsync_Writes_Typed_EmailAddresses_To_Beta_Endpoint()
     {
         var handler = new RecordingHandler(new HttpResponseMessage(HttpStatusCode.OK));

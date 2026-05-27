@@ -71,4 +71,35 @@ public sealed class MicrosoftDirectoryMapperTests
 
         Assert.Equal("jane.alias@example.org", user.Email);
     }
+
+    [Theory]
+    [InlineData("Guest")]
+    [InlineData("guest")]
+    [InlineData("ExternalMember")]
+    public void ToMeshUser_Marks_Non_Member_UserType_As_Suspended(string userType)
+    {
+        var user = MicrosoftDirectoryMapper.ToMeshUser(new MicrosoftGraphUser
+        {
+            Id = "guest-1",
+            UserPrincipalName = "guest_example.org#EXT#@contoso.onmicrosoft.com",
+            AccountEnabled = true,
+            UserType = userType
+        });
+
+        Assert.True(user.IsSuspended);
+    }
+
+    [Fact]
+    public void ToMeshUser_Does_Not_Mark_Member_UserType_As_Suspended()
+    {
+        var user = MicrosoftDirectoryMapper.ToMeshUser(new MicrosoftGraphUser
+        {
+            Id = "member-1",
+            UserPrincipalName = "member@example.org",
+            AccountEnabled = true,
+            UserType = "Member"
+        });
+
+        Assert.False(user.IsSuspended);
+    }
 }

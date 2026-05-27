@@ -55,6 +55,11 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
                 .ConfigureAwait(false);
             using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
+            if (await IsNoMailboxResponseAsync(response, cancellationToken).ConfigureAwait(false))
+            {
+                return contacts;
+            }
+
             await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
 
             //var payload1 = await response.Content.ReadAsStringAsync();
@@ -253,6 +258,19 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
 
         throw new HttpRequestException(
             $"Microsoft Graph contact request failed: {(int)response.StatusCode} ({response.ReasonPhrase}) for {request.Method} {requestUri}. Response: {bodyExcerpt}");
+    }
+
+    private static async Task<bool> IsNoMailboxResponseAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        if (response.StatusCode != System.Net.HttpStatusCode.NotFound || response.Content is null)
+        {
+            return false;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return body.Contains("MailboxNotEnabledForRESTAPI", StringComparison.OrdinalIgnoreCase);
     }
 
     private static MicrosoftGraphContact ToMicrosoftGraphContact(ContactResource contact)

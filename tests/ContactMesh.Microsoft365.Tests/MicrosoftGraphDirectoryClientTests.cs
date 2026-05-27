@@ -57,7 +57,7 @@ public sealed class MicrosoftGraphDirectoryClientTests
         Assert.Equal("Bearer graph-token", handler.Requests[0].Authorization);
         Assert.Equal("Bearer graph-token", handler.Requests[1].Authorization);
         Assert.Equal(
-            "https://graph.test/v1.0/users?%24select=id%2Cmail%2CuserPrincipalName%2CdisplayName%2CgivenName%2Csurname%2CcompanyName%2Cdepartment%2CjobTitle%2CbusinessPhones%2CmobilePhone%2CaccountEnabled&%24top=999",
+            "https://graph.test/v1.0/users?%24select=id%2Cmail%2CuserPrincipalName%2CdisplayName%2CgivenName%2Csurname%2CcompanyName%2Cdepartment%2CjobTitle%2CbusinessPhones%2CmobilePhone%2CaccountEnabled%2CuserType&%24top=999",
             handler.Requests[0].RequestUri?.ToString());
         Assert.Equal(
             "https://graph.test/v1.0/users?$skiptoken=next-page",

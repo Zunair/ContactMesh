@@ -2,6 +2,7 @@ namespace ContactMesh.Core.Logging;
 
 public static class SyncProgressKind
 {
+    public const string RunStarted = "RunStarted";
     public const string TargetStarted = "TargetStarted";
     public const string TargetCompleted = "TargetCompleted";
     public const string TargetFailed = "TargetFailed";
@@ -17,7 +18,8 @@ public sealed record SyncProgress(
     int UpdateCount = 0,
     int DeleteCount = 0,
     int NoChangeCount = 0,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    string? Message = null);
 
 public delegate Task SyncProgressCallback(SyncProgress progress, CancellationToken cancellationToken);
 
@@ -26,6 +28,11 @@ public static class SyncProgressFormatter
     public static string Format(SyncProgress progress)
     {
         ArgumentNullException.ThrowIfNull(progress);
+
+        if (progress.Kind == SyncProgressKind.RunStarted)
+        {
+            return $"Scope: {progress.Message} ({progress.TargetCount} targets)";
+        }
 
         var target = FormatTarget(progress);
 

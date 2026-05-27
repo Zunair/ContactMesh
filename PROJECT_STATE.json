@@ -11,7 +11,7 @@
       "lastKnown": {
         "commit": null,
         "build": "pass",
-        "tests": "227 pass, 1 skipped",
+        "tests": "241 pass, 1 skipped",
         "warnings": null
       }
   },
@@ -95,7 +95,12 @@
     { "id": "web-notification-permission-guidance", "commit": null, "state": "done-local", "note": "Settings dashboard notification test panel now tells admins the Microsoft 365 app registration needs Microsoft Graph Application permission Mail.Send with admin consent, not Delegated permission, and notes Exchange Application Access Policy sender scope. MicrosoftGraphMailNotificationSender now enriches 403 ErrorAccessDenied sendMail failures with the same guidance; docs and tests updated." },
     { "id": "audit-log-web-ui", "commit": null, "state": "done-local", "note": "AuditLog section added to Web settings UI with editable Enabled, Directory, IncludeNoChange, and IncludeDryRunPlannedAsWrites fields; nav link added between Notifications and Rules. SettingsFormModel.FromForm now binds ContactMesh.AuditLog.* so saves no longer silently reset Directory to default; Coalesce helper preserves blank-vs-missing distinction." },
     { "id": "audit-dry-run-planned-as-writes", "commit": null, "state": "done-local", "note": "Wired IncludeDryRunPlannedAsWrites in RunAuditWriter.ResolveStatus: when true and dry-run, operation rows use Status=Written instead of Planned so downstream dashboards count them the same as live writes. Previously the option was declared but never read. docs/audit-and-notifications.md updated to describe actual behaviour." },
-    { "id": "audit-skip-empty-detail-csv", "commit": null, "state": "done-local", "note": "RunAuditWriter now skips creating the -detail.csv when there are no rows to write (all operations excluded by IncludeNoChange filter, no warnings, no errors). DetailCsvPath is empty string in that case. Pipeline log line and notification email body both omit the detail reference. New test Writer_Skips_Detail_File_When_No_Rows_To_Write added; total 227 pass, 1 skipped." }
+    { "id": "audit-skip-empty-detail-csv", "commit": null, "state": "done-local", "note": "RunAuditWriter now skips creating the -detail.csv when there are no rows to write (all operations excluded by IncludeNoChange filter, no warnings, no errors). DetailCsvPath is empty string in that case. Pipeline log line and notification email body both omit the detail reference. New test Writer_Skips_Detail_File_When_No_Rows_To_Write added; total 227 pass, 1 skipped." },
+    { "id": "guest-user-filtering", "commit": null, "state": "done-local", "note": "MicrosoftDirectoryMapper now marks UserType != Member (e.g. Guest) as IsSuspended=true so guest accounts with no Exchange mailbox are excluded from targets and source contacts." },
+    { "id": "global-user-groups-scope", "commit": null, "state": "done-local", "note": "ContactSyncOrchestrator now resolves GlobalUserGroups members and concatenates with TargetUsers as effectiveTargetUsers before passing to SyncRuleEngine, so GlobalUserGroups actually limits the sync target scope." },
+    { "id": "security-group-type-alias", "commit": null, "state": "done-local", "note": "MicrosoftGroupProvider.IsAllowedGroupType now treats 'Security' config value as matching MailEnabledSecurity so mail-enabled security groups load when GroupTypes includes Security." },
+    { "id": "no-mailbox-graceful-skip", "commit": null, "state": "done-local", "note": "MicrosoftGraphContactClient.ListAsync returns empty contacts for MailboxNotEnabledForRESTAPI 404 instead of throwing, so service accounts and on-prem mailboxes are not counted as target failures." },
+    { "id": "run-scope-logging", "commit": null, "state": "done-local", "note": "ContactSyncOrchestrator now emits a RunStarted progress event before the per-target loop. The event carries TargetCount and a Message describing the active scope path (TargetUsers, GlobalUserGroups with group names, or 'all eligible directory users'), including a warning when a GlobalUserGroups group has no resolved members. SyncProgressFormatter renders 'Scope: {Message} ({N} targets)'. 241 tests pass, 1 skipped." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

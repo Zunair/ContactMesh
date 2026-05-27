@@ -22,7 +22,7 @@ public static class MicrosoftDirectoryMapper
             Department = user.Department,
             JobTitle = user.JobTitle,
             Phones = ToPhones(user).ToList(),
-            IsSuspended = user.AccountEnabled == false
+            IsSuspended = user.AccountEnabled == false || IsGuestUser(user.UserType)
         };
     }
 
@@ -44,6 +44,10 @@ public static class MicrosoftDirectoryMapper
             OrganizationUnit = organizationUnit
         };
     }
+
+    private static bool IsGuestUser(string? userType) =>
+        !string.IsNullOrWhiteSpace(userType) &&
+        !string.Equals(userType, "Member", StringComparison.OrdinalIgnoreCase);
 
     private static IEnumerable<ContactPhone> ToPhones(MicrosoftGraphUser user)
     {

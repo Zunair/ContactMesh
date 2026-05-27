@@ -1,4 +1,5 @@
 using ContactMesh.Core.Logging;
+using ContactMesh.Core.Abstractions;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 using Xunit;
@@ -39,6 +40,162 @@ public sealed class SyncRunReportFormatterTests
         Assert.Equal(
             "Target 2/2 user-2 <second@example.org>: failed - contact store unavailable",
             SyncProgressFormatter.Format(failed));
+    }
+
+    [Fact]
+    public void ProgressFormatter_RunStarted_Shows_Scope_And_Target_Count()
+    {
+        var runStarted = new SyncProgress(
+            SyncProgressKind.RunStarted,
+            TargetUserId: string.Empty,
+            TargetUserEmail: null,
+            TargetIndex: 0,
+            TargetCount: 6,
+            Message: "GlobalUserGroups [it@example.org]");
+
+        Assert.Equal(
+            "Scope: GlobalUserGroups [it@example.org] (6 targets)",
+            SyncProgressFormatter.Format(runStarted));
+    }
+
+    [Fact]
+    public async Task RunAsync_Emits_RunStarted_Progress_Before_Targets()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            new MeshUser { Id = "u1", Email = "u1@example.org" },
+            new MeshUser { Id = "u2", Email = "u2@example.org" }
+        });
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(),
+            new NoOpContactProvider());
+        var progressUpdates = new List<SyncProgress>();
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = true,
+                Rules = new SyncRuleOptions { TargetUsers = new[] { "u1@example.org" } }
+            },
+            CancellationToken.None,
+            (p, _) => { progressUpdates.Add(p); return Task.CompletedTask; });
+
+        var runStarted = progressUpdates.First(p => p.Kind == SyncProgressKind.RunStarted);
+        Assert.Equal(0, runStarted.TargetIndex);
+        Assert.Equal(1, runStarted.TargetCount);
+        Assert.Contains("TargetUsers", runStarted.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(SyncProgressKind.TargetStarted, progressUpdates.First(p => p.Kind == SyncProgressKind.TargetStarted).Kind);
+    }
+
+    [Fact]
+    public async Task RunAsync_RunStarted_Scope_Shows_GlobalUserGroups()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            new MeshUser { Id = "u1", Email = "u1@example.org" },
+            new MeshUser { Id = "u2", Email = "u2@example.org" }
+        });
+        var group = new MeshGroup
+        {
+            Id = "dept",
+            Email = "dept@example.org",
+            GroupVisibility = MeshGroupVisibility.Domain,
+            MemberVisibility = MeshGroupVisibility.Domain,
+            Members = new[] { new MeshGroupMember { Id = "u1", Email = "u1@example.org", Type = MeshGroupMemberType.User } }
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(group),
+            new NoOpContactProvider());
+        var progressUpdates = new List<SyncProgress>();
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = true,
+                Rules = new SyncRuleOptions { GlobalUserGroups = new[] { "dept@example.org" } }
+            },
+            CancellationToken.None,
+            (p, _) => { progressUpdates.Add(p); return Task.CompletedTask; });
+
+        var runStarted = progressUpdates.First(p => p.Kind == SyncProgressKind.RunStarted);
+        Assert.Equal(1, runStarted.TargetCount);
+        Assert.Contains("GlobalUserGroups", runStarted.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dept@example.org", runStarted.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RunAsync_RunStarted_Scope_Shows_All_Users_When_No_Scope_Configured()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            new MeshUser { Id = "u1", Email = "u1@example.org" },
+            new MeshUser { Id = "u2", Email = "u2@example.org" }
+        });
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(),
+            new NoOpContactProvider());
+        var progressUpdates = new List<SyncProgress>();
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions { DryRun = true },
+            CancellationToken.None,
+            (p, _) => { progressUpdates.Add(p); return Task.CompletedTask; });
+
+        var runStarted = progressUpdates.First(p => p.Kind == SyncProgressKind.RunStarted);
+        Assert.Equal(2, runStarted.TargetCount);
+        Assert.Contains("all", runStarted.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RunAsync_RunStarted_Warns_When_GlobalUserGroups_Group_Not_Found()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            new MeshUser { Id = "u1", Email = "u1@example.org" }
+        });
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(),
+            new NoOpContactProvider());
+        var progressUpdates = new List<SyncProgress>();
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = true,
+                Rules = new SyncRuleOptions { GlobalUserGroups = new[] { "missing-group@example.org" } }
+            },
+            CancellationToken.None,
+            (p, _) => { progressUpdates.Add(p); return Task.CompletedTask; });
+
+        var runStarted = progressUpdates.First(p => p.Kind == SyncProgressKind.RunStarted);
+        Assert.Contains("no members found", runStarted.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class FakeDirectoryProvider : IDirectoryProvider
+    {
+        private readonly IReadOnlyList<MeshUser> users;
+        public FakeDirectoryProvider(IReadOnlyList<MeshUser> users) => this.users = users;
+        public Task<IReadOnlyList<MeshUser>> GetUsersAsync(CancellationToken _) => Task.FromResult(this.users);
+    }
+
+    private sealed class FakeGroupProvider : IGroupProvider
+    {
+        private readonly IReadOnlyList<MeshGroup> groups;
+        public FakeGroupProvider(params MeshGroup[] groups) => this.groups = groups;
+        public Task<IReadOnlyList<MeshGroup>> GetGroupsAsync(CancellationToken _) => Task.FromResult(this.groups);
+        public Task<IReadOnlyList<MeshContact>> GetGroupContactsAsync(string groupId, CancellationToken _) =>
+            Task.FromResult<IReadOnlyList<MeshContact>>(Array.Empty<MeshContact>());
+    }
+
+    private sealed class NoOpContactProvider : IContactProvider
+    {
+        public Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken _) =>
+            Task.FromResult<IReadOnlyList<MeshContact>>(Array.Empty<MeshContact>());
+        public Task ApplyChangesAsync(string userId, ContactChangeSet changes, CancellationToken _) => Task.CompletedTask;
     }
 
     [Fact]

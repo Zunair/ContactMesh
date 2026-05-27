@@ -61,12 +61,16 @@ public sealed class ContactSyncOrchestrator
             mappedGroups,
             options.Rules.GroupsToSyncByGroup);
         var excludedUsers = ResolveUserIdsFromGroups(mappedGroups, options.Rules.ExclusionGroups);
+        var globalGroupUsers = ResolveUserIdsFromGroups(mappedGroups, options.Rules.GlobalUserGroups);
+        var effectiveTargetUsers = options.Rules.TargetUsers
+            .Concat(globalGroupUsers)
+            .ToList();
         var ruleEngine = new SyncRuleEngine(
             new ExclusionRule(excludedUsers),
             organizationUnitRule: new OrganizationUnitRule(
                 options.Rules.IncludedOrganizationUnits,
                 options.Rules.ExcludedOrganizationUnits),
-            targetUsers: options.Rules.TargetUsers);
+            targetUsers: effectiveTargetUsers);
 
         var eligibleUsers = ruleEngine.CreateEligibleUsers(users);
         var sourceUsers = ResolveDirectorySourceUsers(eligibleUsers, mappedGroups, options.Rules);
@@ -77,6 +81,17 @@ public sealed class ContactSyncOrchestrator
         var targetEligibleUsers = eligibleUsers
             .Where(user => targetUsers.ContainsKey(user.Id))
             .ToList();
+
+        await ReportProgressAsync(
+            progress,
+            new SyncProgress(
+                SyncProgressKind.RunStarted,
+                TargetUserId: string.Empty,
+                TargetUserEmail: null,
+                TargetIndex: 0,
+                TargetCount: targetEligibleUsers.Count,
+                Message: BuildScopeDescription(options.Rules, globalGroupUsers, eligibleUsers.Count)),
+            cancellationToken).ConfigureAwait(false);
 
         var results = new List<SyncResult>();
         var planner = CreatePlanner(options, groupContactSources, this.additionalManagedMetadataKeys, this.additionalOperationalMetadataKeys);
@@ -396,6 +411,38 @@ public sealed class ContactSyncOrchestrator
             .SelectMany(member => new[] { member.Id, member.Email })
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string BuildScopeDescription(
+        SyncRuleOptions rules,
+        IReadOnlySet<string> globalGroupUserIds,
+        int eligibleCount)
+    {
+        var parts = new List<string>();
+
+        if (rules.TargetUsers.Count > 0)
+        {
+            parts.Add($"TargetUsers [{string.Join(", ", rules.TargetUsers)}]");
+        }
+
+        if (rules.GlobalUserGroups.Count > 0)
+        {
+            var groupList = string.Join(", ", rules.GlobalUserGroups);
+            if (globalGroupUserIds.Count == 0)
+            {
+                parts.Add($"GlobalUserGroups [{groupList}] (no members found - check GroupTypes config)");
+            }
+            else
+            {
+                parts.Add($"GlobalUserGroups [{groupList}]");
+            }
+        }
+
+        var scope = parts.Count > 0
+            ? string.Join(" + ", parts)
+            : $"all {eligibleCount} eligible directory users";
+
+        return scope;
     }
 
     private static IReadOnlySet<string> BuildTargetLabels(

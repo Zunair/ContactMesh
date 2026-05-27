@@ -67,6 +67,19 @@ public sealed class MicrosoftGroupProvider : IGroupProvider
         }
 
         var groupType = MicrosoftGroupMapper.GetGroupType(group);
-        return groupType.HasValue && this.allowedGroupTypes.Contains(groupType.Value.ToString());
+        if (!groupType.HasValue)
+        {
+            return false;
+        }
+
+        // Allow "Security" in config to match MailEnabledSecurity.
+        // Pure security groups (no mail address) are already excluded by the mail check above.
+        if (groupType.Value == MicrosoftGroupType.MailEnabledSecurity &&
+            this.allowedGroupTypes.Contains("Security"))
+        {
+            return true;
+        }
+
+        return this.allowedGroupTypes.Contains(groupType.Value.ToString());
     }
 }

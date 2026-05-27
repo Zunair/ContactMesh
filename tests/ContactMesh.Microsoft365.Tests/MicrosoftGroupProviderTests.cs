@@ -170,6 +170,46 @@ public sealed class MicrosoftGroupProviderTests
         Assert.Single(groups);
     }
 
+    [Fact]
+    public async Task GetGroupsAsync_Security_GroupType_Matches_MailEnabledSecurity()
+    {
+        var allTypeGroups = new[]
+        {
+            new MicrosoftGraphGroup { Id = "mail-sec", Mail = "mailsec@example.org", MailEnabled = true, SecurityEnabled = true },
+            new MicrosoftGraphGroup { Id = "dist", Mail = "dist@example.org", MailEnabled = true, SecurityEnabled = false }
+        };
+
+        var provider = new MicrosoftGroupProvider(
+            new FakeGraphGroupClient(allTypeGroups, new Dictionary<string, IReadOnlyList<MicrosoftGraphGroupMember>>(StringComparer.OrdinalIgnoreCase)),
+            new[] { "Security" });
+
+        var groups = await provider.GetGroupsAsync(CancellationToken.None);
+
+        var group = Assert.Single(groups);
+        Assert.Equal("mail-sec", group.Id);
+    }
+
+    [Fact]
+    public async Task GetGroupsAsync_Security_And_Distribution_GroupTypes_Match_Both()
+    {
+        var allTypeGroups = new[]
+        {
+            new MicrosoftGraphGroup { Id = "m365", Mail = "m365@example.org", GroupTypes = new[] { "Unified" }, MailEnabled = true },
+            new MicrosoftGraphGroup { Id = "mail-sec", Mail = "mailsec@example.org", MailEnabled = true, SecurityEnabled = true },
+            new MicrosoftGraphGroup { Id = "dist", Mail = "dist@example.org", MailEnabled = true, SecurityEnabled = false }
+        };
+
+        var provider = new MicrosoftGroupProvider(
+            new FakeGraphGroupClient(allTypeGroups, new Dictionary<string, IReadOnlyList<MicrosoftGraphGroupMember>>(StringComparer.OrdinalIgnoreCase)),
+            new[] { "Distribution", "Security" });
+
+        var groups = await provider.GetGroupsAsync(CancellationToken.None);
+
+        Assert.Equal(2, groups.Count);
+        Assert.Contains(groups, g => g.Id == "mail-sec");
+        Assert.Contains(groups, g => g.Id == "dist");
+    }
+
     private sealed class FakeGraphGroupClient : IMicrosoftGraphGroupClient
     {
         private readonly IReadOnlyList<MicrosoftGraphGroup> groups;

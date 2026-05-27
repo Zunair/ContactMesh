@@ -134,6 +134,12 @@ public sealed class ContactSyncOrchestratorTests
             progressUpdates,
             progress =>
             {
+                Assert.Equal(SyncProgressKind.RunStarted, progress.Kind);
+                Assert.Equal(2, progress.TargetCount);
+                Assert.NotNull(progress.Message);
+            },
+            progress =>
+            {
                 Assert.Equal(SyncProgressKind.TargetStarted, progress.Kind);
                 Assert.Equal("user-1", progress.TargetUserId);
                 Assert.Equal(1, progress.TargetIndex);
@@ -192,6 +198,91 @@ public sealed class ContactSyncOrchestratorTests
         Assert.Equal("target", applied.Key);
         Assert.Contains(applied.Value.Creates, contact => contact.SourceId == "source");
         Assert.DoesNotContain(applied.Value.Creates, contact => contact.SourceId == "target");
+    }
+
+    [Fact]
+    public async Task RunAsync_GlobalUserGroups_Limits_Recipients_To_Group_Members()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("member", "member@example.org"),
+            User("non-member", "non-member@example.org")
+        });
+        var globalGroup = new MeshGroup
+        {
+            Id = "global-group",
+            Email = "global-group@example.org",
+            GroupVisibility = MeshGroupVisibility.Domain,
+            MemberVisibility = MeshGroupVisibility.Domain,
+            Members = new[]
+            {
+                new MeshGroupMember { Id = "member", Email = "member@example.org", Type = MeshGroupMemberType.User }
+            }
+        };
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { globalGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    GlobalUserGroups = new[] { "global-group@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        var syncResult = Assert.Single(result.Results);
+        Assert.Equal("member", syncResult.TargetUserId);
+        Assert.DoesNotContain(result.Results, r => r.TargetUserId == "non-member");
+    }
+
+    [Fact]
+    public async Task RunAsync_GlobalUserGroups_Combines_With_TargetUsers()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("group-member", "group-member@example.org"),
+            User("explicit-target", "explicit-target@example.org"),
+            User("other", "other@example.org")
+        });
+        var globalGroup = new MeshGroup
+        {
+            Id = "global-group",
+            Email = "global-group@example.org",
+            GroupVisibility = MeshGroupVisibility.Domain,
+            MemberVisibility = MeshGroupVisibility.Domain,
+            Members = new[]
+            {
+                new MeshGroupMember { Id = "group-member", Email = "group-member@example.org", Type = MeshGroupMemberType.User }
+            }
+        };
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { globalGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "explicit-target@example.org" },
+                    GlobalUserGroups = new[] { "global-group@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        Assert.Equal(2, result.TargetCount);
+        Assert.Contains(result.Results, r => r.TargetUserId == "group-member");
+        Assert.Contains(result.Results, r => r.TargetUserId == "explicit-target");
+        Assert.DoesNotContain(result.Results, r => r.TargetUserId == "other");
     }
 
     [Fact]
