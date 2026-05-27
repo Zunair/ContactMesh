@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Notifications;
 using ContactMesh.Core.Sync;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
@@ -34,6 +35,7 @@ public static class SettingsPageRenderer
         html.AppendLine("<div class=\"brand-mark\" aria-hidden=\"true\">CM</div>");
         html.AppendLine("<nav>");
         html.AppendLine("<a href=\"#runtime\">Runtime</a>");
+        html.AppendLine("<a href=\"#notifications\">Notifications</a>");
         html.AppendLine("<a href=\"#rules\">Rules</a>");
         html.AppendLine("<a href=\"#providers\">Providers</a>");
         html.AppendLine("</nav>");
@@ -59,6 +61,7 @@ public static class SettingsPageRenderer
 
         html.AppendLine("<form method=\"post\" action=\"/settings\">");
         AppendRuntimeSection(html, contactMesh, configPath);
+        AppendNotificationsSection(html, contactMesh.Notifications);
         AppendRulesSection(html, contactMesh.Rules, contactMesh.ManagedEmailDomains);
         AppendProvidersSection(html, googleWorkspace, microsoft365);
         html.AppendLine("<div class=\"save-bar\">");
@@ -140,6 +143,55 @@ public static class SettingsPageRenderer
 
         html.AppendLine(">");
         html.AppendLine("</label>");
+        html.AppendLine("</div>");
+        html.AppendLine("</section>");
+    }
+
+    private static void AppendNotificationsSection(StringBuilder html, NotificationOptions options)
+    {
+        html.AppendLine("<section id=\"notifications\" class=\"band\">");
+        html.AppendLine("<div class=\"band-header\">");
+        html.AppendLine("<h2>Notifications</h2>");
+        html.AppendLine("<span class=\"muted\">ContactMesh:Notifications</span>");
+        html.AppendLine("</div>");
+        html.AppendLine("<div class=\"settings-grid\">");
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Email notifications</span>");
+        html.AppendLine("<small>When enabled, live sync runs send success or failure mail through the configured provider sender.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.Notifications.Enabled\" value=\"true\"");
+        if (options.Enabled)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        AppendField(html, "From mailbox", "ContactMesh.Notifications.From", options.From, "Mailbox used as the sender for Graph sendMail; for Microsoft 365 this must be a user Graph can send as.");
+        AppendField(html, "Subject prefix", "ContactMesh.Notifications.SubjectPrefix", options.SubjectPrefix, "Prefix applied to automated run emails and the dashboard test email.");
+        AppendListField(html, "Success recipients", "ContactMesh.Notifications.SuccessTo", "Recipients for successful live sync notifications. The test email uses these plus failure recipients.", options.SuccessTo);
+        AppendListField(html, "Failure recipients", "ContactMesh.Notifications.FailureTo", "Recipients for failed live sync notifications. Failure run emails can include CSV audit attachments.", options.FailureTo);
+        html.AppendLine("<label class=\"setting-row switch-row\">");
+        html.AppendLine("<span>Attach CSV on failure</span>");
+        html.AppendLine("<small>When enabled, failure notifications attach the audit summary and detail CSV files up to the configured byte limit.</small>");
+        html.Append("<input type=\"checkbox\" name=\"ContactMesh.Notifications.AttachCsvOnFailure\" value=\"true\"");
+        if (options.AttachCsvOnFailure)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.AppendLine("</label>");
+        AppendField(
+            html,
+            "Max attachment bytes",
+            "ContactMesh.Notifications.MaxAttachmentBytes",
+            options.MaxAttachmentBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "Maximum bytes kept per CSV attachment before truncation.");
+        html.AppendLine("<section class=\"rule-group test-email-panel\">");
+        html.AppendLine("<h3>Test email</h3>");
+        html.AppendLine("<p class=\"description\">Sends one test message to all configured success and failure recipients using the current form values. This does not save settings.</p>");
+        html.AppendLine("<button type=\"submit\" formaction=\"/settings/test-email\">Send test email</button>");
+        html.AppendLine("</section>");
         html.AppendLine("</div>");
         html.AppendLine("</section>");
     }

@@ -22,6 +22,13 @@ public sealed class ContactMeshConfigurationTests
             ["ContactMesh:ForceDeduplicatePhones"] = "true",
             ["ContactMesh:ForceNormalizeEmailTypes"] = "true",
             ["ContactMesh:ManagedEmailDomains:0"] = "example.org",
+            ["ContactMesh:Notifications:Enabled"] = "true",
+            ["ContactMesh:Notifications:From"] = "sender@example.org",
+            ["ContactMesh:Notifications:SuccessTo:0"] = "success@example.org",
+            ["ContactMesh:Notifications:FailureTo:0"] = "failure@example.org",
+            ["ContactMesh:Notifications:SubjectPrefix"] = "[Mesh]",
+            ["ContactMesh:Notifications:AttachCsvOnFailure"] = "true",
+            ["ContactMesh:Notifications:MaxAttachmentBytes"] = "2048",
             ["ContactMesh:Rules:TargetUsers:0"] = "target@example.org",
             ["ContactMesh:Rules:MainContactsGroupEmail"] = "company-directory@example.org",
             ["ContactMesh:Rules:MainContactsGroupLabel"] = "-Directory",
@@ -66,6 +73,13 @@ public sealed class ContactMeshConfigurationTests
         Assert.True(contactMesh.ForceDeduplicatePhones);
         Assert.True(contactMesh.ForceNormalizeEmailTypes);
         Assert.Equal("example.org", Assert.Single(contactMesh.ManagedEmailDomains));
+        Assert.True(contactMesh.Notifications.Enabled);
+        Assert.Equal("sender@example.org", contactMesh.Notifications.From);
+        Assert.Equal("success@example.org", Assert.Single(contactMesh.Notifications.SuccessTo));
+        Assert.Equal("failure@example.org", Assert.Single(contactMesh.Notifications.FailureTo));
+        Assert.Equal("[Mesh]", contactMesh.Notifications.SubjectPrefix);
+        Assert.True(contactMesh.Notifications.AttachCsvOnFailure);
+        Assert.Equal(2048, contactMesh.Notifications.MaxAttachmentBytes);
         Assert.Equal("target@example.org", Assert.Single(contactMesh.Rules.TargetUsers));
         Assert.Equal("company-directory@example.org", contactMesh.Rules.MainContactsGroupEmail);
         Assert.Equal("-Directory", contactMesh.Rules.MainContactsGroupLabel);

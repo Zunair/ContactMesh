@@ -7,6 +7,7 @@ using ContactMesh.Google.Auth;
 using ContactMesh.Google.Contacts;
 using ContactMesh.Google.Directory;
 using ContactMesh.Google.Groups;
+using ContactMesh.Hosting.Notifications;
 using ContactMesh.Microsoft365.Auth;
 using ContactMesh.Microsoft365.Contacts;
 using ContactMesh.Microsoft365.Directory;
@@ -28,6 +29,7 @@ public static class ContactMeshHostFactory
         services.AddSingleton(CreateAuditWriter);
         services.AddSingleton(CreateNotificationDispatcher);
         services.AddSingleton<ContactSyncRunPipeline>();
+        services.AddSingleton<NotificationTestEmailService>();
 
         return services;
     }
@@ -41,16 +43,23 @@ public static class ContactMeshHostFactory
     private static IRunNotificationSender? CreateNotificationSender(IServiceProvider services)
     {
         var contactMesh = services.GetRequiredService<IOptions<ContactMeshOptions>>().Value;
-        if (!contactMesh.Notifications.Enabled)
-        {
-            return null;
-        }
+        var microsoft365 = services.GetRequiredService<IOptions<Microsoft365Options>>().Value;
+        var httpClient = services.GetRequiredService<HttpClient>();
+        return CreateNotificationSender(contactMesh, microsoft365, httpClient);
+    }
+
+    public static IRunNotificationSender? CreateNotificationSender(
+        ContactMeshOptions contactMesh,
+        Microsoft365Options microsoft365,
+        HttpClient httpClient)
+    {
+        ArgumentNullException.ThrowIfNull(contactMesh);
+        ArgumentNullException.ThrowIfNull(microsoft365);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
         var providerKey = contactMesh.Provider.Trim().ToUpperInvariant();
         if (providerKey is "MICROSOFT365" or "MICROSOFT")
         {
-            var microsoft365 = services.GetRequiredService<IOptions<Microsoft365Options>>().Value;
-            var httpClient = services.GetRequiredService<HttpClient>();
             var graphClientFactory = new MicrosoftGraphClientFactory(microsoft365);
             var accessTokenProvider = graphClientFactory.CreateAccessTokenProvider(httpClient);
             return new MicrosoftGraphMailNotificationSender(httpClient, accessTokenProvider);

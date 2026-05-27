@@ -22,6 +22,16 @@ public sealed class SettingsPageRendererTests
                 ForceDeduplicatePhones = true,
                 ForceNormalizeEmailTypes = true,
                 ManagedEmailDomains = new[] { "example.org" },
+                Notifications = new()
+                {
+                    Enabled = true,
+                    From = "sender@example.org",
+                    SuccessTo = new[] { "success@example.org" },
+                    FailureTo = new[] { "failure@example.org" },
+                    SubjectPrefix = "[Mesh]",
+                    AttachCsvOnFailure = true,
+                    MaxAttachmentBytes = 1024
+                },
                 Rules = new SyncRuleOptions
                 {
                     MainContactsGroupEmail = "company-directory@example.org",
@@ -63,6 +73,11 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("name=\"ContactMesh.ForceDeduplicatePhones\"", html);
         Assert.Contains("name=\"ContactMesh.ForceNormalizeEmailTypes\"", html);
         Assert.Contains("example.org", html);
+        Assert.Contains("name=\"ContactMesh.Notifications.From\"", html);
+        Assert.Contains("sender@example.org", html);
+        Assert.Contains("success@example.org", html);
+        Assert.Contains("failure@example.org", html);
+        Assert.Contains("formaction=\"/settings/test-email\"", html);
         Assert.Contains("target@example.org", html);
         Assert.Contains("company-directory@example.org", html);
         Assert.Contains("-Directory", html);
@@ -129,6 +144,7 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("live runs skip delete writes to providers", html);
         Assert.Contains("Use once to clean legacy duplicates", html);
         Assert.Contains("no longer show the organization address under Other email", html);
+        Assert.Contains("Sends one test message to all configured success and failure recipients", html);
         Assert.Contains("Optional user IDs or email addresses that limit who receives managed contacts", html);
         Assert.Contains("append =Ignore to reduce expected noise", html);
         Assert.Contains("Secret value is masked here", html);
@@ -146,6 +162,13 @@ public sealed class SettingsPageRendererTests
             ["ContactMesh.ForceDeduplicatePhones"] = "true",
             ["ContactMesh.ForceNormalizeEmailTypes"] = "true",
             ["ContactMesh.ManagedEmailDomains"] = "example.org",
+            ["ContactMesh.Notifications.Enabled"] = "true",
+            ["ContactMesh.Notifications.From"] = "sender@example.org",
+            ["ContactMesh.Notifications.SuccessTo"] = "success@example.org",
+            ["ContactMesh.Notifications.FailureTo"] = "failure@example.org",
+            ["ContactMesh.Notifications.SubjectPrefix"] = "[Mesh]",
+            ["ContactMesh.Notifications.AttachCsvOnFailure"] = "true",
+            ["ContactMesh.Notifications.MaxAttachmentBytes"] = "2048",
             ["ContactMesh.Rules.MainContactsGroupEmail"] = "company-directory@example.org",
             ["ContactMesh.Rules.MainContactsGroupLabel"] = "-Directory",
             ["ContactMesh.Rules.GroupContactPrefix"] = "#",
@@ -174,6 +197,11 @@ public sealed class SettingsPageRendererTests
             Assert.Contains("\"DisableDeletes\": true", json);
             Assert.Contains("\"ForceDeduplicatePhones\": true", json);
             Assert.Contains("\"ForceNormalizeEmailTypes\": true", json);
+            Assert.Contains("\"From\": \"sender@example.org\"", json);
+            Assert.Contains("\"success@example.org\"", json);
+            Assert.Contains("\"failure@example.org\"", json);
+            Assert.Contains("\"SubjectPrefix\": \"[Mesh]\"", json);
+            Assert.Contains("\"MaxAttachmentBytes\": 2048", json);
             Assert.Contains("\"MainContactsGroupEmail\": \"company-directory@example.org\"", json);
             Assert.Contains("\"MainContactsGroupLabel\": \"-Directory\"", json);
             Assert.Contains("\"GroupContactPrefix\": \"#\"", json);

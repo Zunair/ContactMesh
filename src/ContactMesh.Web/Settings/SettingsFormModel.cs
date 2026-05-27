@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Notifications;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 using Microsoft.AspNetCore.Http;
@@ -47,6 +48,19 @@ public sealed record SettingsFormModel(
             ForceDeduplicatePhones = form.ContainsKey("ContactMesh.ForceDeduplicatePhones"),
             ForceNormalizeEmailTypes = form.ContainsKey("ContactMesh.ForceNormalizeEmailTypes"),
             ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
+            Notifications = new NotificationOptions
+            {
+                Enabled = form.ContainsKey("ContactMesh.Notifications.Enabled"),
+                From = Read(form, "ContactMesh.Notifications.From"),
+                SuccessTo = Lines(form, "ContactMesh.Notifications.SuccessTo"),
+                FailureTo = Lines(form, "ContactMesh.Notifications.FailureTo"),
+                SubjectPrefix = Read(form, "ContactMesh.Notifications.SubjectPrefix"),
+                AttachCsvOnFailure = form.ContainsKey("ContactMesh.Notifications.AttachCsvOnFailure"),
+                MaxAttachmentBytes = ReadInt(
+                    form,
+                    "ContactMesh.Notifications.MaxAttachmentBytes",
+                    new NotificationOptions().MaxAttachmentBytes)
+            },
             Rules = new SyncRuleOptions
             {
                 MainContactsGroupEmail = Read(form, "ContactMesh.Rules.MainContactsGroupEmail"),
@@ -91,6 +105,11 @@ public sealed record SettingsFormModel(
     {
         return Read(form, key)
             .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static int ReadInt(IFormCollection form, string key, int fallback)
+    {
+        return int.TryParse(Read(form, key), out var value) ? value : fallback;
     }
 
     private static IReadOnlyList<GroupMapping> Mappings(IFormCollection form, string key)
