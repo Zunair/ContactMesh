@@ -2,7 +2,7 @@
   "v": 1,
   "repo": "ContactMesh",
   "updated": "2026-05-27",
-  "head": "1c7065e",
+  "head": "96fdbc7",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
       "lastKnown": {
         "commit": null,
         "build": "pass",
-        "tests": "225 pass, 1 skipped",
+        "tests": "226 pass, 1 skipped",
         "warnings": null
       }
   },
@@ -91,7 +91,8 @@
     { "id": "microsoft-contact-diagnostic-blank-config-fix", "commit": "c66234e", "state": "done", "note": "Fixed m365-contact-email-slot so blank ContactDiagnostic config values, such as WorkEmail, are treated as missing values and do not override CLI/contact fallback values. Live report after moving zfadmin@mhphope.org back to Other in Outlook showed Graph now stores it in secondaryEmailAddress with primaryEmailAddress null." },
     { "id": "microsoft-beta-typed-email-diagnostic", "commit": "3c3dab0", "state": "done", "note": "Added beta-only typed email diagnostic support to m365-contact-email-slot via --beta-email-type. It PATCHes /beta/users/{user}/contacts/{contactId} with typed emailAddresses[] and reads beta back with id/displayName/emailAddresses. Live test for target zfayaz@mhphope.org/contact zfadmin@mhphope.org: v1 reset restored primaryEmailAddress; beta PATCH accepted type=work; beta GET returned emailAddresses[] type=work; v1 subsequently projected the contact as primaryEmailAddress with no type." },
     { "id": "run-audit-csv-and-email-notifications", "commit": null, "state": "done-local", "note": "Added per-run dual CSV audit logs (detail + summary) via provider-neutral RunAuditWriter, and success/failure email notifications via Microsoft Graph sendMail. New ContactMesh:AuditLog and ContactMesh:Notifications options bind through host config; runs route through ContactSyncRunPipeline used by CLI/Worker; dispatcher skips on dry-run (including early dry-run failures), missing sender, or empty recipients; failure mails attach summary+detail CSVs truncated to MaxAttachmentBytes. Docs added at docs/audit-and-notifications.md and referenced from configuration.md; samples updated for Microsoft365 (enabled) and Google (sender stays null). 14 new tests in Core/Microsoft365." },
-    { "id": "web-notification-test-email", "commit": null, "state": "done-local", "note": "Settings dashboard now surfaces ContactMesh:Notifications settings and provides a Send test email action at /settings/test-email. The test uses current form values without saving, sends one Microsoft Graph sendMail message to distinct success+failure recipients, and renders sent/skipped/failed notice feedback. Hosting has a NotificationTestEmailService with fake-handler coverage; Web renderer/form tests cover notification fields and persistence." }
+    { "id": "web-notification-test-email", "commit": null, "state": "done-local", "note": "Settings dashboard now surfaces ContactMesh:Notifications settings and provides a Send test email action at /settings/test-email. The test uses current form values without saving, sends one Microsoft Graph sendMail message to distinct success+failure recipients, and renders sent/skipped/failed notice feedback. Hosting has a NotificationTestEmailService with fake-handler coverage; Web renderer/form tests cover notification fields and persistence." },
+    { "id": "web-notification-permission-guidance", "commit": null, "state": "done-local", "note": "Settings dashboard notification test panel now tells admins the Microsoft 365 app registration needs Microsoft Graph Application permission Mail.Send with admin consent, not Delegated permission, and notes Exchange Application Access Policy sender scope. MicrosoftGraphMailNotificationSender now enriches 403 ErrorAccessDenied sendMail failures with the same guidance; docs and tests updated." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

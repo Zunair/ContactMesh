@@ -81,6 +81,8 @@ unhandled exception escaped the orchestrator or `HasErrors` is true on the resul
 ## Email behaviour
 
 * Mail is sent through the existing Microsoft Graph token provider (`POST /users/{From}/sendMail`).
+* The Azure app registration must have Microsoft Graph **Application permission** `Mail.Send` with admin consent granted. Do not use the delegated `Mail.Send` permission for the client-credentials flow.
+* If your tenant restricts Graph mail with an Exchange Application Access Policy, the configured `From` mailbox must be included in the allowed policy scope.
 * Subjects look like `[ContactMesh] Microsoft365 sync Success — 5C/3U/0D over 12 targets`.
 * The body includes provider, run id, host kind, configuration path, the rendered run report, artifact paths, and (on failure) the exception details.
 * For non-Microsoft 365 providers, the dispatcher logs `No notification sender configured.` to the run output and skips sending. Email for Google Workspace runs is not implemented in this slice.

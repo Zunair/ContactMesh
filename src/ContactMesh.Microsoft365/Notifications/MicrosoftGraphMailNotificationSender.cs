@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -95,8 +96,20 @@ public sealed class MicrosoftGraphMailNotificationSender : IRunNotificationSende
             ? string.Empty
             : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var excerpt = body.Length <= 2048 ? body : body[..2048];
-        throw new HttpRequestException(
-            $"Microsoft Graph sendMail failed: {(int)response.StatusCode} ({response.ReasonPhrase}). Response: {excerpt}");
+        throw new HttpRequestException(BuildFailureMessage(response, excerpt, message.From));
+    }
+
+    private static string BuildFailureMessage(HttpResponseMessage response, string excerpt, string from)
+    {
+        var message = $"Microsoft Graph sendMail failed: {(int)response.StatusCode} ({response.ReasonPhrase}). Response: {excerpt}";
+        if (response.StatusCode == HttpStatusCode.Forbidden
+            && excerpt.Contains("ErrorAccessDenied", StringComparison.OrdinalIgnoreCase))
+        {
+            message += " Required Azure permission: add Microsoft Graph > Application permissions > Mail.Send to the app registration and grant admin consent. If Mail.Send is already granted, check any Exchange Application Access Policy allows the configured From mailbox"
+                + (string.IsNullOrWhiteSpace(from) ? "." : $" ({from.Trim()}).");
+        }
+
+        return message;
     }
 
     private sealed class SendMailPayload

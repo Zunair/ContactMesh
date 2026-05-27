@@ -187,6 +187,10 @@ public static class SettingsPageRenderer
             "ContactMesh.Notifications.MaxAttachmentBytes",
             options.MaxAttachmentBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "Maximum bytes kept per CSV attachment before truncation.");
+        html.AppendLine("<section class=\"rule-group permission-callout\">");
+        html.AppendLine("<h3>Azure permission</h3>");
+        html.AppendLine("<p class=\"description\">For Microsoft 365 test email, the app registration needs Microsoft Graph Application permission Mail.Send with admin consent. Use Application permissions, not Delegated permissions. If your tenant uses an Exchange Application Access Policy, include the From mailbox in the allowed policy scope.</p>");
+        html.AppendLine("</section>");
         html.AppendLine("<section class=\"rule-group test-email-panel\">");
         html.AppendLine("<h3>Test email</h3>");
         html.AppendLine("<p class=\"description\">Sends one test message to all configured success and failure recipients using the current form values. This does not save settings.</p>");

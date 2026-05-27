@@ -74,7 +74,35 @@ public sealed class MicrosoftGraphMailNotificationSenderTests
             Body: "Body",
             Attachments: Array.Empty<NotificationAttachment>());
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => sender.SendAsync(message, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => sender.SendAsync(message, CancellationToken.None));
+
+        Assert.Contains("Microsoft Graph sendMail failed", exception.Message);
+    }
+
+    [Fact]
+    public async Task SendAsync_Adds_Permission_Guidance_For_AccessDenied()
+    {
+        var handler = new RecordingHandler(new HttpResponseMessage(HttpStatusCode.Forbidden)
+        {
+            Content = new StringContent("""{"error":{"code":"ErrorAccessDenied","message":"Access is denied."}}""")
+        });
+        var sender = new MicrosoftGraphMailNotificationSender(
+            new HttpClient(handler),
+            new FakeTokenProvider("graph-token"),
+            new Uri("https://graph.test/"));
+
+        var message = new NotificationMessage(
+            From: "ops@example.com",
+            To: new[] { "team@example.com" },
+            Subject: "Subject",
+            Body: "Body",
+            Attachments: Array.Empty<NotificationAttachment>());
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => sender.SendAsync(message, CancellationToken.None));
+
+        Assert.Contains("Application permissions > Mail.Send", exception.Message);
+        Assert.Contains("grant admin consent", exception.Message);
+        Assert.Contains("ops@example.com", exception.Message);
     }
 
     [Fact]

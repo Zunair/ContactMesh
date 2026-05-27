@@ -77,6 +77,7 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("sender@example.org", html);
         Assert.Contains("success@example.org", html);
         Assert.Contains("failure@example.org", html);
+        Assert.Contains("Application permission Mail.Send", html);
         Assert.Contains("formaction=\"/settings/test-email\"", html);
         Assert.Contains("target@example.org", html);
         Assert.Contains("company-directory@example.org", html);
@@ -145,6 +146,7 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("Use once to clean legacy duplicates", html);
         Assert.Contains("no longer show the organization address under Other email", html);
         Assert.Contains("Sends one test message to all configured success and failure recipients", html);
+        Assert.Contains("Use Application permissions, not Delegated permissions", html);
         Assert.Contains("Optional user IDs or email addresses that limit who receives managed contacts", html);
         Assert.Contains("append =Ignore to reduce expected noise", html);
         Assert.Contains("Secret value is masked here", html);
