@@ -2,8 +2,14 @@ namespace ContactMesh.Microsoft365.Auth;
 
 public sealed class MicrosoftClientCredentialsAccessTokenProvider : IMicrosoftGraphAccessTokenProvider
 {
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(50);
+    private static readonly TimeSpan RefreshSkew = TimeSpan.FromMinutes(5);
+
     private readonly Microsoft365Options options;
     private readonly IMicrosoftGraphAccessTokenSource tokenSource;
+    private readonly SemaphoreSlim refreshLock = new(1, 1);
+    private string? cachedAccessToken;
+    private DateTimeOffset cachedAccessTokenExpiresAt;
 
     public MicrosoftClientCredentialsAccessTokenProvider(
         Microsoft365Options options,
@@ -18,16 +24,43 @@ public sealed class MicrosoftClientCredentialsAccessTokenProvider : IMicrosoftGr
 
     public async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
-        var request = this.CreateRequest();
-        var accessToken = await this.tokenSource.GetAccessTokenAsync(request, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (string.IsNullOrWhiteSpace(accessToken))
+        if (this.HasUsableCachedToken())
         {
-            throw new InvalidOperationException("Microsoft Graph access token source returned an empty token.");
+            return this.cachedAccessToken!;
         }
 
-        return accessToken;
+        await this.refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (this.HasUsableCachedToken())
+            {
+                return this.cachedAccessToken!;
+            }
+
+            var request = this.CreateRequest();
+            var accessToken = await this.tokenSource.GetAccessTokenAsync(request, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                throw new InvalidOperationException("Microsoft Graph access token source returned an empty token.");
+            }
+
+            this.cachedAccessToken = accessToken;
+            this.cachedAccessTokenExpiresAt = DateTimeOffset.UtcNow.Add(CacheLifetime);
+
+            return accessToken;
+        }
+        finally
+        {
+            this.refreshLock.Release();
+        }
+    }
+
+    private bool HasUsableCachedToken()
+    {
+        return !string.IsNullOrWhiteSpace(this.cachedAccessToken)
+            && this.cachedAccessTokenExpiresAt > DateTimeOffset.UtcNow.Add(RefreshSkew);
     }
 
     private MicrosoftGraphTokenRequest CreateRequest()

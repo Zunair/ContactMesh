@@ -49,6 +49,27 @@ public sealed class MicrosoftClientCredentialsAccessTokenProviderTests
             Assert.Single(tokenSource.Requests).Scopes);
     }
 
+    [Fact]
+    public async Task GetAccessTokenAsync_Reuses_Cached_Token()
+    {
+        var tokenSource = new FakeGraphAccessTokenSource("graph-token");
+        var provider = new MicrosoftClientCredentialsAccessTokenProvider(
+            new Microsoft365Options
+            {
+                TenantId = "tenant-id",
+                ClientId = "client-id",
+                ClientSecret = "client-secret"
+            },
+            tokenSource);
+
+        var first = await provider.GetAccessTokenAsync(CancellationToken.None);
+        var second = await provider.GetAccessTokenAsync(CancellationToken.None);
+
+        Assert.Equal("graph-token", first);
+        Assert.Equal("graph-token", second);
+        Assert.Single(tokenSource.Requests);
+    }
+
     [Theory]
     [InlineData(null, "client-id", "client-secret", "Microsoft365:TenantId must be configured.")]
     [InlineData("tenant-id", null, "client-secret", "Microsoft365:ClientId must be configured.")]
