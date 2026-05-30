@@ -438,11 +438,11 @@ public sealed class ContactSyncOrchestratorTests
         var listOnlyContact = Assert.Single(applied.Creates, contact => contact.SourceId == "group:list-only");
 
         Assert.Contains(new ContactEmail("help@example.org", "work", true), helpContact.Emails);
-        Assert.Contains("Support", helpContact.Labels);
+        Assert.Contains("#Support", helpContact.Labels);
         Assert.Equal("GroupsToSyncByGroup", helpContact.Metadata[ContactSyncOrchestrator.SourceRuleMetadataKey]);
         Assert.Equal("help@example.org", helpContact.Metadata[ContactSyncOrchestrator.SourceGroupEmailMetadataKey]);
         Assert.Equal("#List-Only", listOnlyContact.DisplayName);
-        Assert.Contains("Support", listOnlyContact.Labels);
+        Assert.Contains("#Support", listOnlyContact.Labels);
         // Level 2 label group and user member of container are not promoted to contacts
         Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "group:support");
         Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "group:not-a-group");
@@ -520,11 +520,12 @@ public sealed class ContactSyncOrchestratorTests
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         // L3 group becomes the contact with L2 label
         var branchContact = Assert.Single(applied.Creates, c => c.SourceId == "group:branch");
-        Assert.Contains("Location", branchContact.Labels);
+        Assert.Contains("+Location", branchContact.Labels);
         // L2 group is NOT promoted to a contact
         Assert.DoesNotContain(applied.Creates, c => c.SourceId == "group:location");
         // Directory users inside L3 are NOT labeled with the L2 label
         var branchUserContact = Assert.Single(applied.Creates, c => c.SourceId == "branch-user");
+        Assert.DoesNotContain("+Location", branchUserContact.Labels);
         Assert.DoesNotContain("Location", branchUserContact.Labels);
     }
 
@@ -697,7 +698,8 @@ public sealed class ContactSyncOrchestratorTests
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         var groupContact = Assert.Single(applied.Updates, c => c.SourceId == "group:unit-id");
 
-        Assert.Contains("IT Department", groupContact.Labels);
+        Assert.Contains("+IT Department", groupContact.Labels);
+        Assert.DoesNotContain("IT Department", groupContact.Labels);
         Assert.DoesNotContain("unit-id", groupContact.Labels);
         Assert.DoesNotContain("unit@example.org", groupContact.Labels);
     }

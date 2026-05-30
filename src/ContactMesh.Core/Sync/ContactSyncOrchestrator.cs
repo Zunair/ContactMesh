@@ -94,7 +94,12 @@ public sealed class ContactSyncOrchestrator
             cancellationToken).ConfigureAwait(false);
 
         var results = new List<SyncResult>();
-        var planner = CreatePlanner(options, groupContactSources, this.additionalManagedMetadataKeys, this.additionalOperationalMetadataKeys);
+        var planner = CreatePlanner(
+            options,
+            groupContactSources,
+            groupContactPrefix,
+            this.additionalManagedMetadataKeys,
+            this.additionalOperationalMetadataKeys);
         var syncEngine = new ContactSyncEngine(
             this.contactProvider,
             planner,
@@ -108,7 +113,7 @@ public sealed class ContactSyncOrchestrator
             var visibleGroups = ruleEngine.FilterGroupsForTarget(mappedGroups, baseTarget);
             var target = baseTarget with
             {
-                LabelNames = BuildTargetLabels(directoryLabel, groupContactSources)
+                LabelNames = BuildTargetLabels(directoryLabel, groupContactSources, groupContactPrefix)
             };
 
             await ReportProgressAsync(
@@ -237,7 +242,10 @@ public sealed class ContactSyncOrchestrator
         foreach (var entry in groupContactSources)
         {
             contacts.Add(AddGroupRuleMetadata(
-                this.groupContactFactory.CreateGroupContact(entry.Group, new[] { entry.LabelName }, groupContactPrefix),
+                this.groupContactFactory.CreateGroupContact(
+                    entry.Group,
+                    new[] { ApplyPrefix(entry.LabelName, groupContactPrefix) },
+                    groupContactPrefix),
                 "GroupsToSyncByGroup",
                 entry.Group));
         }
@@ -447,7 +455,8 @@ public sealed class ContactSyncOrchestrator
 
     private static IReadOnlySet<string> BuildTargetLabels(
         string directoryLabel,
-        IReadOnlyList<GroupContactSource> groupContactSources)
+        IReadOnlyList<GroupContactSource> groupContactSources,
+        string groupContactPrefix)
     {
         var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -456,7 +465,7 @@ public sealed class ContactSyncOrchestrator
 
         foreach (var entry in groupContactSources)
         {
-            labels.Add(entry.LabelName);
+            labels.Add(ApplyPrefix(entry.LabelName, groupContactPrefix));
         }
 
         return labels;
@@ -494,6 +503,7 @@ public sealed class ContactSyncOrchestrator
     private static SyncPlanner CreatePlanner(
         ContactMeshOptions options,
         IReadOnlyList<GroupContactSource> groupContactSources,
+        string groupContactPrefix,
         IReadOnlyList<string> additionalManagedMetadataKeys,
         IReadOnlyList<string> additionalOperationalMetadataKeys)
     {
@@ -504,6 +514,7 @@ public sealed class ContactSyncOrchestrator
 
         foreach (var entry in groupContactSources)
         {
+            managedLabels.Add(ApplyPrefix(entry.LabelName, groupContactPrefix));
             managedLabels.Add(entry.LabelName);
             foreach (var value in new[] { entry.Group.Email, entry.Group.Id })
             {
@@ -541,7 +552,22 @@ public sealed class ContactSyncOrchestrator
             {
                 ManagedEmailDomains = options.ManagedEmailDomains,
                 ForceNormalizeEmailTypes = options.ForceNormalizeEmailTypes
-            }));
+        }));
+    }
+
+    private static string ApplyPrefix(string label, string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return label;
+        }
+
+        var normalizedPrefix = string.IsNullOrWhiteSpace(prefix) ? string.Empty : prefix.Trim();
+        var normalizedLabel = label.Trim();
+
+        return normalizedPrefix.Length == 0 || normalizedLabel.StartsWith(normalizedPrefix, StringComparison.Ordinal)
+            ? normalizedLabel
+            : $"{normalizedPrefix}{normalizedLabel}";
     }
 
     private static bool MatchesGroup(MeshGroup group, string idOrEmail)

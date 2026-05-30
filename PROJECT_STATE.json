@@ -1,8 +1,8 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-05-28",
-  "head": "db0c6fe",
+  "updated": "2026-05-30",
+  "head": "81e2706",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
       "lastKnown": {
         "commit": null,
         "build": "pass",
-        "tests": "242 pass, 1 skipped",
+        "tests": "243 pass, 1 skipped",
         "warnings": "NU1900 vulnerability-data warnings during restore/build because https://api.nuget.org/v3/index.json was unavailable in the sandbox."
       }
   },
@@ -102,7 +102,8 @@
     { "id": "no-mailbox-graceful-skip", "commit": null, "state": "done-local", "note": "MicrosoftGraphContactClient.ListAsync returns empty contacts for MailboxNotEnabledForRESTAPI 404 instead of throwing, so service accounts and on-prem mailboxes are not counted as target failures." },
     { "id": "run-scope-logging", "commit": null, "state": "done-local", "note": "ContactSyncOrchestrator now emits a RunStarted progress event before the per-target loop. The event carries TargetCount and a Message describing the active scope path (TargetUsers, GlobalUserGroups with group names, or 'all eligible directory users'), including a warning when a GlobalUserGroups group has no resolved members. SyncProgressFormatter renders 'Scope: {Message} ({N} targets)'. 241 tests pass, 1 skipped." },
     { "id": "audit-target-user-email", "commit": null, "state": "done-local", "note": "Audit detail and summary CSVs now include TargetUserEmail immediately after TargetUserId. SyncResult carries TargetUserEmail from SyncTarget.UserEmail via SyncExecutor and target failure results; RunAuditWriter writes the email for operation, warning/error, and target summary rows while run summary rows leave target fields blank. Docs and audit/executor tests updated." },
-    { "id": "microsoft-token-cache", "commit": null, "state": "done-local", "note": "MicrosoftClientCredentialsAccessTokenProvider now caches client-credentials access tokens for 50 minutes with a 5-minute refresh skew and synchronizes refreshes, reducing repeated login.microsoftonline.com token requests across multi-target runs. Added provider caching test." }
+    { "id": "microsoft-token-cache", "commit": null, "state": "done-local", "note": "MicrosoftClientCredentialsAccessTokenProvider now caches client-credentials access tokens for 50 minutes with a 5-minute refresh skew and synchronizes refreshes, reducing repeated login.microsoftonline.com token requests across multi-target runs. Added provider caching test." },
+    { "id": "group-category-prefix", "commit": null, "state": "done-local", "note": "GroupsToSyncByGroup labels/categories now apply GroupContactPrefix, while MainContactsGroupLabel remains unprefixed. Planner managed-label ownership includes both prefixed desired labels and previous raw labels so old unprefixed managed categories are removed on update. Docs, Web setting copy, and core orchestrator tests updated; build passed and 243 tests passed, 1 skipped." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }
