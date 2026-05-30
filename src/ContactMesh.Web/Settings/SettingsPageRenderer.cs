@@ -88,7 +88,7 @@ public static class SettingsPageRenderer
         html.AppendLine("<span class=\"muted\">Read only</span>");
         html.AppendLine("</div>");
         html.AppendLine("<div class=\"settings-grid\">");
-        AppendField(html, "Provider", "ContactMesh.Provider", options.Provider, "Selects which provider host ContactMesh uses for directory, group, and contact reads or writes.");
+        AppendProviderSelect(html, options.Provider);
         AppendReadonlyField(html, "Config file", Path.GetFullPath(configPath), "The JSON file loaded first; environment variables and command-line values can override it.");
         AppendReadonlyField(html, "Config status", File.Exists(configPath) ? "Loaded from disk" : "Will be created on save", "If this does not point at appsettings.local.json, launch the Web app with that JSON path.");
         html.AppendLine("<label class=\"setting-row switch-row\">");
@@ -339,6 +339,44 @@ public static class SettingsPageRenderer
         html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
         html.AppendLine("\">");
         html.AppendLine("</label>");
+    }
+
+    private static void AppendProviderSelect(StringBuilder html, string? value)
+    {
+        var selectedValue = string.IsNullOrWhiteSpace(value) ? "Scaffolded" : value.Trim();
+        var knownProviders = new[] { "Microsoft365", "Google", "Scaffolded" };
+
+        html.AppendLine("<label class=\"setting-row\">");
+        html.AppendLine("<span>Provider</span>");
+        html.AppendLine("<small>Selects which provider host ContactMesh uses for directory, group, and contact reads or writes.</small>");
+        html.AppendLine("<select name=\"ContactMesh.Provider\">");
+        foreach (var provider in knownProviders)
+        {
+            AppendProviderOption(html, provider, selectedValue);
+        }
+
+        if (!knownProviders.Contains(selectedValue, StringComparer.OrdinalIgnoreCase))
+        {
+            AppendProviderOption(html, selectedValue, selectedValue);
+        }
+
+        html.AppendLine("</select>");
+        html.AppendLine("</label>");
+    }
+
+    private static void AppendProviderOption(StringBuilder html, string provider, string selectedValue)
+    {
+        html.Append("<option value=\"");
+        html.Append(Encode(provider));
+        html.Append("\"");
+        if (string.Equals(provider, selectedValue, StringComparison.OrdinalIgnoreCase))
+        {
+            html.Append(" selected");
+        }
+
+        html.Append(">");
+        html.Append(Encode(provider));
+        html.AppendLine("</option>");
     }
 
     private static void AppendReadonlyField(StringBuilder html, string label, string? value, string description)
@@ -690,6 +728,7 @@ h3 {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   min-width: 0;
@@ -788,6 +827,7 @@ th {
 }
 
 .detail-row input,
+.detail-row select,
 .detail-row textarea {
   min-width: 0;
   max-width: 64%;
@@ -859,6 +899,7 @@ button {
   }
 
   .detail-row input,
+  .detail-row select,
   .detail-row textarea {
     max-width: none;
   }

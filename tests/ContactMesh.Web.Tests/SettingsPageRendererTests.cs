@@ -66,7 +66,9 @@ public sealed class SettingsPageRendererTests
 
         Assert.Contains("<title>ContactMesh Settings</title>", html);
         Assert.Contains("<form method=\"post\" action=\"/settings\">", html);
-        Assert.Contains("value=\"Google\"", html);
+        Assert.Contains("<select name=\"ContactMesh.Provider\">", html);
+        Assert.Contains("<option value=\"Google\" selected>Google</option>", html);
+        Assert.Contains("<option value=\"Microsoft365\">Microsoft365</option>", html);
         Assert.Contains("checked", html);
         Assert.Contains("Deletes off", html);
         Assert.Contains("name=\"ContactMesh.DisableDeletes\"", html);
@@ -128,6 +130,24 @@ public sealed class SettingsPageRendererTests
 
         Assert.Contains("Managed domains", html);
         Assert.Contains("Will be created on save", html);
+        Assert.Contains("<option value=\"Scaffolded\" selected>Scaffolded</option>", html);
+    }
+
+    [Fact]
+    public void RenderPreservesUnknownProviderInDropdown()
+    {
+        var html = SettingsPageRenderer.Render(
+            new ContactMeshOptions
+            {
+                Provider = "CustomProvider"
+            },
+            new GoogleWorkspaceOptions(),
+            new Microsoft365Options(),
+            "appsettings.json",
+            null);
+
+        Assert.Contains("<select name=\"ContactMesh.Provider\">", html);
+        Assert.Contains("<option value=\"CustomProvider\" selected>CustomProvider</option>", html);
     }
 
     [Fact]
