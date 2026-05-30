@@ -59,7 +59,8 @@ public sealed class SettingsPageRendererTests
                 TenantId = "tenant-id",
                 ClientId = "client-id",
                 ClientSecret = "super-secret",
-                Scopes = new[] { "https://graph.microsoft.com/.default" }
+                Scopes = new[] { "https://graph.microsoft.com/.default" },
+                GroupTypes = new[] { "Microsoft365", "Distribution" }
             },
             "settings.json",
             null);
@@ -93,6 +94,10 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("Configured", html);
         Assert.Contains("name=\"ContactMesh.Rules.TargetUsers\"", html);
         Assert.Contains("name=\"Microsoft365.ClientSecret\"", html);
+        Assert.Contains("<details class=\"checkbox-dropdown\">", html);
+        Assert.Contains("value=\"Microsoft365\" checked", html);
+        Assert.Contains("value=\"Distribution\" checked", html);
+        Assert.Contains("value=\"MailEnabledSecurity\"", html);
         Assert.DoesNotContain("super-secret", html);
     }
 
@@ -151,6 +156,23 @@ public sealed class SettingsPageRendererTests
     }
 
     [Fact]
+    public void RenderPreservesCustomGroupTypeInChecklist()
+    {
+        var html = SettingsPageRenderer.Render(
+            new ContactMeshOptions(),
+            new GoogleWorkspaceOptions(),
+            new Microsoft365Options
+            {
+                GroupTypes = new[] { "CustomType" }
+            },
+            "appsettings.json",
+            null);
+
+        Assert.Contains("CustomType", html);
+        Assert.Contains("value=\"CustomType\" checked", html);
+    }
+
+    [Fact]
     public void RenderShowsSettingDescriptionsForLiveProviderValidation()
     {
         var html = SettingsPageRenderer.Render(
@@ -201,7 +223,8 @@ public sealed class SettingsPageRendererTests
             ["Microsoft365.TenantId"] = "tenant-id",
             ["Microsoft365.ClientId"] = "client-id",
             ["Microsoft365.ClientSecret"] = "",
-            ["Microsoft365.Scopes"] = Microsoft365Options.DefaultGraphScope
+            ["Microsoft365.Scopes"] = Microsoft365Options.DefaultGraphScope,
+            ["Microsoft365.GroupTypes"] = new[] { "Microsoft365", "Distribution" }
         });
         var configPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
 
@@ -230,6 +253,9 @@ public sealed class SettingsPageRendererTests
             Assert.Contains("\"target@example.org\"", json);
             Assert.Contains("\"contact-labels@example.org\"", json);
             Assert.Contains("\"From\": \"source@example.org\"", json);
+            Assert.Contains("\"GroupTypes\": [", json);
+            Assert.Contains("\"Microsoft365\"", json);
+            Assert.Contains("\"Distribution\"", json);
             Assert.Contains("\"ClientSecret\": \"existing-secret\"", json);
         }
         finally

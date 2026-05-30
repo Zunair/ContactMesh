@@ -38,7 +38,7 @@ public sealed record SettingsFormModel(
                 ? currentMicrosoft365.ClientSecret
                 : microsoftClientSecret,
             Scopes = Lines(form, "Microsoft365.Scopes"),
-            GroupTypes = Lines(form, "Microsoft365.GroupTypes")
+            GroupTypes = Values(form, "Microsoft365.GroupTypes")
         };
         var contactMesh = new ContactMeshOptions
         {
@@ -113,6 +113,20 @@ public sealed record SettingsFormModel(
     {
         return Read(form, key)
             .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static IReadOnlyList<string> Values(IFormCollection form, string key)
+    {
+        if (!form.TryGetValue(key, out var value))
+        {
+            return Array.Empty<string>();
+        }
+
+        return value
+            .Where(item => item is not null)
+            .SelectMany(item => item!.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToArray();
     }
 
     private static int ReadInt(IFormCollection form, string key, int fallback)

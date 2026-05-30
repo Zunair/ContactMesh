@@ -308,7 +308,7 @@ public static class SettingsPageRenderer
         AppendDetailInput(html, "Client ID", "Microsoft365.ClientId", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
         AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
         AppendDetailTextarea(html, "Scopes", "Microsoft365.Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", microsoft365.Scopes);
-        AppendDetailTextarea(html, "Group types", "Microsoft365.GroupTypes", "Limits which group types are loaded from Graph. One value per line: Microsoft365, MailEnabledSecurity, Distribution. Leave empty to load all types.", microsoft365.GroupTypes);
+        AppendGroupTypesPicker(html, microsoft365.GroupTypes);
         html.AppendLine("</section>");
 
         html.AppendLine("</div>");
@@ -482,6 +482,61 @@ public static class SettingsPageRenderer
         html.AppendLine("</div>");
         AppendTextarea(html, name, values);
         html.AppendLine("</div>");
+    }
+
+    private static void AppendGroupTypesPicker(StringBuilder html, IReadOnlyList<string> values)
+    {
+        var selected = new HashSet<string>(values, StringComparer.OrdinalIgnoreCase);
+        var knownTypes = new[] { "Microsoft365", "MailEnabledSecurity", "Distribution", "Security" };
+
+        html.AppendLine("<div class=\"detail-row detail-multiselect\">");
+        html.AppendLine("<div>");
+        html.AppendLine("<span>Group types</span>");
+        html.AppendLine("<small>Limits which group types are loaded from Graph. Leave all unchecked to load all types.</small>");
+        html.AppendLine("</div>");
+        html.AppendLine("<details class=\"checkbox-dropdown\">");
+        html.Append("<summary>");
+        html.Append(Encode(GroupTypesSummary(values)));
+        html.AppendLine("</summary>");
+        html.AppendLine("<div class=\"checkbox-menu\">");
+        foreach (var groupType in knownTypes)
+        {
+            AppendGroupTypeOption(html, groupType, selected.Contains(groupType));
+        }
+
+        foreach (var customValue in values.Where(value => !knownTypes.Contains(value, StringComparer.OrdinalIgnoreCase)))
+        {
+            AppendGroupTypeOption(html, customValue, true);
+        }
+
+        html.AppendLine("</div>");
+        html.AppendLine("</details>");
+        html.AppendLine("</div>");
+    }
+
+    private static void AppendGroupTypeOption(StringBuilder html, string value, bool selected)
+    {
+        html.AppendLine("<label class=\"checkbox-option\">");
+        html.Append("<input type=\"checkbox\" name=\"Microsoft365.GroupTypes\" value=\"");
+        html.Append(Encode(value));
+        html.Append("\"");
+        if (selected)
+        {
+            html.Append(" checked");
+        }
+
+        html.AppendLine(">");
+        html.Append("<span>");
+        html.Append(Encode(value));
+        html.AppendLine("</span>");
+        html.AppendLine("</label>");
+    }
+
+    private static string GroupTypesSummary(IReadOnlyList<string> values)
+    {
+        return values.Count == 0
+            ? "All group types"
+            : string.Join(", ", values);
     }
 
     private static void AppendTextarea(StringBuilder html, string name, IReadOnlyList<string> values)
@@ -691,10 +746,15 @@ h3 {
   color: var(--muted);
 }
 
-.settings-grid,
-.provider-grid {
+.settings-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 14px;
 }
 
@@ -819,22 +879,102 @@ th {
 }
 
 .detail-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 58%);
   gap: 16px;
+  align-items: start;
   padding: 10px 0;
   border-top: 1px solid var(--line);
 }
 
 .detail-row input,
 .detail-row select,
-.detail-row textarea {
+.detail-row textarea,
+.checkbox-dropdown {
   min-width: 0;
-  max-width: 64%;
+  max-width: none;
 }
 
 .detail-textarea {
   align-items: start;
+}
+
+.detail-multiselect {
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.checkbox-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.checkbox-dropdown summary {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  padding: 9px 34px 9px 10px;
+  line-height: 1.3;
+  list-style: none;
+  cursor: pointer;
+}
+
+.checkbox-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.checkbox-dropdown summary::after {
+  content: "";
+  position: absolute;
+  top: 17px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+}
+
+.checkbox-dropdown[open] summary::after {
+  top: 20px;
+  transform: rotate(225deg);
+}
+
+.checkbox-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  padding: 10px;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  min-width: 0;
+}
+
+.checkbox-option:hover,
+.checkbox-option:focus-within {
+  background: #f9fafb;
+}
+
+.checkbox-option input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+
+.checkbox-option span {
+  color: var(--ink);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .save-bar {
@@ -895,13 +1035,7 @@ button {
   }
 
   .detail-row {
-    display: grid;
-  }
-
-  .detail-row input,
-  .detail-row select,
-  .detail-row textarea {
-    max-width: none;
+    grid-template-columns: 1fr;
   }
 }
 """;
