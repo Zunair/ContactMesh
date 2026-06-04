@@ -39,7 +39,14 @@ public sealed class SyncPlanner
             var matchedBySourceId = !string.IsNullOrWhiteSpace(desired.SourceId)
                 && existingBySourceId.TryGetValue(desired.SourceId, out existing);
 
-            if (!matchedBySourceId && !this.TryFindExistingByEmail(desired, existingByEmail, out existing))
+            var matchedByAlternateEmail = false;
+            var matchedEmail = string.Empty;
+            if (!matchedBySourceId && !this.TryFindExistingByEmail(
+                desired,
+                existingByEmail,
+                out existing,
+                out matchedEmail,
+                out matchedByAlternateEmail))
             {
                 operations.Add(new SyncOperation
                 {
@@ -68,7 +75,13 @@ public sealed class SyncPlanner
                 ExistingContact = existing,
                 Reason = type == SyncOperationType.NoChange
                     ? "No managed fields changed."
-                    : matchedBySourceId ? "Managed fields changed." : "Existing contact matched by email."
+                    : matchedBySourceId ? "Managed fields changed." : "Existing contact matched by email.",
+                Warnings = matchedByAlternateEmail
+                    ? new[]
+                    {
+                        $"Existing contact for {FormatIdentity(desired)} matched by alternate email {matchedEmail}; check account primary email and aliases."
+                    }
+                    : Array.Empty<string>()
             });
         }
 
@@ -122,8 +135,8 @@ public sealed class SyncPlanner
     private Dictionary<string, MeshContact> BuildUniqueExistingEmailIndex(IReadOnlyList<MeshContact> existingContacts)
     {
         return existingContacts
-            .SelectMany(contact => contact.Emails
-                .Select(email => (email: this.emailNormalizer.NormalizeForComparison(email.Address), contact)))
+            .SelectMany(contact => GetContactMatchEmails(contact)
+                .Select(email => (email: this.emailNormalizer.NormalizeForComparison(email), contact)))
             .Where(item => item.email.Length > 0)
             .GroupBy(item => item.email, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Select(item => item.contact).Distinct().Count() == 1)
@@ -138,18 +151,60 @@ public sealed class SyncPlanner
     private bool TryFindExistingByEmail(
         MeshContact desired,
         IReadOnlyDictionary<string, MeshContact> existingByEmail,
-        out MeshContact? existing)
+        out MeshContact? existing,
+        out string matchedEmail,
+        out bool matchedByAlternateEmail)
     {
-        foreach (var email in desired.Emails.Select(email => this.emailNormalizer.NormalizeForComparison(email.Address)))
+        var primaryEmails = desired.Emails
+            .Select(email => this.emailNormalizer.NormalizeForComparison(email.Address))
+            .Where(email => email.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var email in GetContactMatchEmails(desired).Select(email => this.emailNormalizer.NormalizeForComparison(email)))
         {
             if (email.Length > 0 && existingByEmail.TryGetValue(email, out existing))
             {
+                matchedEmail = email;
+                matchedByAlternateEmail = !primaryEmails.Contains(email);
                 return true;
             }
         }
 
         existing = null;
+        matchedEmail = string.Empty;
+        matchedByAlternateEmail = false;
         return false;
+    }
+
+    private static IEnumerable<string> GetContactMatchEmails(MeshContact contact)
+    {
+        foreach (var email in contact.Emails.Select(email => email.Address))
+        {
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                yield return email;
+            }
+        }
+
+        foreach (var email in contact.MatchEmails)
+        {
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                yield return email;
+            }
+        }
+    }
+
+    private static string FormatIdentity(MeshContact contact)
+    {
+        return new[]
+            {
+                contact.DisplayName,
+                contact.SourceId,
+                contact.Emails.FirstOrDefault(email => email.IsPrimary)?.Address,
+                contact.Emails.FirstOrDefault()?.Address
+            }
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?? "(unknown contact)";
     }
 
     private static bool AreEquivalent(MeshContact left, MeshContact right)

@@ -77,6 +77,28 @@ public sealed class SyncPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_Updates_Unmanaged_Contact_With_Matching_Alias_And_Warns()
+    {
+        var desired = Contact("user-1", "Jane Doe") with
+        {
+            Emails = new[] { new ContactEmail("primary@example.org", "work", true) },
+            MatchEmails = new[] { "primary@example.org", "alias@example.org" }
+        };
+        var existing = new MeshContact
+        {
+            DisplayName = "Jane",
+            Emails = new[] { new ContactEmail("alias@example.org", "work", true) }
+        };
+
+        var operation = Assert.Single(new SyncPlanner().CreatePlan(new[] { desired }, new[] { existing }));
+
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+        Assert.Equal(existing, operation.ExistingContact);
+        Assert.Contains("matched by alternate email alias@example.org", Assert.Single(operation.Warnings));
+        Assert.Equal("primary@example.org", Assert.Single(operation.DesiredContact.Emails).Address);
+    }
+
+    [Fact]
     public void CreatePlan_Creates_When_Email_Match_Is_Ambiguous()
     {
         var desired = Contact("user-1", "Jane Doe") with

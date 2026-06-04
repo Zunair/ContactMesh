@@ -9,7 +9,7 @@ namespace ContactMesh.Microsoft365.Groups;
 public sealed class MicrosoftGraphGroupClient : IMicrosoftGraphGroupClient
 {
     private const string GroupSelectFields = "id,mail,displayName,visibility,mailEnabled,securityEnabled,groupTypes";
-    private const string MemberSelectFields = "id,mail,userPrincipalName,displayName,givenName,surname,companyName,department,jobTitle,businessPhones,mobilePhone";
+    private const string MemberSelectFields = "id,mail,userPrincipalName,displayName,givenName,surname,companyName,department,jobTitle,proxyAddresses,businessPhones,mobilePhone";
     private static readonly Uri DefaultBaseAddress = new("https://graph.microsoft.com/");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -156,6 +156,7 @@ public sealed class MicrosoftGraphGroupClient : IMicrosoftGraphGroupClient
             CompanyName = member.CompanyName,
             Department = member.Department,
             JobTitle = member.JobTitle,
+            ProxyAddresses = (IReadOnlyList<string>?)member.ProxyAddresses ?? Array.Empty<string>(),
             BusinessPhones = (IReadOnlyList<string>?)member.BusinessPhones ?? Array.Empty<string>(),
             MobilePhone = member.MobilePhone
         };
@@ -195,6 +196,7 @@ public sealed class MicrosoftGraphGroupClient : IMicrosoftGraphGroupClient
         public string? CompanyName { get; init; }
         public string? Department { get; init; }
         public string? JobTitle { get; init; }
+        public List<string>? ProxyAddresses { get; init; }
         public List<string>? BusinessPhones { get; init; }
         public string? MobilePhone { get; init; }
     }

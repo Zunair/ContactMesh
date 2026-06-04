@@ -19,9 +19,14 @@ public sealed class ContactMergeEngine
             .Where(e => !string.IsNullOrWhiteSpace(e.Address))
             .DistinctBy(e => e.Address, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var sourceMatchEmails = sourceEmails.Select(email => email.Address)
+            .Concat(sourceContact.MatchEmails)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Select(email => email.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var userOwnedEmails = existingContact.Emails
-            .Where(e => !sourceEmails.Any(s => string.Equals(s.Address, e.Address, StringComparison.OrdinalIgnoreCase)))
+            .Where(e => !sourceMatchEmails.Contains(e.Address))
             .ToList();
 
         var sourcePhones = sourceContact.Phones
@@ -70,6 +75,7 @@ public sealed class ContactMergeEngine
             Department = sourceContact.Department ?? existingContact.Department,
             JobTitle = sourceContact.JobTitle ?? existingContact.JobTitle,
             Emails = sourceEmails.Concat(userOwnedEmails).ToList(),
+            MatchEmails = sourceContact.MatchEmails.ToList(),
             Phones = sourcePhones.Concat(userOwnedPhones).ToList(),
             Labels = this.MergeLabels(sourceContact.Labels, existingContact.Labels),
             Metadata = MergeMetadata(existingContact.Metadata, sourceContact.Metadata)

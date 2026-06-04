@@ -72,6 +72,24 @@ public sealed class MicrosoftDirectoryMapperTests
         Assert.Equal("jane.alias@example.org", user.Email);
     }
 
+    [Fact]
+    public void ToMeshUser_Prefers_Primary_Proxy_And_Warns_On_Mismatch()
+    {
+        var user = MicrosoftDirectoryMapper.ToMeshUser(new MicrosoftGraphUser
+        {
+            Id = "graph-user-1",
+            DisplayName = "Jane Doe",
+            Mail = "jane.mail@example.org",
+            UserPrincipalName = "jane.upn@example.org",
+            ProxyAddresses = new[] { "smtp:jane.mail@example.org", "SMTP:jane.primary@example.org" }
+        });
+
+        Assert.Equal("jane.primary@example.org", user.Email);
+        Assert.Contains("jane.mail@example.org", user.AlternateEmails);
+        Assert.Contains("jane.upn@example.org", user.AlternateEmails);
+        Assert.Contains("mismatched email identity values", Assert.Single(user.Warnings));
+    }
+
     [Theory]
     [InlineData("Guest")]
     [InlineData("guest")]

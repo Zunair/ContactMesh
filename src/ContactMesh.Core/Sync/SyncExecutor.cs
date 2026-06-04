@@ -34,6 +34,7 @@ public sealed class SyncExecutor
             TargetUserEmail = target.UserEmail,
             DryRun = dryRun,
             Operations = operations,
+            Warnings = operations.SelectMany(operation => operation.Warnings).ToList(),
             LogEntries = CreateLogEntries(target, operations, dryRun, disableDeletes)
         };
     }
@@ -91,6 +92,15 @@ public sealed class SyncExecutor
                 operation.OperationType,
                 operation.DesiredContact.SourceId ?? operation.ExistingContact?.SourceId,
                 operation.Reason));
+        }
+
+        foreach (var warning in operations.SelectMany(operation => operation.Warnings))
+        {
+            entries.Add(new SyncLogEntry(
+                now,
+                SyncLogLevel.Warning,
+                warning,
+                target.UserId));
         }
 
         return entries;

@@ -6,6 +6,7 @@ namespace ContactMesh.Core.Sync;
 public sealed record ContactSyncRunResult
 {
     public bool DryRun { get; init; }
+    public IReadOnlyList<string> RunWarnings { get; init; } = Array.Empty<string>();
     public IReadOnlyList<SyncResult> Results { get; init; } = Array.Empty<SyncResult>();
 
     public int TargetCount => this.Results.Count;
@@ -14,11 +15,11 @@ public sealed record ContactSyncRunResult
     public int DeleteCount => this.Results.Sum(result => result.DeleteCount);
     public int NoChangeCount => this.Results.Sum(result => result.NoChangeCount);
     public int WriteCount => this.Results.Sum(result => result.WriteCount);
-    public int WarningCount => this.Results.Sum(result => result.WarningCount);
+    public int WarningCount => this.RunWarnings.Count + this.Results.Sum(result => result.WarningCount);
     public int ErrorCount => this.Results.Sum(result => result.ErrorCount);
     public bool HasWarnings => this.WarningCount > 0;
     public bool HasErrors => this.ErrorCount > 0;
-    public IReadOnlyList<string> Warnings => this.Results.SelectMany(result => result.Warnings).ToList();
+    public IReadOnlyList<string> Warnings => this.RunWarnings.Concat(this.Results.SelectMany(result => result.Warnings)).ToList();
     public IReadOnlyList<string> Errors => this.Results.SelectMany(result => result.Errors).ToList();
     public IReadOnlyList<SyncLogEntry> LogEntries => this.Results.SelectMany(result => result.LogEntries).ToList();
 

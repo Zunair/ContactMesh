@@ -73,6 +73,7 @@ public sealed class MicrosoftGraphGroupClientTests
                           "id": "user-1",
                           "mail": "jane@example.org",
                           "userPrincipalName": "jane@tenant.example",
+                          "proxyAddresses": [ "SMTP:jane.primary@example.org", "smtp:jane@example.org" ],
                           "displayName": "Jane Doe"
                         },
                         {
@@ -104,6 +105,7 @@ public sealed class MicrosoftGraphGroupClientTests
         Assert.Equal(2, members.Count);
         Assert.Equal("#microsoft.graph.user", members[0].ODataType);
         Assert.Equal("jane@example.org", members[0].Mail);
+        Assert.Equal(new[] { "SMTP:jane.primary@example.org", "smtp:jane@example.org" }, members[0].ProxyAddresses);
         Assert.Equal("#microsoft.graph.orgContact", members[1].ODataType);
         Assert.Equal("External", members[1].GivenName);
         Assert.Equal("+1 215 555 0100", Assert.Single(members[1].BusinessPhones));
@@ -114,6 +116,7 @@ public sealed class MicrosoftGraphGroupClientTests
             handler.Requests[0].RequestUri?.ToString(),
             StringComparison.Ordinal);
         Assert.Contains("%24select=", handler.Requests[0].RequestUri?.ToString(), StringComparison.Ordinal);
+        Assert.Contains("proxyAddresses", Uri.UnescapeDataString(handler.Requests[0].RequestUri?.ToString() ?? string.Empty), StringComparison.Ordinal);
         Assert.Contains("%24top=999", handler.Requests[0].RequestUri?.ToString(), StringComparison.Ordinal);
         Assert.Equal(
             "https://graph.test/v1.0/groups/group-1/transitiveMembers?$skiptoken=next-page",

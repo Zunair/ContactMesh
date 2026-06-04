@@ -23,7 +23,9 @@ public sealed class MicrosoftUserProvider : IDirectoryProvider
 
         return users
             .Where(user => !string.IsNullOrWhiteSpace(user.Id)
-                && (!string.IsNullOrWhiteSpace(user.Mail) || !string.IsNullOrWhiteSpace(user.UserPrincipalName)))
+                && (!string.IsNullOrWhiteSpace(user.Mail)
+                    || !string.IsNullOrWhiteSpace(user.UserPrincipalName)
+                    || user.ProxyAddresses.Any(address => !string.IsNullOrWhiteSpace(address))))
             .Select(MicrosoftDirectoryMapper.ToMeshUser)
             .ToList();
     }

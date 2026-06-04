@@ -204,6 +204,7 @@ public sealed class SyncRunReportFormatterTests
         var result = new ContactSyncRunResult
         {
             DryRun = true,
+            RunWarnings = new[] { "alias mismatch" },
             Results = new[]
             {
                 new SyncResult
@@ -250,8 +251,9 @@ public sealed class SyncRunReportFormatterTests
         Assert.Contains("Plan: 1 create, 0 update, 0 delete, 1 unchanged.", lines);
         Assert.Contains("Writes: 1", lines);
         Assert.Contains("Dry run: true (provider writes skipped: 1)", lines);
-        Assert.Contains("Warnings: 1", lines);
+        Assert.Contains("Warnings: 2", lines);
         Assert.Contains("Errors: 1", lines);
+        Assert.Contains("Warning: alias mismatch", lines);
         Assert.Contains("Target target@example.org: 1 create, 0 update, 0 delete, 1 unchanged.", lines);
         Assert.Contains("  Warning: Skipped incomplete phone.", lines);
         Assert.Contains("  Error: Provider write failed.", lines);

@@ -18,6 +18,7 @@ public sealed class DirectoryContactFactory
             Department = user.Department,
             JobTitle = user.JobTitle,
             Emails = new[] { new ContactEmail(email, "work", true) },
+            MatchEmails = GetMatchEmails(user, email),
             Phones = user.Phones.ToList(),
             Labels = (labels ?? Array.Empty<string>())
                 .Where(label => !string.IsNullOrWhiteSpace(label))
@@ -50,5 +51,15 @@ public sealed class DirectoryContactFactory
         }
 
         return metadata;
+    }
+
+    private static IReadOnlyList<string> GetMatchEmails(MeshUser user, string primaryEmail)
+    {
+        return new[] { primaryEmail, user.Email }
+            .Concat(user.AlternateEmails)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

@@ -20,6 +20,11 @@ public static class SyncRunReportFormatter
             $"Errors: {summary.ErrorCount}"
         };
 
+        foreach (var warning in result.RunWarnings)
+        {
+            lines.Add($"Warning: {warning}");
+        }
+
         foreach (var syncResult in result.Results)
         {
             AddTargetLines(lines, syncResult, result.DryRun);

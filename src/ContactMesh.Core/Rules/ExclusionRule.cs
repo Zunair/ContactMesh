@@ -13,6 +13,20 @@ public sealed class ExclusionRule
 
     public bool IsExcluded(MeshUser user)
     {
-        return this.excludedUserIds.Contains(user.Id) || this.excludedUserIds.Contains(user.Email);
+        return this.excludedUserIds.Contains(user.Id)
+            || GetUserEmails(user).Any(this.excludedUserIds.Contains);
+    }
+
+    private static IEnumerable<string> GetUserEmails(MeshUser user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            yield return user.Email;
+        }
+
+        foreach (var email in user.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
     }
 }

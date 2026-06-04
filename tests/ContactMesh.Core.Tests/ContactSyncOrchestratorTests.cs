@@ -361,6 +361,59 @@ public sealed class ContactSyncOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_MainContactsGroup_Matches_User_By_Alternate_Email_And_Reports_Warning()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            new MeshUser
+            {
+                Id = "source",
+                Email = "primary@example.org",
+                AlternateEmails = new[] { "alias@example.org" },
+                Warnings = new[] { "source account alias mismatch" }
+            }
+        });
+        var rootGroup = new MeshGroup
+        {
+            Id = "root",
+            Email = "staff@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "source",
+                    Email = "alias@example.org",
+                    Type = MeshGroupMemberType.User
+                }
+            }
+        };
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { rootGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    MainContactsGroupEmails = new[] { "staff@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        Assert.Contains("source account alias mismatch", result.RunWarnings);
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        var contact = Assert.Single(applied.Creates, c => c.SourceId == "source");
+        Assert.Equal("primary@example.org", Assert.Single(contact.Emails).Address);
+        Assert.Contains("alias@example.org", contact.MatchEmails);
+    }
+
+    [Fact]
     public async Task RunAsync_GroupsToSyncByGroup_Creates_Group_Email_Contacts_From_Container_Members()
     {
         // Hierarchy: container (L1) → support label group (L2) → help / list-only contact groups (L3)

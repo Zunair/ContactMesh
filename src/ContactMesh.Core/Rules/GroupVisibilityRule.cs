@@ -39,9 +39,37 @@ public sealed class GroupVisibilityRule
 
     private static bool HasMember(MeshGroup group, SyncTarget target)
     {
+        var targetEmails = GetTargetEmails(target).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         return group.Members.Any(member =>
             string.Equals(member.Id, target.UserId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(member.Email, target.UserEmail, StringComparison.OrdinalIgnoreCase));
+            || GetMemberEmails(member).Any(targetEmails.Contains));
+    }
+
+    private static IEnumerable<string> GetTargetEmails(SyncTarget target)
+    {
+        if (!string.IsNullOrWhiteSpace(target.UserEmail))
+        {
+            yield return target.UserEmail;
+        }
+
+        foreach (var email in target.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
+    }
+
+    private static IEnumerable<string> GetMemberEmails(MeshGroupMember member)
+    {
+        if (!string.IsNullOrWhiteSpace(member.Email))
+        {
+            yield return member.Email;
+        }
+
+        foreach (var email in member.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
     }
 }
 

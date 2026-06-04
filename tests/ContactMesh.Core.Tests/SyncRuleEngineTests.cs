@@ -64,6 +64,50 @@ public sealed class SyncRuleEngineTests
     }
 
     [Fact]
+    public void CreateTargets_Uses_TargetUserScope_By_Alternate_Email()
+    {
+        var users = new[]
+        {
+            new MeshUser
+            {
+                Id = "1",
+                Email = "primary@example.org",
+                AlternateEmails = new[] { "alias@example.org" }
+            },
+            User("2", "other@example.org", "/Staff")
+        };
+
+        var engine = new SyncRuleEngine(targetUsers: new[] { "alias@example.org" });
+
+        var target = Assert.Single(engine.CreateTargets(users));
+
+        Assert.Equal("1", target.UserId);
+        Assert.Equal("primary@example.org", target.UserEmail);
+        Assert.Contains("alias@example.org", target.AlternateEmails);
+    }
+
+    [Fact]
+    public void CreateTargets_Excludes_By_Alternate_Email()
+    {
+        var users = new[]
+        {
+            new MeshUser
+            {
+                Id = "1",
+                Email = "primary@example.org",
+                AlternateEmails = new[] { "blocked-alias@example.org" }
+            },
+            User("2", "active@example.org", "/Staff")
+        };
+
+        var engine = new SyncRuleEngine(new ExclusionRule(new[] { "blocked-alias@example.org" }));
+
+        var target = Assert.Single(engine.CreateTargets(users));
+
+        Assert.Equal("2", target.UserId);
+    }
+
+    [Fact]
     public void CreateEligibleUsers_Does_Not_Apply_TargetUserScope()
     {
         var users = new[]
@@ -165,6 +209,38 @@ public sealed class SyncRuleEngineTests
         var memberDecision = Assert.Single(memberDecisions);
         Assert.True(memberDecision.CanSeeMembers);
         Assert.Empty(nonMemberDecisions);
+    }
+
+    [Fact]
+    public void FilterGroupsForTarget_Uses_Target_And_Member_Alternate_Emails()
+    {
+        var group = new MeshGroup
+        {
+            Id = "members@example.org",
+            Email = "members@example.org",
+            GroupVisibility = MeshGroupVisibility.Members,
+            MemberVisibility = MeshGroupVisibility.Members,
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "user-1",
+                    Email = "old@example.org",
+                    AlternateEmails = new[] { "primary@example.org" },
+                    Type = MeshGroupMemberType.User
+                }
+            }
+        };
+        var target = new SyncTarget
+        {
+            UserId = "user-1",
+            UserEmail = "primary@example.org",
+            AlternateEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "old@example.org" }
+        };
+
+        var decision = Assert.Single(new SyncRuleEngine().FilterGroupsForTarget(new[] { group }, target));
+
+        Assert.True(decision.CanSeeMembers);
     }
 
     [Fact]

@@ -29,6 +29,7 @@ public sealed record SyncOperation
     public required MeshContact DesiredContact { get; init; }
     public MeshContact? ExistingContact { get; init; }
     public string Reason { get; init; } = string.Empty;
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 }
 
 public enum SyncOperationType

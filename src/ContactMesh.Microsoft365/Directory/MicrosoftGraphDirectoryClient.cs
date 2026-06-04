@@ -8,7 +8,7 @@ namespace ContactMesh.Microsoft365.Directory;
 
 public sealed class MicrosoftGraphDirectoryClient : IMicrosoftGraphDirectoryClient
 {
-    private const string UserSelectFields = "id,mail,userPrincipalName,displayName,givenName,surname,companyName,department,jobTitle,businessPhones,mobilePhone,accountEnabled,userType";
+    private const string UserSelectFields = "id,mail,userPrincipalName,displayName,givenName,surname,companyName,department,jobTitle,proxyAddresses,businessPhones,mobilePhone,accountEnabled,userType";
     private static readonly Uri DefaultBaseAddress = new("https://graph.microsoft.com/");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

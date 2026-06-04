@@ -34,7 +34,14 @@ public sealed class SyncRuleEngine
     {
         return this.CreateEligibleUsers(users)
             .Where(this.IsInTargetScope)
-            .Select(user => new SyncTarget { UserId = user.Id, UserEmail = user.Email })
+            .Select(user => new SyncTarget
+            {
+                UserId = user.Id,
+                UserEmail = user.Email,
+                AlternateEmails = user.AlternateEmails
+                    .Where(email => !string.IsNullOrWhiteSpace(email))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            })
             .ToList();
     }
 
@@ -52,7 +59,7 @@ public sealed class SyncRuleEngine
     {
         return this.targetUsers.Count == 0
             || this.targetUsers.Contains(user.Id)
-            || this.targetUsers.Contains(user.Email);
+            || GetUserEmails(user).Any(this.targetUsers.Contains);
     }
 
     private static IReadOnlySet<string> NormalizeTargetUsers(IEnumerable<string>? targetUsers)
@@ -61,5 +68,18 @@ public sealed class SyncRuleEngine
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<string> GetUserEmails(MeshUser user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            yield return user.Email;
+        }
+
+        foreach (var email in user.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
     }
 }

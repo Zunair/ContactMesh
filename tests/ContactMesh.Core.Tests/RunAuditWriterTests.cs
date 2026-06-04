@@ -109,6 +109,34 @@ public sealed class RunAuditWriterTests : IDisposable
     }
 
     [Fact]
+    public async Task Writer_Includes_Run_Warnings_In_Detail_And_Summary()
+    {
+        var writer = new RunAuditWriter(new AuditLogOptions { Directory = this.root });
+        var result = new ContactSyncRunResult
+        {
+            DryRun = false,
+            RunWarnings = new[] { "alias mismatch" }
+        };
+        var context = new RunAuditContext
+        {
+            Provider = "Microsoft365",
+            RunId = "run-warning",
+            StartedAt = DateTimeOffset.UtcNow,
+            CompletedAt = DateTimeOffset.UtcNow
+        };
+
+        var artifacts = await writer.WriteAsync(result, context, TestContext.Current.CancellationToken);
+
+        var detail = await File.ReadAllTextAsync(artifacts!.DetailCsvPath, TestContext.Current.CancellationToken);
+        Assert.Contains(",,Warning,Warning", detail);
+        Assert.Contains("alias mismatch", detail);
+
+        var summary = await File.ReadAllTextAsync(artifacts.SummaryCsvPath, TestContext.Current.CancellationToken);
+        Assert.Contains("alias mismatch", summary);
+        Assert.Contains(",1,0,", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Writer_Reports_Failure_When_Context_Has_Exception()
     {
         var options = new AuditLogOptions { Directory = this.root };

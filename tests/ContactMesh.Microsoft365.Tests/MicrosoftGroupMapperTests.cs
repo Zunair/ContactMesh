@@ -24,6 +24,7 @@ public sealed class MicrosoftGroupMapperTests
                     Id = "user-1",
                     ODataType = "#microsoft.graph.user",
                     Mail = "jane@example.org",
+                    ProxyAddresses = new[] { "SMTP:jane.primary@example.org", "smtp:jane@example.org" },
                     DisplayName = "Jane Doe"
                 },
                 new MicrosoftGraphGroupMember
@@ -51,7 +52,10 @@ public sealed class MicrosoftGroupMapperTests
         Assert.Equal(MeshGroupVisibility.Domain, group.GroupVisibility);
         Assert.Equal(MeshGroupVisibility.Domain, group.MemberVisibility);
         Assert.Equal(3, group.Members.Count);
-        Assert.Contains(group.Members, member => member.Type == MeshGroupMemberType.User && member.Email == "jane@example.org");
+        var userMember = Assert.Single(group.Members, member => member.Type == MeshGroupMemberType.User);
+        Assert.Equal("jane.primary@example.org", userMember.Email);
+        Assert.Contains("jane@example.org", userMember.AlternateEmails);
+        Assert.Contains("mismatched email identity values", Assert.Single(userMember.Warnings));
         Assert.Contains(group.Members, member => member.Type == MeshGroupMemberType.Group && member.Email == "nested@example.org");
         Assert.Contains(group.Members, member => member.Type == MeshGroupMemberType.Contact && member.Email == "external@example.org");
     }

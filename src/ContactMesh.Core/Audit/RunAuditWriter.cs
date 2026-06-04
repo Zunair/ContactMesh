@@ -108,6 +108,11 @@ public sealed class RunAuditWriter
             return false;
         }
 
+        if (result.RunWarnings.Count > 0)
+        {
+            return true;
+        }
+
         foreach (var target in result.Results)
         {
             if (target.Errors.Count > 0 || target.Warnings.Count > 0)
@@ -178,6 +183,11 @@ public sealed class RunAuditWriter
         }
 
         var dryRun = result.DryRun ? "true" : "false";
+        foreach (var warning in result.RunWarnings)
+        {
+            await writer.WriteLineAsync(JoinCsv(BuildRunIssueRow(context, dryRun, "Warning", warning))).ConfigureAwait(false);
+        }
+
         foreach (var target in result.Results)
         {
             foreach (var operation in target.Operations)
@@ -371,6 +381,33 @@ public sealed class RunAuditWriter
             dryRun,
             target.TargetUserId,
             target.TargetUserEmail,
+            level,
+            level,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            message
+        };
+    }
+
+    private static string[] BuildRunIssueRow(
+        RunAuditContext context,
+        string dryRun,
+        string level,
+        string message)
+    {
+        return new[]
+        {
+            DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+            context.Provider,
+            context.RunId,
+            dryRun,
+            string.Empty,
+            string.Empty,
             level,
             level,
             string.Empty,

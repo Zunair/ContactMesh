@@ -54,8 +54,9 @@ public sealed class RunNotificationDispatcher
             return new RunNotificationResult(RunNotificationOutcome.Skipped, "Notifications:From is not configured.");
         }
 
-        var isFailure = RunAuditWriter.DetermineOutcome(result, context) == "Failure";
-        var recipients = (isFailure ? this.options.FailureTo : this.options.SuccessTo)
+        var notificationStatus = ResolveNotificationStatus(result, context);
+        var useFailureRecipients = notificationStatus is "Failure" or "Warning";
+        var recipients = (useFailureRecipients ? this.options.FailureTo : this.options.SuccessTo)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value.Trim())
             .ToList();
@@ -64,37 +65,52 @@ public sealed class RunNotificationDispatcher
         {
             return new RunNotificationResult(
                 RunNotificationOutcome.Skipped,
-                isFailure ? "Notifications:FailureTo has no recipients." : "Notifications:SuccessTo has no recipients.");
+                useFailureRecipients ? "Notifications:FailureTo has no recipients." : "Notifications:SuccessTo has no recipients.");
         }
 
-        var subject = BuildSubject(result, context, isFailure);
-        var body = BuildBody(result, context, artifacts, isFailure);
-        var attachments = BuildAttachments(artifacts, isFailure);
+        var subject = BuildSubject(result, context, notificationStatus);
+        var body = BuildBody(result, context, artifacts, notificationStatus);
+        var attachments = BuildAttachments(artifacts, notificationStatus == "Failure");
 
         var message = new NotificationMessage(this.options.From, recipients, subject, body, attachments);
         await this.sender.SendAsync(message, cancellationToken).ConfigureAwait(false);
         return new RunNotificationResult(RunNotificationOutcome.Sent);
     }
 
-    private string BuildSubject(ContactSyncRunResult? result, RunAuditContext context, bool isFailure)
+    private static string ResolveNotificationStatus(ContactSyncRunResult? result, RunAuditContext context)
+    {
+        if (RunAuditWriter.DetermineOutcome(result, context) == "Failure")
+        {
+            return "Failure";
+        }
+
+        return result?.HasWarnings == true ? "Warning" : "Success";
+    }
+
+    private string BuildSubject(ContactSyncRunResult? result, RunAuditContext context, string status)
     {
         var prefix = string.IsNullOrWhiteSpace(this.options.SubjectPrefix)
             ? string.Empty
             : this.options.SubjectPrefix.Trim() + " ";
-        var status = isFailure ? "FAILED" : "Success";
+        var subjectStatus = status switch
+        {
+            "Failure" => "FAILED",
+            "Warning" => "Warning",
+            _ => "Success"
+        };
         var summary = result?.Summary;
         var counts = summary is null
             ? string.Empty
             : $" — {summary.CreateCount}C/{summary.UpdateCount}U/{summary.DeleteCount}D over {summary.TargetCount} targets";
 
-        return $"{prefix}{context.Provider} sync {status}{counts}";
+        return $"{prefix}{context.Provider} sync {subjectStatus}{counts}";
     }
 
     private static string BuildBody(
         ContactSyncRunResult? result,
         RunAuditContext context,
         RunAuditArtifacts? artifacts,
-        bool isFailure)
+        string status)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Provider: {context.Provider}");
@@ -111,7 +127,7 @@ public sealed class RunNotificationDispatcher
         builder.AppendLine($"Completed: {context.CompletedAt.ToString("o", CultureInfo.InvariantCulture)}");
         var duration = (context.CompletedAt - context.StartedAt).TotalSeconds;
         builder.AppendLine($"Duration: {duration.ToString("F3", CultureInfo.InvariantCulture)} seconds");
-        builder.AppendLine($"Outcome: {(isFailure ? "Failure" : "Success")}");
+        builder.AppendLine($"Outcome: {status}");
 
         if (context.Failure is not null)
         {

@@ -16,6 +16,8 @@ public sealed record MeshGroupMember
     public required string Email { get; init; }
     public required MeshGroupMemberType Type { get; init; }
     public string? DisplayName { get; init; }
+    public IReadOnlyList<string> AlternateEmails { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 }
 
 public enum MeshGroupMemberType

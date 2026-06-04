@@ -189,6 +189,40 @@ public sealed class RunNotificationDispatcherTests
         };
     }
 
+    [Fact]
+    public async Task Dispatcher_Sends_Warning_Email_To_Failure_Recipients()
+    {
+        var sender = new RecordingSender();
+        var dispatcher = new RunNotificationDispatcher(
+            new NotificationOptions
+            {
+                Enabled = true,
+                From = "ops@example.com",
+                SuccessTo = new[] { "team@example.com" },
+                FailureTo = new[] { "oncall@example.com" },
+                AttachCsvOnFailure = true
+            },
+            sender);
+
+        var dispatched = await dispatcher.DispatchAsync(
+            new ContactSyncRunResult
+            {
+                DryRun = false,
+                RunWarnings = new[] { "alias mismatch" }
+            },
+            NewContext(),
+            artifacts: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(RunNotificationOutcome.Sent, dispatched.Outcome);
+        var message = Assert.Single(sender.Messages);
+        Assert.Equal(new[] { "oncall@example.com" }, message.To);
+        Assert.Contains("Warning", message.Subject);
+        Assert.Contains("Outcome: Warning", message.Body);
+        Assert.Contains("alias mismatch", message.Body);
+        Assert.Empty(message.Attachments);
+    }
+
     private sealed class RecordingSender : IRunNotificationSender
     {
         public List<NotificationMessage> Messages { get; } = new();

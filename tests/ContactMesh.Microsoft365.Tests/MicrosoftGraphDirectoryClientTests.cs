@@ -28,6 +28,7 @@ public sealed class MicrosoftGraphDirectoryClientTests
                           "companyName": "Example",
                           "department": "Engineering",
                           "jobTitle": "Director",
+                          "proxyAddresses": [ "SMTP:jane.alias@example.org", "smtp:jane@example.org" ],
                           "businessPhones": [ "+1 215 555 0100" ],
                           "mobilePhone": "+1 215 555 0101",
                           "accountEnabled": true
@@ -51,13 +52,14 @@ public sealed class MicrosoftGraphDirectoryClientTests
         var user = Assert.Single(users);
         Assert.Equal("graph-user-1", user.Id);
         Assert.Equal("jane.alias@example.org", user.Mail);
+        Assert.Equal(new[] { "SMTP:jane.alias@example.org", "smtp:jane@example.org" }, user.ProxyAddresses);
         Assert.Equal("Jane", user.GivenName);
         Assert.Equal("+1 215 555 0100", Assert.Single(user.BusinessPhones));
         Assert.True(user.AccountEnabled);
         Assert.Equal("Bearer graph-token", handler.Requests[0].Authorization);
         Assert.Equal("Bearer graph-token", handler.Requests[1].Authorization);
         Assert.Equal(
-            "https://graph.test/v1.0/users?%24select=id%2Cmail%2CuserPrincipalName%2CdisplayName%2CgivenName%2Csurname%2CcompanyName%2Cdepartment%2CjobTitle%2CbusinessPhones%2CmobilePhone%2CaccountEnabled%2CuserType&%24top=999",
+            "https://graph.test/v1.0/users?%24select=id%2Cmail%2CuserPrincipalName%2CdisplayName%2CgivenName%2Csurname%2CcompanyName%2Cdepartment%2CjobTitle%2CproxyAddresses%2CbusinessPhones%2CmobilePhone%2CaccountEnabled%2CuserType&%24top=999",
             handler.Requests[0].RequestUri?.ToString());
         Assert.Equal(
             "https://graph.test/v1.0/users?$skiptoken=next-page",

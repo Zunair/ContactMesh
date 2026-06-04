@@ -57,6 +57,7 @@ public sealed class ContactSyncOrchestrator
         var users = await this.directoryProvider.GetUsersAsync(cancellationToken).ConfigureAwait(false);
         var groups = await this.groupProvider.GetGroupsAsync(cancellationToken).ConfigureAwait(false);
         var mappedGroups = this.groupMappingEngine.ApplyMappings(groups, options.Rules.GroupMappings);
+        var runWarnings = CollectRunWarnings(users, mappedGroups);
         var groupContactSources = ResolveGroupsToSyncByGroup(
             mappedGroups,
             options.Rules.GroupsToSyncByGroup);
@@ -181,6 +182,7 @@ public sealed class ContactSyncOrchestrator
         return new ContactSyncRunResult
         {
             DryRun = options.DryRun,
+            RunWarnings = runWarnings,
             Results = results
         };
     }
@@ -281,7 +283,7 @@ public sealed class ContactSyncOrchestrator
         }
 
         return eligibleUsers
-            .Where(user => memberKeys.Contains(user.Id) || memberKeys.Contains(user.Email))
+            .Where(user => memberKeys.Contains(user.Id) || GetUserEmails(user).Any(memberKeys.Contains))
             .ToList();
     }
 
@@ -325,7 +327,10 @@ public sealed class ContactSyncOrchestrator
                 }
 
                 AddIfPresent(memberKeys, member.Id);
-                AddIfPresent(memberKeys, member.Email);
+                foreach (var email in GetMemberEmails(member))
+                {
+                    AddIfPresent(memberKeys, email);
+                }
             }
         }
 
@@ -434,7 +439,7 @@ public sealed class ContactSyncOrchestrator
         return groups
             .Where(group => exclusions.Contains(group.Id) || exclusions.Contains(group.Email))
             .SelectMany(group => group.Members)
-            .SelectMany(member => new[] { member.Id, member.Email })
+            .SelectMany(member => new[] { member.Id }.Concat(GetMemberEmails(member)))
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
@@ -657,7 +662,58 @@ public sealed class ContactSyncOrchestrator
     private static bool IsTargetUser(MeshUser user, SyncTarget target)
     {
         return string.Equals(user.Id, target.UserId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(user.Email, target.UserEmail, StringComparison.OrdinalIgnoreCase);
+            || GetUserEmails(user).Intersect(GetTargetEmails(target), StringComparer.OrdinalIgnoreCase).Any();
+    }
+
+    private static IReadOnlyList<string> CollectRunWarnings(
+        IReadOnlyList<MeshUser> users,
+        IReadOnlyList<MeshGroup> groups)
+    {
+        return users.SelectMany(user => user.Warnings)
+            .Concat(groups.SelectMany(group => group.Members.SelectMany(member => member.Warnings)))
+            .Where(warning => !string.IsNullOrWhiteSpace(warning))
+            .Select(warning => warning.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IEnumerable<string> GetUserEmails(MeshUser user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            yield return user.Email;
+        }
+
+        foreach (var email in user.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
+    }
+
+    private static IEnumerable<string> GetMemberEmails(MeshGroupMember member)
+    {
+        if (!string.IsNullOrWhiteSpace(member.Email))
+        {
+            yield return member.Email;
+        }
+
+        foreach (var email in member.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
+    }
+
+    private static IEnumerable<string> GetTargetEmails(SyncTarget target)
+    {
+        if (!string.IsNullOrWhiteSpace(target.UserEmail))
+        {
+            yield return target.UserEmail;
+        }
+
+        foreach (var email in target.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        {
+            yield return email;
+        }
     }
 
     private static SyncResult CreateErrorResult(SyncTarget target, bool dryRun, Exception exception)

@@ -9,20 +9,22 @@ public static class MicrosoftDirectoryMapper
         ArgumentNullException.ThrowIfNull(user);
 
         var id = RequireValue(user.Id, "Graph user id");
-        var email = FirstValue(user.Mail, user.UserPrincipalName);
+        var identity = ResolveEmailIdentity(user.Mail, user.UserPrincipalName, user.ProxyAddresses);
 
         return new MeshUser
         {
             Id = id,
-            Email = email,
+            Email = identity.PrimaryEmail,
             DisplayName = user.DisplayName,
             GivenName = user.GivenName,
             FamilyName = user.Surname,
             CompanyName = user.CompanyName,
             Department = user.Department,
             JobTitle = user.JobTitle,
+            AlternateEmails = identity.AlternateEmails,
             Phones = ToPhones(user).ToList(),
-            IsSuspended = user.AccountEnabled == false || IsGuestUser(user.UserType)
+            IsSuspended = user.AccountEnabled == false || IsGuestUser(user.UserType),
+            Warnings = BuildWarnings("Microsoft 365 user", id, user.DisplayName, identity)
         };
     }
 
@@ -73,6 +75,86 @@ public static class MicrosoftDirectoryMapper
         return value;
     }
 
+    private static EmailIdentity ResolveEmailIdentity(
+        string? mail,
+        string? userPrincipalName,
+        IReadOnlyList<string> proxyAddresses)
+    {
+        var primaryProxy = GetPrimaryProxyAddress(proxyAddresses);
+        var primaryEmail = FirstValue(primaryProxy, mail, userPrincipalName);
+        var alternates = GetDistinctEmails(new[] { mail, userPrincipalName }
+                .Concat(GetSmtpProxyAddresses(proxyAddresses)))
+            .Where(email => !string.Equals(email, primaryEmail, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return new EmailIdentity(
+            primaryEmail,
+            mail?.Trim(),
+            userPrincipalName?.Trim(),
+            primaryProxy,
+            alternates);
+    }
+
+    private static IReadOnlyList<string> BuildWarnings(
+        string subject,
+        string id,
+        string? displayName,
+        EmailIdentity identity)
+    {
+        var compared = GetDistinctEmails(new[]
+        {
+            identity.PrimaryEmail,
+            identity.Mail,
+            identity.UserPrincipalName,
+            identity.PrimaryProxyAddress
+        });
+        if (compared.Count <= 1)
+        {
+            return Array.Empty<string>();
+        }
+
+        var name = string.IsNullOrWhiteSpace(displayName) ? id : $"{displayName.Trim()} ({id})";
+        return new[]
+        {
+            $"{subject} {name} has mismatched email identity values: selectedPrimary={identity.PrimaryEmail}; mail={identity.Mail ?? "(blank)"}; userPrincipalName={identity.UserPrincipalName ?? "(blank)"}; primaryProxy={identity.PrimaryProxyAddress ?? "(blank)"}. ContactMesh will match aliases, but account cleanup may be needed."
+        };
+    }
+
+    private static string? GetPrimaryProxyAddress(IEnumerable<string> proxyAddresses)
+    {
+        return proxyAddresses
+            .Select(address => address?.Trim())
+            .FirstOrDefault(address => address is not null && address.StartsWith("SMTP:", StringComparison.Ordinal))
+            ?[5..];
+    }
+
+    private static IEnumerable<string> GetSmtpProxyAddresses(IEnumerable<string> proxyAddresses)
+    {
+        foreach (var proxyAddress in proxyAddresses)
+        {
+            var value = proxyAddress?.Trim();
+            if (string.IsNullOrWhiteSpace(value) || !value.StartsWith("smtp:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var email = value[5..].Trim();
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                yield return email;
+            }
+        }
+    }
+
+    private static IReadOnlyList<string> GetDistinctEmails(IEnumerable<string?> emails)
+    {
+        return emails
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Select(email => email!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static string RequireValue(string? value, string name)
     {
         var trimmed = value?.Trim();
@@ -83,4 +165,11 @@ public static class MicrosoftDirectoryMapper
 
         return trimmed;
     }
+
+    private sealed record EmailIdentity(
+        string PrimaryEmail,
+        string? Mail,
+        string? UserPrincipalName,
+        string? PrimaryProxyAddress,
+        IReadOnlyList<string> AlternateEmails);
 }

@@ -30,6 +30,7 @@ public sealed record MicrosoftGraphGroupMember
     public string? CompanyName { get; init; }
     public string? Department { get; init; }
     public string? JobTitle { get; init; }
+    public IReadOnlyList<string> ProxyAddresses { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> BusinessPhones { get; init; } = Array.Empty<string>();
     public string? MobilePhone { get; init; }
 }
