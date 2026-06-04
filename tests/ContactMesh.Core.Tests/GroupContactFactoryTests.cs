@@ -19,7 +19,7 @@ public sealed class GroupContactFactoryTests
         var contact = new GroupContactFactory().CreateGroupContact(group, new[] { "Directory", "Support" });
 
         Assert.Equal("group:group-1", contact.SourceId);
-        Assert.Equal("+Support-Team", contact.DisplayName);
+        Assert.Equal("+Support-Team Group", contact.DisplayName);
         Assert.Equal("+Support-Team", contact.GivenName);
         Assert.Equal("Group", contact.FamilyName);
         Assert.Equal("support@example.org", Assert.Single(contact.Emails).Address);
@@ -41,7 +41,7 @@ public sealed class GroupContactFactoryTests
 
         var contact = new GroupContactFactory().CreateGroupContact(group);
 
-        Assert.Equal("+support@example.org", contact.DisplayName);
+        Assert.Equal("+support@example.org Group", contact.DisplayName);
         Assert.Equal("+support@example.org", contact.GivenName);
     }
 
@@ -57,7 +57,7 @@ public sealed class GroupContactFactoryTests
 
         var contact = new GroupContactFactory().CreateGroupContact(group, prefix: "#");
 
-        Assert.Equal("#Support-Team", contact.DisplayName);
+        Assert.Equal("#Support-Team Group", contact.DisplayName);
         Assert.Equal("#Support-Team", contact.GivenName);
     }
 
@@ -73,7 +73,7 @@ public sealed class GroupContactFactoryTests
 
         var contact = new GroupContactFactory().CreateGroupContact(group);
 
-        Assert.Equal("+Support-Team", contact.DisplayName);
+        Assert.Equal("+Support-Team Group", contact.DisplayName);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public sealed class GroupContactFactoryTests
 
         var contact = new GroupContactFactory().CreateGroupContact(group);
 
-        Assert.Equal("+833-Chestnut-Street-(833C)", contact.DisplayName);
+        Assert.Equal("+833-Chestnut-Street-(833C) Group", contact.DisplayName);
         Assert.Equal("Group", contact.FamilyName);
     }
 

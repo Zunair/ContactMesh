@@ -267,7 +267,7 @@ public static class SettingsPageRenderer
 
         html.AppendLine("<div class=\"rules-layout\">");
         AppendListField(html, "Managed domains", "ContactMesh.ManagedEmailDomains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
-        AppendField(html, "Main contacts group", "ContactMesh.Rules.MainContactsGroupEmail", rules.MainContactsGroupEmail, "Optional source group whose user members, including nested group members when the provider supplies them, become directory contacts instead of every eligible tenant user.");
+        AppendListField(html, "Main contacts groups", "ContactMesh.Rules.MainContactsGroupEmails", "Optional source groups whose user members, including nested group members when the provider supplies them, become directory contacts instead of every eligible tenant user.", ResolveMainContactsGroups(rules));
         AppendField(html, "Main contacts label", "ContactMesh.Rules.MainContactsGroupLabel", ResolveDirectoryLabel(rules), "Compatibility label for directory contacts from the main contacts group; prefer group contact containers for new labels.");
         AppendField(html, "Group contact prefix", "ContactMesh.Rules.GroupContactPrefix", ResolveGroupContactPrefix(rules), "Prefix added to managed group contact display names and group-derived categories; use + by default to distinguish groups from people.");
         AppendListField(html, "Target users", "ContactMesh.Rules.TargetUsers", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
@@ -275,7 +275,6 @@ public static class SettingsPageRenderer
         AppendListField(html, "Global external contacts", "ContactMesh.Rules.GlobalExternalContactGroups", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
         AppendListField(html, "Group contact containers", "ContactMesh.Rules.GroupsToSyncByGroup", "Label containers whose direct group members become managed group-email contacts and display-name labels for their members.", rules.GroupsToSyncByGroup);
         AppendListField(html, "Exclusion groups", "ContactMesh.Rules.ExclusionGroups", "Users or group members that should not receive managed contacts.", rules.ExclusionGroups);
-        AppendListField(html, "Scoped group roots", "ContactMesh.Rules.ScopedGroupRoots", "Root groups used for group-aware visibility, so targets receive contacts from groups they are allowed to see.", rules.ScopedGroupRoots);
         AppendListField(html, "Included OUs", "ContactMesh.Rules.IncludedOrganizationUnits", "Organization unit prefixes allowed to receive managed contacts.", rules.IncludedOrganizationUnits);
         AppendListField(html, "Excluded OUs", "ContactMesh.Rules.ExcludedOrganizationUnits", "Organization unit prefixes blocked from receiving managed contacts; append =Ignore to reduce expected noise.", rules.ExcludedOrganizationUnits);
         AppendMappings(html, rules.GroupMappings);
@@ -574,6 +573,15 @@ public static class SettingsPageRenderer
         return string.IsNullOrWhiteSpace(rules.GroupContactPrefix)
             ? GroupContactFactory.DefaultGroupContactPrefix
             : rules.GroupContactPrefix;
+    }
+
+    private static IReadOnlyList<string> ResolveMainContactsGroups(SyncRuleOptions rules)
+    {
+        return rules.MainContactsGroupEmails
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string Encode(string value)

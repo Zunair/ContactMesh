@@ -34,7 +34,7 @@ public sealed class SettingsPageRendererTests
                 },
                 Rules = new SyncRuleOptions
                 {
-                    MainContactsGroupEmail = "company-directory@example.org",
+                    MainContactsGroupEmails = new[] { "company-directory@example.org", "contractors@example.org" },
                     MainContactsGroupLabel = "-Directory",
                     GroupContactPrefix = "#",
                     TargetUsers = new[] { "target@example.org" },
@@ -84,10 +84,14 @@ public sealed class SettingsPageRendererTests
         Assert.Contains("formaction=\"/settings/test-email\"", html);
         Assert.Contains("target@example.org", html);
         Assert.Contains("company-directory@example.org", html);
+        Assert.Contains("contractors@example.org", html);
+        Assert.Contains("name=\"ContactMesh.Rules.MainContactsGroupEmails\"", html);
         Assert.Contains("-Directory", html);
         Assert.Contains("#", html);
         Assert.Contains("all-users", html);
         Assert.Contains("contact-labels@example.org", html);
+        Assert.DoesNotContain("Scoped group roots", html);
+        Assert.DoesNotContain("department-root", html);
         Assert.Contains("source-group", html);
         Assert.Contains("target-group", html);
         Assert.Contains("service-account.json", html);
@@ -213,7 +217,7 @@ public sealed class SettingsPageRendererTests
             ["ContactMesh.Notifications.SubjectPrefix"] = "[Mesh]",
             ["ContactMesh.Notifications.AttachCsvOnFailure"] = "true",
             ["ContactMesh.Notifications.MaxAttachmentBytes"] = "2048",
-            ["ContactMesh.Rules.MainContactsGroupEmail"] = "company-directory@example.org",
+            ["ContactMesh.Rules.MainContactsGroupEmails"] = "company-directory@example.org\ncontractors@example.org",
             ["ContactMesh.Rules.MainContactsGroupLabel"] = "-Directory",
             ["ContactMesh.Rules.GroupContactPrefix"] = "#",
             ["ContactMesh.Rules.TargetUsers"] = "target@example.org",
@@ -232,6 +236,13 @@ public sealed class SettingsPageRendererTests
         {
             var settings = SettingsFormModel.FromForm(
                 form,
+                new ContactMeshOptions
+                {
+                    Rules = new SyncRuleOptions
+                    {
+                        ScopedGroupRoots = new[] { "department-root" }
+                    }
+                },
                 new GoogleWorkspaceOptions(),
                 new Microsoft365Options { ClientSecret = "existing-secret" });
 
@@ -247,9 +258,13 @@ public sealed class SettingsPageRendererTests
             Assert.Contains("\"failure@example.org\"", json);
             Assert.Contains("\"SubjectPrefix\": \"[Mesh]\"", json);
             Assert.Contains("\"MaxAttachmentBytes\": 2048", json);
-            Assert.Contains("\"MainContactsGroupEmail\": \"company-directory@example.org\"", json);
+            Assert.Contains("\"MainContactsGroupEmails\": [", json);
+            Assert.Contains("\"company-directory@example.org\"", json);
+            Assert.Contains("\"contractors@example.org\"", json);
             Assert.Contains("\"MainContactsGroupLabel\": \"-Directory\"", json);
             Assert.Contains("\"GroupContactPrefix\": \"#\"", json);
+            Assert.Contains("\"ScopedGroupRoots\": [", json);
+            Assert.Contains("\"department-root\"", json);
             Assert.Contains("\"target@example.org\"", json);
             Assert.Contains("\"contact-labels@example.org\"", json);
             Assert.Contains("\"From\": \"source@example.org\"", json);

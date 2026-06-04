@@ -15,11 +15,12 @@ public sealed class GroupContactFactory
             ? group.Email
             : HyphenateWhitespace(group.DisplayName);
         var displayName = ApplyPrefix(baseDisplayName, prefix);
+        var fullDisplayName = string.IsNullOrWhiteSpace(displayName) ? displayName : $"{displayName} Group";
 
         return new MeshContact
         {
             SourceId = $"group:{group.Id}",
-            DisplayName = displayName,
+            DisplayName = fullDisplayName,
             GivenName = displayName,
             FamilyName = "Group",
             Emails = new[] { new ContactEmail(group.Email, "work", true) },

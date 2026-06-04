@@ -30,7 +30,8 @@ public sealed class ContactMeshConfigurationTests
             ["ContactMesh:Notifications:AttachCsvOnFailure"] = "true",
             ["ContactMesh:Notifications:MaxAttachmentBytes"] = "2048",
             ["ContactMesh:Rules:TargetUsers:0"] = "target@example.org",
-            ["ContactMesh:Rules:MainContactsGroupEmail"] = "company-directory@example.org",
+            ["ContactMesh:Rules:MainContactsGroupEmails:0"] = "company-directory@example.org",
+            ["ContactMesh:Rules:MainContactsGroupEmails:1"] = "contractors@example.org",
             ["ContactMesh:Rules:MainContactsGroupLabel"] = "-Directory",
             ["ContactMesh:Rules:GroupContactPrefix"] = "#",
             ["ContactMesh:Rules:GlobalUserGroups:0"] = "all-users",
@@ -81,7 +82,7 @@ public sealed class ContactMeshConfigurationTests
         Assert.True(contactMesh.Notifications.AttachCsvOnFailure);
         Assert.Equal(2048, contactMesh.Notifications.MaxAttachmentBytes);
         Assert.Equal("target@example.org", Assert.Single(contactMesh.Rules.TargetUsers));
-        Assert.Equal("company-directory@example.org", contactMesh.Rules.MainContactsGroupEmail);
+        Assert.Equal(new[] { "company-directory@example.org", "contractors@example.org" }, contactMesh.Rules.MainContactsGroupEmails);
         Assert.Equal("-Directory", contactMesh.Rules.MainContactsGroupLabel);
         Assert.Equal("#", contactMesh.Rules.GroupContactPrefix);
         Assert.Equal("all-users", Assert.Single(contactMesh.Rules.GlobalUserGroups));
@@ -90,7 +91,7 @@ public sealed class ContactMeshConfigurationTests
         Assert.Equal("target-group", Assert.Single(contactMesh.Rules.GroupMappings).To);
 
         Assert.Equal("all-users", Assert.Single(rules.GlobalUserGroups));
-        Assert.Equal("company-directory@example.org", rules.MainContactsGroupEmail);
+        Assert.Equal(new[] { "company-directory@example.org", "contractors@example.org" }, rules.MainContactsGroupEmails);
         Assert.Equal("-Directory", rules.MainContactsGroupLabel);
         Assert.Equal("#", rules.GroupContactPrefix);
         Assert.Equal("external-users", Assert.Single(rules.GlobalExternalContactGroups));

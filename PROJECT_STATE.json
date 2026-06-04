@@ -1,8 +1,8 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-05-30",
-  "head": "81e2706",
+  "updated": "2026-06-04",
+  "head": "9255793",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
   "verify": {
@@ -11,7 +11,7 @@
       "lastKnown": {
         "commit": null,
         "build": "pass",
-        "tests": "244 pass, 1 skipped",
+        "tests": "256 pass, 1 skipped",
         "warnings": "NU1900 vulnerability-data warnings during restore/build because https://api.nuget.org/v3/index.json was unavailable in the sandbox."
       }
   },
@@ -105,7 +105,11 @@
     { "id": "microsoft-token-cache", "commit": null, "state": "done-local", "note": "MicrosoftClientCredentialsAccessTokenProvider now caches client-credentials access tokens for 50 minutes with a 5-minute refresh skew and synchronizes refreshes, reducing repeated login.microsoftonline.com token requests across multi-target runs. Added provider caching test." },
     { "id": "web-runtime-provider-dropdown", "commit": null, "state": "done-local", "note": "Settings dashboard Runtime provider now renders as a dropdown with Microsoft365, Google, and Scaffolded options while preserving an unknown current provider value as a selected option. Renderer tests cover selected known, default scaffolded, and custom provider values." },
     { "id": "group-category-prefix", "commit": null, "state": "done-local", "note": "GroupsToSyncByGroup labels/categories now apply GroupContactPrefix, while MainContactsGroupLabel remains unprefixed. Planner managed-label ownership includes both prefixed desired labels and previous raw labels so old unprefixed managed categories are removed on update. Docs, Web setting copy, and core orchestrator tests updated; build passed and 243 tests passed, 1 skipped." },
-    { "id": "web-group-types-multiselect", "commit": null, "state": "done-local", "note": "Microsoft365 GroupTypes in the Web settings UI now renders as a checklist dropdown with Microsoft365, MailEnabledSecurity, Distribution, and Security options, preserves custom configured values, saves repeated checkbox values as a JSON array, and uses a wider responsive provider layout so the picker is not cramped. Build passed and 244 tests passed, 1 skipped." }
+    { "id": "web-group-types-multiselect", "commit": null, "state": "done-local", "note": "Microsoft365 GroupTypes in the Web settings UI now renders as a checklist dropdown with Microsoft365, MailEnabledSecurity, Distribution, and Security options, preserves custom configured values, saves repeated checkbox values as a JSON array, and uses a wider responsive provider layout so the picker is not cramped. Build passed and 244 tests passed, 1 skipped." },
+    { "id": "main-contacts-groups-list", "commit": null, "state": "done-local", "note": "Replaced singular MainContactsGroupEmail with MainContactsGroupEmails list config. ContactSyncOrchestrator now unions resolved members from all listed main contact groups, Web settings renders/saves the list, and docs/samples/tests use the plural setting only. Build passed with NU1900 sandbox warnings; tests passed 239, skipped 1." },
+    { "id": "main-label-all-managed-contacts", "commit": null, "state": "done-local", "note": "ContactSyncOrchestrator now applies MainContactsGroupLabel (or default Directory label) to every managed desired contact type, including group contacts and visible group member contacts. Updated sync rules docs and expanded orchestrator assertions; ContactMesh.Core.Tests passed 135/135." },
+    { "id": "web-hide-scoped-group-roots", "commit": null, "state": "done-local", "note": "Hid dormant ScopedGroupRoots from the Web settings rules UI while preserving existing configured values during Web saves and test-email form binding. ContactMesh.Web.Tests passed 7/7. Full solution build was blocked by locked ContactMesh.Cli output DLLs from running dotnet processes." },
+    { "id": "phone-us-format-normalization", "commit": null, "state": "done-local", "note": "Phone normalization now treats +12675073489, 12675073489, 2675073489, and 267-507-3489 as the same U.S. number and formats new/cleanup merge output as 267-507-3489. Covered by normalizer, duplicate detector, merge engine, and duplicate consolidation tests. Build passed and 256 tests passed, 1 skipped." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

@@ -250,7 +250,11 @@ public sealed class ContactSyncOrchestrator
                 entry.Group));
         }
 
-        return ruleEngine.FilterContactsForTarget(DeduplicateContacts(contacts), target);
+        var managedContacts = DeduplicateContacts(contacts)
+            .Select(contact => AddLabels(contact, new[] { directoryLabel }))
+            .ToList();
+
+        return ruleEngine.FilterContactsForTarget(managedContacts, target);
     }
 
     private static IReadOnlyList<MeshUser> ResolveDirectorySourceUsers(
@@ -258,21 +262,35 @@ public sealed class ContactSyncOrchestrator
         IReadOnlyList<MeshGroup> groups,
         SyncRuleOptions rules)
     {
-        if (string.IsNullOrWhiteSpace(rules.MainContactsGroupEmail))
+        var configuredGroups = ResolveMainContactsGroupIds(rules);
+        if (configuredGroups.Count == 0)
         {
             return eligibleUsers;
         }
 
-        var rootGroup = groups.FirstOrDefault(group => MatchesGroup(group, rules.MainContactsGroupEmail));
-        if (rootGroup is null)
+        var memberKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var idOrEmail in configuredGroups)
         {
-            return Array.Empty<MeshUser>();
-        }
+            var rootGroup = groups.FirstOrDefault(group => MatchesGroup(group, idOrEmail));
+            if (rootGroup is null)
+            {
+                continue;
+            }
 
-        var memberKeys = ResolveUserMemberKeys(rootGroup, groups);
+            memberKeys.UnionWith(ResolveUserMemberKeys(rootGroup, groups));
+        }
 
         return eligibleUsers
             .Where(user => memberKeys.Contains(user.Id) || memberKeys.Contains(user.Email))
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> ResolveMainContactsGroupIds(SyncRuleOptions rules)
+    {
+        return rules.MainContactsGroupEmails
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 

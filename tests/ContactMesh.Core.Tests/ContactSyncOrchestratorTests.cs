@@ -66,10 +66,9 @@ public sealed class ContactSyncOrchestratorTests
             Assert.DoesNotContain(changes.Creates, contact => contact.SourceId == "blocked");
             Assert.DoesNotContain(changes.Creates, contact => contact.SourceId == "suspended");
         });
-        var directoryContacts = contactProvider.AppliedChanges.Values
-            .SelectMany(changes => changes.Creates)
-            .Where(contact => contact.SourceId is "user-1" or "user-2");
-        Assert.All(directoryContacts, contact => Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, contact.Labels));
+        var managedContacts = contactProvider.AppliedChanges.Values
+            .SelectMany(changes => changes.Creates);
+        Assert.All(managedContacts, contact => Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, contact.Labels));
         Assert.All(
             contactProvider.AppliedChanges.Values.SelectMany(changes => changes.Creates).Where(contact => contact.SourceId == "external-1"),
             contact => Assert.DoesNotContain("team@example.org", contact.Labels));
@@ -293,6 +292,7 @@ public sealed class ContactSyncOrchestratorTests
             User("target", "target@example.org"),
             User("direct", "direct@example.org"),
             User("nested", "nested@example.org"),
+            User("contractor", "contractor@example.org"),
             User("outside", "outside@example.org")
         });
         var rootGroup = new MeshGroup
@@ -321,10 +321,18 @@ public sealed class ContactSyncOrchestratorTests
             MeshGroupVisibility.Hidden,
             MeshGroupVisibility.Hidden,
             "nested");
+        var contractorGroup = Group(
+            "contractors",
+            "contractors@example.org",
+            MeshGroupVisibility.Hidden,
+            MeshGroupVisibility.Hidden,
+            "contractor");
         var contactProvider = new CapturingContactProvider();
         var orchestrator = new ContactSyncOrchestrator(
             directoryProvider,
-            new FakeGroupProvider(new[] { rootGroup, nestedGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            new FakeGroupProvider(
+                new[] { rootGroup, nestedGroup, contractorGroup },
+                new Dictionary<string, IReadOnlyList<MeshContact>>()),
             contactProvider);
 
         var result = await orchestrator.RunAsync(
@@ -334,7 +342,7 @@ public sealed class ContactSyncOrchestratorTests
                 Rules = new SyncRuleOptions
                 {
                     TargetUsers = new[] { "target@example.org" },
-                    MainContactsGroupEmail = "staff@example.org",
+                    MainContactsGroupEmails = new[] { "staff@example.org", "contractors@example.org" },
                     MainContactsGroupLabel = "-Directory"
                 }
             },
@@ -346,8 +354,9 @@ public sealed class ContactSyncOrchestratorTests
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         Assert.Contains(applied.Creates, contact => contact.SourceId == "direct");
         Assert.Contains(applied.Creates, contact => contact.SourceId == "nested");
+        Assert.Contains(applied.Creates, contact => contact.SourceId == "contractor");
         Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "outside");
-        Assert.All(applied.Creates.Where(contact => contact.SourceId is "direct" or "nested"), contact =>
+        Assert.All(applied.Creates.Where(contact => contact.SourceId is "direct" or "nested" or "contractor"), contact =>
             Assert.Contains("-Directory", contact.Labels));
     }
 
@@ -438,10 +447,12 @@ public sealed class ContactSyncOrchestratorTests
         var listOnlyContact = Assert.Single(applied.Creates, contact => contact.SourceId == "group:list-only");
 
         Assert.Contains(new ContactEmail("help@example.org", "work", true), helpContact.Emails);
+        Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, helpContact.Labels);
         Assert.Contains("#Support", helpContact.Labels);
         Assert.Equal("GroupsToSyncByGroup", helpContact.Metadata[ContactSyncOrchestrator.SourceRuleMetadataKey]);
         Assert.Equal("help@example.org", helpContact.Metadata[ContactSyncOrchestrator.SourceGroupEmailMetadataKey]);
-        Assert.Equal("#List-Only", listOnlyContact.DisplayName);
+        Assert.Equal("#List-Only Group", listOnlyContact.DisplayName);
+        Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, listOnlyContact.Labels);
         Assert.Contains("#Support", listOnlyContact.Labels);
         // Level 2 label group and user member of container are not promoted to contacts
         Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "group:support");
@@ -520,6 +531,7 @@ public sealed class ContactSyncOrchestratorTests
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         // L3 group becomes the contact with L2 label
         var branchContact = Assert.Single(applied.Creates, c => c.SourceId == "group:branch");
+        Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, branchContact.Labels);
         Assert.Contains("+Location", branchContact.Labels);
         // L2 group is NOT promoted to a contact
         Assert.DoesNotContain(applied.Creates, c => c.SourceId == "group:location");
@@ -698,6 +710,7 @@ public sealed class ContactSyncOrchestratorTests
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         var groupContact = Assert.Single(applied.Updates, c => c.SourceId == "group:unit-id");
 
+        Assert.Contains(ContactSyncOrchestrator.DirectoryLabel, groupContact.Labels);
         Assert.Contains("+IT Department", groupContact.Labels);
         Assert.DoesNotContain("IT Department", groupContact.Labels);
         Assert.DoesNotContain("unit-id", groupContact.Labels);

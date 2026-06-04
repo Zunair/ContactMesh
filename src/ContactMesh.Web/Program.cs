@@ -35,6 +35,7 @@ IResult RenderSettings(
 
 async Task<IResult> SaveSettings(
     HttpRequest request,
+    IOptionsMonitor<ContactMeshOptions> contactMesh,
     IOptionsMonitor<GoogleWorkspaceOptions> googleWorkspace,
     IOptionsMonitor<Microsoft365Options> microsoft365,
     CancellationToken cancellationToken)
@@ -42,6 +43,7 @@ async Task<IResult> SaveSettings(
     var form = await request.ReadFormAsync(cancellationToken);
     var settings = SettingsFormModel.FromForm(
         form,
+        contactMesh.CurrentValue,
         googleWorkspace.CurrentValue,
         microsoft365.CurrentValue);
     await settings.SaveAsync(configPath, cancellationToken);
@@ -58,6 +60,7 @@ async Task<IResult> SaveSettings(
 
 async Task<IResult> SendTestEmail(
     HttpRequest request,
+    IOptionsMonitor<ContactMeshOptions> contactMesh,
     IOptionsMonitor<GoogleWorkspaceOptions> googleWorkspace,
     IOptionsMonitor<Microsoft365Options> microsoft365,
     NotificationTestEmailService testEmailService,
@@ -66,6 +69,7 @@ async Task<IResult> SendTestEmail(
     var form = await request.ReadFormAsync(cancellationToken);
     var settings = SettingsFormModel.FromForm(
         form,
+        contactMesh.CurrentValue,
         googleWorkspace.CurrentValue,
         microsoft365.CurrentValue);
 

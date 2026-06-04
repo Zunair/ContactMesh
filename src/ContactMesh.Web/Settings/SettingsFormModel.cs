@@ -20,6 +20,7 @@ public sealed record SettingsFormModel(
 
     public static SettingsFormModel FromForm(
         IFormCollection form,
+        ContactMeshOptions currentContactMesh,
         GoogleWorkspaceOptions currentGoogleWorkspace,
         Microsoft365Options currentMicrosoft365)
     {
@@ -71,7 +72,7 @@ public sealed record SettingsFormModel(
             },
             Rules = new SyncRuleOptions
             {
-                MainContactsGroupEmail = Read(form, "ContactMesh.Rules.MainContactsGroupEmail"),
+                MainContactsGroupEmails = Lines(form, "ContactMesh.Rules.MainContactsGroupEmails"),
                 MainContactsGroupLabel = Read(form, "ContactMesh.Rules.MainContactsGroupLabel"),
                 GroupContactPrefix = Read(form, "ContactMesh.Rules.GroupContactPrefix"),
                 TargetUsers = Lines(form, "ContactMesh.Rules.TargetUsers"),
@@ -79,7 +80,7 @@ public sealed record SettingsFormModel(
                 GlobalExternalContactGroups = Lines(form, "ContactMesh.Rules.GlobalExternalContactGroups"),
                 GroupsToSyncByGroup = Lines(form, "ContactMesh.Rules.GroupsToSyncByGroup"),
                 ExclusionGroups = Lines(form, "ContactMesh.Rules.ExclusionGroups"),
-                ScopedGroupRoots = Lines(form, "ContactMesh.Rules.ScopedGroupRoots"),
+                ScopedGroupRoots = currentContactMesh.Rules.ScopedGroupRoots,
                 IncludedOrganizationUnits = Lines(form, "ContactMesh.Rules.IncludedOrganizationUnits"),
                 ExcludedOrganizationUnits = Lines(form, "ContactMesh.Rules.ExcludedOrganizationUnits"),
                 GroupMappings = Mappings(form, "ContactMesh.Rules.GroupMappings")

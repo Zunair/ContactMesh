@@ -21,7 +21,7 @@ public sealed record ContactMeshOptions
 
 public sealed record SyncRuleOptions
 {
-    public string MainContactsGroupEmail { get; init; } = string.Empty;
+    public IReadOnlyList<string> MainContactsGroupEmails { get; init; } = Array.Empty<string>();
     public string MainContactsGroupLabel { get; init; } = string.Empty;
     public string GroupContactPrefix { get; init; } = "+";
     public IReadOnlyList<string> TargetUsers { get; init; } = Array.Empty<string>();

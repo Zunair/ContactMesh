@@ -77,7 +77,7 @@ The central config shape is:
     "ManagedEmailDomains": [ "example.org" ],
     "Rules": {
       "GlobalUserGroups": [],
-      "MainContactsGroupEmail": "company-directory@example.org",
+      "MainContactsGroupEmails": [ "company-directory@example.org" ],
       "MainContactsGroupLabel": "-Directory",
       "GroupContactPrefix": "+",
       "GlobalExternalContactGroups": [],

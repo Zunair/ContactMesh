@@ -14,7 +14,7 @@ ContactMesh uses one central `ContactMesh` section and provider-specific section
     "ManagedEmailDomains": [],
     "Rules": {
       "TargetUsers": [],
-      "MainContactsGroupEmail": "",
+      "MainContactsGroupEmails": [],
       "MainContactsGroupLabel": "-Directory",
       "GroupContactPrefix": "+",
       "GlobalUserGroups": [],
