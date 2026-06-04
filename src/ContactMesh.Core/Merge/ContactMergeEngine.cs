@@ -37,7 +37,9 @@ public sealed class ContactMergeEngine
                 var stored = existingContact.Phones.FirstOrDefault(p =>
                     string.Equals(this.phoneNormalizer.NormalizeForComparison(p.Number), key, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(p.Type, sourcePhone.Type, StringComparison.Ordinal));
-                return stored is null ? sourcePhone : sourcePhone with { Number = stored.Number };
+                return stored is null
+                    ? sourcePhone with { Number = this.phoneNormalizer.FormatForDisplay(sourcePhone.Number) }
+                    : sourcePhone with { Number = stored.Number };
             })
             .ToList();
 
@@ -45,6 +47,7 @@ public sealed class ContactMergeEngine
         {
             sourcePhones = sourcePhones
                 .DistinctBy(p => this.phoneNormalizer.NormalizeForComparison(p.Number), StringComparer.OrdinalIgnoreCase)
+                .Select(p => p with { Number = this.phoneNormalizer.FormatForDisplay(p.Number) })
                 .ToList();
         }
 

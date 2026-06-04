@@ -89,6 +89,7 @@ public sealed class DuplicateContactConsolidationEngine
             .Where(phone => !string.IsNullOrWhiteSpace(phone.Number))
             .GroupBy(phone => normalizer.NormalizeForComparison(phone.Number), StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(phone => phone.IsPrimary).First())
+            .Select(phone => phone with { Number = normalizer.FormatForDisplay(phone.Number) })
             .ToList();
     }
 

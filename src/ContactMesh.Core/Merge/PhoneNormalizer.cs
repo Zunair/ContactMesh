@@ -23,4 +23,20 @@ public sealed class PhoneNormalizer
 
         return digits;
     }
+
+    public string FormatForDisplay(string? phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return string.Empty;
+        }
+
+        var normalized = this.NormalizeForComparison(phoneNumber);
+        if (normalized.Length == 10)
+        {
+            return $"{normalized[..3]}-{normalized[3..6]}-{normalized[6..]}";
+        }
+
+        return phoneNumber.Trim();
+    }
 }

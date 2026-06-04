@@ -85,6 +85,35 @@ public sealed class DuplicateContactConsolidationEngineTests
         Assert.Single(operations, operation => operation.OperationType == SyncOperationType.Delete);
     }
 
+    [Fact]
+    public void CreatePlan_Merges_Phone_Variants_With_Hyphenated_Display_Format()
+    {
+        var keeper = Contact("contact-1", "Jane", "jane@example.org") with
+        {
+            Phones = new[]
+            {
+                new ContactPhone("+12675073489", "work", true),
+                new ContactPhone("12675073489", "work")
+            }
+        };
+
+        var duplicate = Contact("contact-2", "Jane Duplicate", "JANE@example.org") with
+        {
+            Phones = new[]
+            {
+                new ContactPhone("2675073489", "work"),
+                new ContactPhone("267-507-3489", "work")
+            }
+        };
+
+        var operations = new DuplicateContactConsolidationEngine().CreatePlan(new[] { keeper, duplicate });
+
+        var update = operations.Single(operation => operation.OperationType == SyncOperationType.Update);
+        var phone = Assert.Single(update.DesiredContact.Phones);
+        Assert.Equal("267-507-3489", phone.Number);
+        Assert.Equal("work", phone.Type);
+    }
+
     private static MeshContact Contact(string sourceId, string displayName, string email)
     {
         return new MeshContact

@@ -33,4 +33,22 @@ public sealed class DuplicateContactDetectorTests
         Assert.Contains(first, duplicateGroup);
         Assert.Contains(second, duplicateGroup);
     }
+
+    [Fact]
+    public void FindDuplicates_Groups_Contacts_With_Us_Country_Code_Phone_Variants()
+    {
+        var first = new MeshContact { DisplayName = "One", Phones = new[] { new ContactPhone("+12675073489") } };
+        var second = new MeshContact { DisplayName = "Two", Phones = new[] { new ContactPhone("12675073489") } };
+        var third = new MeshContact { DisplayName = "Three", Phones = new[] { new ContactPhone("2675073489") } };
+        var fourth = new MeshContact { DisplayName = "Four", Phones = new[] { new ContactPhone("267-507-3489") } };
+
+        var duplicates = new DuplicateContactDetector().FindDuplicates(new[] { first, second, third, fourth });
+
+        var duplicateGroup = Assert.Single(duplicates);
+        Assert.Equal(4, duplicateGroup.Count);
+        Assert.Contains(first, duplicateGroup);
+        Assert.Contains(second, duplicateGroup);
+        Assert.Contains(third, duplicateGroup);
+        Assert.Contains(fourth, duplicateGroup);
+    }
 }

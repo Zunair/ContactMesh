@@ -77,7 +77,28 @@ public sealed class ContactMergeEngineTests
         var merged = new ContactMergeEngine().Merge(source, new MeshContact());
 
         Assert.Single(merged.Phones);
-        Assert.Equal("+1 (215) 555-0100", merged.Phones[0].Number);
+        Assert.Equal("215-555-0100", merged.Phones[0].Number);
+    }
+
+    [Fact]
+    public void Merge_Deduplicates_Source_Phones_With_Us_Country_Code_And_Uses_Hyphenated_Format()
+    {
+        var source = new MeshContact
+        {
+            Phones = new[]
+            {
+                new ContactPhone("+12675073489", "work", true),
+                new ContactPhone("12675073489", "work"),
+                new ContactPhone("2675073489", "work"),
+                new ContactPhone("267-507-3489", "work")
+            }
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, new MeshContact());
+
+        var phone = Assert.Single(merged.Phones);
+        Assert.Equal("267-507-3489", phone.Number);
+        Assert.Equal("work", phone.Type);
     }
 
     [Fact]
@@ -125,7 +146,7 @@ public sealed class ContactMergeEngineTests
         var merged = new ContactMergeEngine(options: options).Merge(source, existing);
 
         var phone = Assert.Single(merged.Phones);
-        Assert.Equal("+1 (215) 555-0100", phone.Number);
+        Assert.Equal("215-555-0100", phone.Number);
         Assert.Equal("work", phone.Type);
     }
 
@@ -283,13 +304,13 @@ public sealed class ContactMergeEngineTests
         var merged = new ContactMergeEngine().Merge(source, new MeshContact());
 
         var phone = Assert.Single(merged.Phones);
-        Assert.Equal("+12155550100", phone.Number);
+        Assert.Equal("215-555-0100", phone.Number);
     }
 
     [Fact]
     public void Merge_Uses_Source_Phone_When_Type_Differs_From_Stored()
     {
-        // If the directory changes a phone's type (e.g. work → mobile), treat it as a new
+        // If the directory changes a phone's type (e.g. work to mobile), treat it as a new
         // phone (no stored match) so the update is written through to the provider.
         var source = new MeshContact
         {
@@ -304,7 +325,7 @@ public sealed class ContactMergeEngineTests
         var merged = new ContactMergeEngine().Merge(source, existing);
 
         var phone = Assert.Single(merged.Phones);
-        Assert.Equal("+12155550100", phone.Number);  // source format (no stored match for mobile)
+        Assert.Equal("215-555-0100", phone.Number);
         Assert.Equal("mobile", phone.Type);
     }
 }
