@@ -57,7 +57,6 @@ public sealed class ContactSyncOrchestrator
         var users = await this.directoryProvider.GetUsersAsync(cancellationToken).ConfigureAwait(false);
         var groups = await this.groupProvider.GetGroupsAsync(cancellationToken).ConfigureAwait(false);
         var mappedGroups = this.groupMappingEngine.ApplyMappings(groups, options.Rules.GroupMappings);
-        var runWarnings = CollectRunWarnings(users, mappedGroups);
         var groupContactSources = ResolveGroupsToSyncByGroup(
             mappedGroups,
             options.Rules.GroupsToSyncByGroup);
@@ -74,6 +73,7 @@ public sealed class ContactSyncOrchestrator
             targetUsers: effectiveTargetUsers);
 
         var eligibleUsers = ruleEngine.CreateEligibleUsers(users);
+        var runWarnings = CollectRunWarnings(eligibleUsers, mappedGroups, options.ManagedEmailDomains);
         var sourceUsers = ResolveDirectorySourceUsers(eligibleUsers, mappedGroups, options.Rules);
         var directoryLabel = ResolveDirectoryLabel(options.Rules);
         var groupContactPrefix = ResolveGroupContactPrefix(options.Rules);
@@ -667,14 +667,48 @@ public sealed class ContactSyncOrchestrator
 
     private static IReadOnlyList<string> CollectRunWarnings(
         IReadOnlyList<MeshUser> users,
-        IReadOnlyList<MeshGroup> groups)
+        IReadOnlyList<MeshGroup> groups,
+        IReadOnlyList<string> managedEmailDomains)
     {
-        return users.SelectMany(user => user.Warnings)
-            .Concat(groups.SelectMany(group => group.Members.SelectMany(member => member.Warnings)))
+        return users
+            .Where(user => HasManagedEmail(user, managedEmailDomains))
+            .SelectMany(user => user.Warnings)
+            .Concat(groups.SelectMany(group => group.Members
+                .Where(member => HasManagedEmail(member, managedEmailDomains))
+                .SelectMany(member => member.Warnings)))
             .Where(warning => !string.IsNullOrWhiteSpace(warning))
             .Select(warning => warning.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static bool HasManagedEmail(MeshUser user, IReadOnlyList<string> managedEmailDomains)
+    {
+        return GetUserEmails(user).Any(email => IsManagedEmail(email, managedEmailDomains));
+    }
+
+    private static bool HasManagedEmail(MeshGroupMember member, IReadOnlyList<string> managedEmailDomains)
+    {
+        return GetMemberEmails(member).Any(email => IsManagedEmail(email, managedEmailDomains));
+    }
+
+    private static bool IsManagedEmail(string email, IReadOnlyList<string> managedEmailDomains)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        return managedEmailDomains
+            .Where(domain => !string.IsNullOrWhiteSpace(domain))
+            .Select(NormalizeDomain)
+            .Any(domain => email.Trim().EndsWith(domain, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeDomain(string domain)
+    {
+        var trimmed = domain.Trim();
+        return trimmed.StartsWith('@') ? trimmed : "@" + trimmed;
     }
 
     private static IEnumerable<string> GetUserEmails(MeshUser user)

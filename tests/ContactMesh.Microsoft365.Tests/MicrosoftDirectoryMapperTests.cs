@@ -90,6 +90,26 @@ public sealed class MicrosoftDirectoryMapperTests
         Assert.Contains("mismatched email identity values", Assert.Single(user.Warnings));
     }
 
+    [Fact]
+    public void ToMeshUser_Can_Carry_Guest_Ext_Upn_Warning_For_Core_Filtering()
+    {
+        var user = MicrosoftDirectoryMapper.ToMeshUser(new MicrosoftGraphUser
+        {
+            Id = "guest-1",
+            DisplayName = "External Guest",
+            Mail = "external@partner.example.net",
+            UserPrincipalName = "external_partner.example.net#EXT#@tenant.onmicrosoft.com",
+            ProxyAddresses = new[] { "SMTP:external@partner.example.net" },
+            AccountEnabled = true,
+            UserType = "Guest"
+        });
+
+        Assert.True(user.IsSuspended);
+        Assert.Equal("external@partner.example.net", user.Email);
+        Assert.Contains("#EXT#", Assert.Single(user.AlternateEmails), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("mismatched email identity values", Assert.Single(user.Warnings));
+    }
+
     [Theory]
     [InlineData("Guest")]
     [InlineData("guest")]

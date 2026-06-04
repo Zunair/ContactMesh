@@ -372,6 +372,14 @@ public sealed class ContactSyncOrchestratorTests
                 Email = "primary@example.org",
                 AlternateEmails = new[] { "alias@example.org" },
                 Warnings = new[] { "source account alias mismatch" }
+            },
+            new MeshUser
+            {
+                Id = "external",
+                Email = "external@partner.example.net",
+                AlternateEmails = new[] { "external_partner.example.net#EXT#@tenant.onmicrosoft.com" },
+                IsSuspended = true,
+                Warnings = new[] { "external guest alias mismatch" }
             }
         });
         var rootGroup = new MeshGroup
@@ -384,6 +392,15 @@ public sealed class ContactSyncOrchestratorTests
                 {
                     Id = "source",
                     Email = "alias@example.org",
+                    Warnings = new[] { "source group member alias mismatch" },
+                    Type = MeshGroupMemberType.User
+                },
+                new MeshGroupMember
+                {
+                    Id = "external",
+                    Email = "external@partner.example.net",
+                    AlternateEmails = new[] { "external_partner.example.net#EXT#@tenant.onmicrosoft.com" },
+                    Warnings = new[] { "external group member alias mismatch" },
                     Type = MeshGroupMemberType.User
                 }
             }
@@ -398,6 +415,7 @@ public sealed class ContactSyncOrchestratorTests
             new ContactMeshOptions
             {
                 DryRun = false,
+                ManagedEmailDomains = new[] { "example.org" },
                 Rules = new SyncRuleOptions
                 {
                     TargetUsers = new[] { "target@example.org" },
@@ -407,6 +425,9 @@ public sealed class ContactSyncOrchestratorTests
             CancellationToken.None);
 
         Assert.Contains("source account alias mismatch", result.RunWarnings);
+        Assert.Contains("source group member alias mismatch", result.RunWarnings);
+        Assert.DoesNotContain("external guest alias mismatch", result.RunWarnings);
+        Assert.DoesNotContain("external group member alias mismatch", result.RunWarnings);
         var applied = Assert.Single(contactProvider.AppliedChanges).Value;
         var contact = Assert.Single(applied.Creates, c => c.SourceId == "source");
         Assert.Equal("primary@example.org", Assert.Single(contact.Emails).Address);
