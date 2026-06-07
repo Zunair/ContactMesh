@@ -50,6 +50,10 @@ public sealed class MicrosoftGraphContactClientTests
             new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent("""{ "value": [] }""")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("""{ "value": [] }""")
             });
         var client = CreateClient(handler);
 
@@ -79,6 +83,69 @@ public sealed class MicrosoftGraphContactClientTests
         Assert.Equal(
             "https://graph.test/v1.0/users/user@example.org/contacts?$skiptoken=next-page",
             handler.Requests[1].RequestUri?.ToString());
+        Assert.StartsWith(
+            "https://graph.test/v1.0/users/user%40example.org/contactFolders?",
+            handler.Requests[2].RequestUri?.ToString(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ListAsync_Reads_Contacts_From_Contact_Folders()
+    {
+        var handler = new RecordingHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("""{ "value": [] }""")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """
+                    {
+                      "value": [
+                        { "id": "folder-1", "displayName": "-Directory" }
+                      ]
+                    }
+                    """)
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("""{ "value": [] }""")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """
+                    {
+                      "value": [
+                        {
+                          "id": "contact-2",
+                          "displayName": "Chin Ha Yi",
+                          "primaryEmailAddress": { "name": "Chin Ha Yi", "address": "cyi@example.org" }
+                        }
+                      ]
+                    }
+                    """)
+            });
+        var client = CreateClient(handler);
+
+        var contacts = await client.ListAsync("user@example.org", CancellationToken.None);
+
+        var contact = Assert.Single(contacts);
+        Assert.Equal("folder-1", contact.ContactFolderId);
+        Assert.Equal("-Directory", contact.ContactFolderDisplayName);
+        Assert.Equal("contact-2", contact.Id);
+        Assert.Equal("Chin Ha Yi", contact.DisplayName);
+        Assert.Equal("cyi@example.org", contact.PrimaryEmailAddress?.Address);
+        var folderContactsUri = handler.Requests[3].RequestUri?.ToString();
+        Assert.StartsWith(
+            "https://graph.test/v1.0/users/user%40example.org/contactFolders/folder-1/contacts?",
+            folderContactsUri,
+            StringComparison.Ordinal);
+        Assert.Contains("%24select=", folderContactsUri, StringComparison.Ordinal);
+        Assert.Contains("%24expand=singleValueExtendedProperties", folderContactsUri, StringComparison.Ordinal);
+        Assert.Contains("contactmesh.sourceId", folderContactsUri, StringComparison.Ordinal);
+        Assert.Contains("%24top=999", folderContactsUri, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -98,6 +165,7 @@ public sealed class MicrosoftGraphContactClientTests
                 DisplayName = "Jane Doe",
                 GivenName = "Jane",
                 Surname = "Doe",
+                CompanyName = "Example",
                 PrimaryEmailAddress = new MicrosoftGraphEmailAddress("jane@example.org", "Jane Doe"),
                 BusinessPhones = new[] { "+1 215 555 0100" },
                 MobilePhone = "+1 215 555 0101",
@@ -115,13 +183,14 @@ public sealed class MicrosoftGraphContactClientTests
                 DisplayName = "Jane Doe"
             },
             CancellationToken.None);
-        await client.DeleteAsync("user@example.org", "contact-1", CancellationToken.None);
+        await client.DeleteAsync("user@example.org", "contact-1", null, CancellationToken.None);
 
         Assert.Equal(HttpMethod.Post, handler.Requests[0].Method);
         Assert.Equal("https://graph.test/v1.0/users/user%40example.org/contacts", handler.Requests[0].RequestUri?.ToString());
         using (var document = JsonDocument.Parse(handler.Requests[0].Body))
         {
             Assert.Equal("Jane Doe", document.RootElement.GetProperty("displayName").GetString());
+            Assert.Equal("Example", document.RootElement.GetProperty("companyName").GetString());
             Assert.Equal("jane@example.org", document.RootElement.GetProperty("primaryEmailAddress").GetProperty("address").GetString());
             Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("secondaryEmailAddress").ValueKind);
             Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("tertiaryEmailAddress").ValueKind);
@@ -140,6 +209,9 @@ public sealed class MicrosoftGraphContactClientTests
         using (var document = JsonDocument.Parse(handler.Requests[1].Body))
         {
             Assert.Equal("Jane Doe", document.RootElement.GetProperty("displayName").GetString());
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("companyName").ValueKind);
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("department").ValueKind);
+            Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("jobTitle").ValueKind);
             Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("primaryEmailAddress").ValueKind);
             Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("secondaryEmailAddress").ValueKind);
             Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("tertiaryEmailAddress").ValueKind);
@@ -150,6 +222,31 @@ public sealed class MicrosoftGraphContactClientTests
 
         Assert.Equal(HttpMethod.Delete, handler.Requests[2].Method);
         Assert.Equal("https://graph.test/v1.0/users/user%40example.org/contacts/contact-1", handler.Requests[2].RequestUri?.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateDeleteAsync_Uses_Contact_Folder_Endpoint_When_Folder_Id_Is_Present()
+    {
+        var handler = new RecordingHandler(
+            new HttpResponseMessage(HttpStatusCode.OK),
+            new HttpResponseMessage(HttpStatusCode.NoContent));
+        var client = CreateClient(handler);
+
+        await client.UpdateAsync(
+            "user@example.org",
+            new MicrosoftGraphContact
+            {
+                Id = "contact-1",
+                ContactFolderId = "folder-1",
+                DisplayName = "Jane Doe"
+            },
+            CancellationToken.None);
+        await client.DeleteAsync("user@example.org", "contact-1", "folder-1", CancellationToken.None);
+
+        Assert.Equal(HttpMethod.Patch, handler.Requests[0].Method);
+        Assert.Equal("https://graph.test/v1.0/users/user%40example.org/contactFolders/folder-1/contacts/contact-1", handler.Requests[0].RequestUri?.ToString());
+        Assert.Equal(HttpMethod.Delete, handler.Requests[1].Method);
+        Assert.Equal("https://graph.test/v1.0/users/user%40example.org/contactFolders/folder-1/contacts/contact-1", handler.Requests[1].RequestUri?.ToString());
     }
 
     [Fact]

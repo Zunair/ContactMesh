@@ -128,7 +128,8 @@ public static class ContactMeshHostFactory
             additionalOperationalMetadataKeys: new[]
             {
                 MicrosoftContactMapper.ContactIdMetadataKey,
-                MicrosoftContactMapper.ChangeKeyMetadataKey
+                MicrosoftContactMapper.ChangeKeyMetadataKey,
+                MicrosoftContactMapper.ContactFolderIdMetadataKey
             });
     }
 

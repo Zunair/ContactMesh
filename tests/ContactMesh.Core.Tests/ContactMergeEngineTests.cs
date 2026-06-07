@@ -44,6 +44,33 @@ public sealed class ContactMergeEngineTests
     }
 
     [Fact]
+    public void Merge_Clears_Managed_Organization_Fields_When_Source_Is_Blank()
+    {
+        var source = new MeshContact
+        {
+            SourceId = "user-1",
+            CompanyName = null,
+            Department = " ",
+            JobTitle = null
+        };
+        var existing = new MeshContact
+        {
+            SourceId = "user-1",
+            CompanyName = "Old Company",
+            Department = "Old Department",
+            JobTitle = "Old Title",
+            Notes = "User-owned note"
+        };
+
+        var merged = new ContactMergeEngine().Merge(source, existing);
+
+        Assert.Null(merged.CompanyName);
+        Assert.Null(merged.Department);
+        Assert.Null(merged.JobTitle);
+        Assert.Equal("User-owned note", merged.Notes);
+    }
+
+    [Fact]
     public void Merge_Deduplicates_Source_Emails_Case_Insensitively()
     {
         var source = new MeshContact

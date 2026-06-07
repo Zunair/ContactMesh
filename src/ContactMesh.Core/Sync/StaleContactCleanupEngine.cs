@@ -52,6 +52,12 @@ public sealed class StaleContactCleanupEngine
         return contact.Emails.Any(IsManagedEmail);
     }
 
+    public bool HasManagedMarker(MeshContact contact)
+    {
+        return this.HasManagedEmail(contact)
+            || contact.Labels.Any(label => this.options.ManagedLabels.Contains(label));
+    }
+
     private bool IsManagedEmail(ContactEmail email)
     {
         return this.options.ManagedEmailDomains.Any(domain =>

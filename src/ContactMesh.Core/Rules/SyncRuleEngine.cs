@@ -23,8 +23,15 @@ public sealed class SyncRuleEngine
 
     public IReadOnlyList<MeshUser> CreateEligibleUsers(IEnumerable<MeshUser> users)
     {
-        return users
+        return this.CreateSourceEligibleUsers(users)
             .Where(user => !user.IsSuspended)
+            .ToList();
+    }
+
+    public IReadOnlyList<MeshUser> CreateSourceEligibleUsers(IEnumerable<MeshUser> users)
+    {
+        return users
+            .Where(user => !user.IsExternal)
             .Where(user => !this.exclusionRule.IsExcluded(user))
             .Where(user => this.organizationUnitRule.Evaluate(user).IsIncluded)
             .ToList();

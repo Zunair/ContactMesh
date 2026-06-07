@@ -9,6 +9,7 @@ public static class MicrosoftContactMapper
     public const string SourceIdExtendedPropertyId = $"String {{{ContactMeshExtendedPropertySetId}}} Name contactmesh.sourceId";
     public const string ContactIdMetadataKey = "microsoft.graph.contactId";
     public const string ChangeKeyMetadataKey = "microsoft.graph.changeKey";
+    public const string ContactFolderIdMetadataKey = "microsoft.graph.contactFolderId";
 
     public static MeshContact ToMeshContact(string sourceId, string displayName, string email)
     {
@@ -35,6 +36,19 @@ public static class MicrosoftContactMapper
             metadata[ChangeKeyMetadataKey] = contact.ChangeKey;
         }
 
+        if (!string.IsNullOrWhiteSpace(contact.ContactFolderId))
+        {
+            metadata[ContactFolderIdMetadataKey] = contact.ContactFolderId;
+        }
+
+        var labels = contact.Categories
+            .Where(category => !string.IsNullOrWhiteSpace(category))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (IsManagedFolderLabelCandidate(contact.ContactFolderDisplayName))
+        {
+            labels.Add(contact.ContactFolderDisplayName!.Trim());
+        }
+
         return new MeshContact
         {
             SourceId = contact.SourceId,
@@ -47,9 +61,7 @@ public static class MicrosoftContactMapper
             Notes = contact.PersonalNotes,
             Emails = ToMeshEmails(contact).ToList(),
             Phones = ToMeshPhones(contact).ToList(),
-            Labels = contact.Categories
-                .Where(category => !string.IsNullOrWhiteSpace(category))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase),
+            Labels = labels,
             Metadata = metadata
         };
     }
@@ -64,6 +76,7 @@ public static class MicrosoftContactMapper
         {
             Id = TryGetMetadata(contact, ContactIdMetadataKey),
             ChangeKey = TryGetMetadata(contact, ChangeKeyMetadataKey),
+            ContactFolderId = TryGetMetadata(contact, ContactFolderIdMetadataKey),
             SourceId = contact.SourceId,
             DisplayName = contact.DisplayName,
             GivenName = contact.GivenName,
@@ -190,5 +203,18 @@ public static class MicrosoftContactMapper
         return contact.Metadata.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
             ? value
             : null;
+    }
+
+    private static bool IsManagedFolderLabelCandidate(string? folderDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(folderDisplayName))
+        {
+            return false;
+        }
+
+        var label = folderDisplayName.Trim();
+        return label.StartsWith("-", StringComparison.Ordinal)
+            || label.StartsWith("+", StringComparison.Ordinal)
+            || string.Equals(label, "Directory", StringComparison.OrdinalIgnoreCase);
     }
 }

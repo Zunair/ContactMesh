@@ -14,6 +14,7 @@ public sealed record MeshUser
     public IReadOnlyList<string> AlternateEmails { get; init; } = Array.Empty<string>();
     public IReadOnlyList<ContactPhone> Phones { get; init; } = Array.Empty<ContactPhone>();
     public bool IsSuspended { get; init; }
+    public bool IsExternal { get; init; }
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
     public IDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }

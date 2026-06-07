@@ -25,6 +25,10 @@ public sealed class SyncPlanner
     public IReadOnlyList<SyncOperation> CreatePlan(IReadOnlyList<MeshContact> desiredContacts, IReadOnlyList<MeshContact> existingContacts)
     {
         var operations = new List<SyncOperation>();
+        var desiredSourceIds = desiredContacts
+            .Where(c => !string.IsNullOrWhiteSpace(c.SourceId))
+            .Select(c => c.SourceId!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var existingBySourceId = existingContacts
             .Where(c => !string.IsNullOrWhiteSpace(c.SourceId))
             .GroupBy(c => c.SourceId!, StringComparer.OrdinalIgnoreCase)
@@ -65,7 +69,25 @@ public sealed class SyncPlanner
 
             matchedExistingContacts.Add(existing);
 
-            var merged = this.ApplyEmailPolicy(this.mergeEngine.Merge(desired, existing));
+            var duplicateExistingContacts = this.FindDuplicateExistingContacts(
+                desired,
+                existingContacts,
+                existing,
+                desiredSourceIds,
+                matchedExistingContacts);
+            foreach (var duplicate in duplicateExistingContacts)
+            {
+                matchedExistingContacts.Add(duplicate);
+                if (!string.IsNullOrWhiteSpace(duplicate.SourceId))
+                {
+                    matchedExistingSourceIds.Add(duplicate.SourceId!);
+                }
+            }
+
+            var existingForMerge = duplicateExistingContacts.Count == 0
+                ? existing
+                : this.MergeExistingDuplicateDetails(existing, duplicateExistingContacts);
+            var merged = this.ApplyEmailPolicy(this.mergeEngine.Merge(desired, existingForMerge));
             var type = AreEquivalent(merged, existing) ? SyncOperationType.NoChange : SyncOperationType.Update;
 
             operations.Add(new SyncOperation
@@ -73,9 +95,7 @@ public sealed class SyncPlanner
                 OperationType = type,
                 DesiredContact = merged,
                 ExistingContact = existing,
-                Reason = type == SyncOperationType.NoChange
-                    ? "No managed fields changed."
-                    : matchedBySourceId ? "Managed fields changed." : "Existing contact matched by email.",
+                Reason = GetMatchedContactReason(type, matchedBySourceId, duplicateExistingContacts.Count),
                 Warnings = matchedByAlternateEmail
                     ? new[]
                     {
@@ -83,12 +103,23 @@ public sealed class SyncPlanner
                     }
                     : Array.Empty<string>()
             });
+
+            foreach (var duplicate in duplicateExistingContacts)
+            {
+                operations.Add(new SyncOperation
+                {
+                    OperationType = SyncOperationType.Delete,
+                    DesiredContact = duplicate,
+                    ExistingContact = duplicate,
+                    Reason = "Duplicate contact with matching managed email was merged into another contact."
+                });
+            }
         }
 
         foreach (var staleContact in existingContacts.Where(contact =>
             string.IsNullOrWhiteSpace(contact.SourceId)
             && !matchedExistingContacts.Contains(contact)
-            && this.staleContactCleanupEngine.HasManagedEmail(contact)))
+            && this.staleContactCleanupEngine.HasManagedMarker(contact)))
         {
             var cleanup = this.staleContactCleanupEngine.Clean(staleContact);
             var operationType = cleanup.ShouldDelete
@@ -104,11 +135,6 @@ public sealed class SyncPlanner
                 Reason = cleanup.Reason
             });
         }
-
-        var desiredSourceIds = desiredContacts
-            .Where(c => !string.IsNullOrWhiteSpace(c.SourceId))
-            .Select(c => c.SourceId!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var staleContact in existingBySourceId.Values.Where(c =>
             !desiredSourceIds.Contains(c.SourceId!)
@@ -130,6 +156,99 @@ public sealed class SyncPlanner
         }
 
         return operations;
+    }
+
+    private IReadOnlyList<MeshContact> FindDuplicateExistingContacts(
+        MeshContact desired,
+        IReadOnlyList<MeshContact> existingContacts,
+        MeshContact matchedExisting,
+        IReadOnlySet<string> desiredSourceIds,
+        IReadOnlySet<MeshContact> alreadyMatchedContacts)
+    {
+        var desiredEmails = GetContactMatchEmails(desired)
+            .Select(email => this.emailNormalizer.NormalizeForComparison(email))
+            .Where(email => email.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (desiredEmails.Count == 0)
+        {
+            return Array.Empty<MeshContact>();
+        }
+
+        return existingContacts
+            .Where(contact => !ReferenceEquals(contact, matchedExisting))
+            .Where(contact => !alreadyMatchedContacts.Contains(contact))
+            .Where(contact => string.IsNullOrWhiteSpace(contact.SourceId)
+                || !desiredSourceIds.Contains(contact.SourceId!))
+            .Where(contact => GetContactMatchEmails(contact)
+                .Select(email => this.emailNormalizer.NormalizeForComparison(email))
+                .Any(desiredEmails.Contains))
+            .ToList();
+    }
+
+    private MeshContact MergeExistingDuplicateDetails(MeshContact keeper, IReadOnlyList<MeshContact> duplicates)
+    {
+        var contacts = new[] { keeper }.Concat(duplicates).ToList();
+
+        return keeper with
+        {
+            Emails = this.MergeEmails(contacts),
+            Phones = MergePhones(contacts),
+            Labels = contacts
+                .SelectMany(contact => contact.Labels)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase),
+            Notes = MergeNotes(contacts)
+        };
+    }
+
+    private IReadOnlyList<ContactEmail> MergeEmails(IEnumerable<MeshContact> contacts)
+    {
+        return contacts
+            .SelectMany(contact => contact.Emails)
+            .Where(email => !string.IsNullOrWhiteSpace(email.Address))
+            .GroupBy(email => this.emailNormalizer.NormalizeForComparison(email.Address), StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(email => email.IsPrimary).First())
+            .ToList();
+    }
+
+    private static IReadOnlyList<ContactPhone> MergePhones(IEnumerable<MeshContact> contacts)
+    {
+        var phoneNormalizer = new PhoneNormalizer();
+
+        return contacts
+            .SelectMany(contact => contact.Phones)
+            .Where(phone => !string.IsNullOrWhiteSpace(phone.Number))
+            .GroupBy(phone => $"{phoneNormalizer.NormalizeForComparison(phone.Number)}\0{phone.Type.ToLowerInvariant()}", StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(phone => phone.IsPrimary).First())
+            .Select(phone => phone with { Number = phoneNormalizer.FormatForDisplay(phone.Number) })
+            .ToList();
+    }
+
+    private static string? MergeNotes(IEnumerable<MeshContact> contacts)
+    {
+        var notes = contacts
+            .Select(contact => contact.Notes)
+            .Where(note => !string.IsNullOrWhiteSpace(note))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        return notes.Count == 0 ? null : string.Join(Environment.NewLine, notes);
+    }
+
+    private static string GetMatchedContactReason(
+        SyncOperationType type,
+        bool matchedBySourceId,
+        int duplicateCount)
+    {
+        if (duplicateCount > 0)
+        {
+            return type == SyncOperationType.NoChange
+                ? "Duplicate contacts were already merged."
+                : "Managed fields changed and duplicate contacts were merged.";
+        }
+
+        return type == SyncOperationType.NoChange
+            ? "No managed fields changed."
+            : matchedBySourceId ? "Managed fields changed." : "Existing contact matched by email.";
     }
 
     private Dictionary<string, MeshContact> BuildUniqueExistingEmailIndex(IReadOnlyList<MeshContact> existingContacts)

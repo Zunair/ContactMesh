@@ -40,10 +40,16 @@ public sealed class MicrosoftContactBatchWriter
 
         foreach (var contact in changes.DeleteWritesDisabled ? Array.Empty<MeshContact>() : changes.Deletes)
         {
-            if (contact.Metadata.TryGetValue(MicrosoftContactMapper.ContactIdMetadataKey, out var contactId)
+            var graphContact = MicrosoftContactMapper.ToMicrosoftGraphContact(contact);
+            if (!string.IsNullOrWhiteSpace(graphContact.Id)
+                && contact.Metadata.TryGetValue(MicrosoftContactMapper.ContactIdMetadataKey, out var contactId)
                 && !string.IsNullOrWhiteSpace(contactId))
             {
-                await this.client.DeleteAsync(userId, contactId, cancellationToken).ConfigureAwait(false);
+                await this.client.DeleteAsync(
+                    userId,
+                    contactId,
+                    graphContact.ContactFolderId,
+                    cancellationToken).ConfigureAwait(false);
             }
         }
     }

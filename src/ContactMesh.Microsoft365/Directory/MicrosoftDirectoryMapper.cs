@@ -23,7 +23,8 @@ public static class MicrosoftDirectoryMapper
             JobTitle = user.JobTitle,
             AlternateEmails = identity.AlternateEmails,
             Phones = ToPhones(user).ToList(),
-            IsSuspended = user.AccountEnabled == false || IsGuestUser(user.UserType),
+            IsSuspended = user.AccountEnabled == false,
+            IsExternal = IsExternalUser(user.UserType),
             Warnings = BuildWarnings("Microsoft 365 user", id, user.DisplayName, identity)
         };
     }
@@ -47,7 +48,7 @@ public static class MicrosoftDirectoryMapper
         };
     }
 
-    private static bool IsGuestUser(string? userType) =>
+    private static bool IsExternalUser(string? userType) =>
         !string.IsNullOrWhiteSpace(userType) &&
         !string.Equals(userType, "Member", StringComparison.OrdinalIgnoreCase);
 

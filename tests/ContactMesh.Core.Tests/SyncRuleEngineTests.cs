@@ -13,7 +13,8 @@ public sealed class SyncRuleEngineTests
         {
             User("1", "active@example.org", "/Staff"),
             User("2", "blocked@example.org", "/Staff"),
-            User("3", "suspended@example.org", "/Staff", isSuspended: true)
+            User("3", "suspended@example.org", "/Staff", isSuspended: true),
+            User("4", "external@example.org", "/Staff", isExternal: true)
         };
 
         var engine = new SyncRuleEngine(new ExclusionRule(new[] { "blocked@example.org" }));
@@ -23,6 +24,23 @@ public sealed class SyncRuleEngineTests
         var target = Assert.Single(targets);
         Assert.Equal("1", target.UserId);
         Assert.Equal("active@example.org", target.UserEmail);
+    }
+
+    [Fact]
+    public void CreateSourceEligibleUsers_Includes_Suspended_But_Excludes_External_Users()
+    {
+        var users = new[]
+        {
+            User("1", "active@example.org", "/Staff"),
+            User("2", "suspended@example.org", "/Staff", isSuspended: true),
+            User("3", "external@example.org", "/Staff", isExternal: true)
+        };
+
+        var engine = new SyncRuleEngine();
+
+        var sourceUsers = engine.CreateSourceEligibleUsers(users);
+
+        Assert.Equal(new[] { "1", "2" }, sourceUsers.Select(user => user.Id));
     }
 
     [Fact]
@@ -267,9 +285,21 @@ public sealed class SyncRuleEngineTests
         Assert.Empty(decisions);
     }
 
-    private static MeshUser User(string id, string email, string organizationUnit = "/", bool isSuspended = false)
+    private static MeshUser User(
+        string id,
+        string email,
+        string organizationUnit = "/",
+        bool isSuspended = false,
+        bool isExternal = false)
     {
-        return new MeshUser { Id = id, Email = email, OrganizationUnit = organizationUnit, IsSuspended = isSuspended };
+        return new MeshUser
+        {
+            Id = id,
+            Email = email,
+            OrganizationUnit = organizationUnit,
+            IsSuspended = isSuspended,
+            IsExternal = isExternal
+        };
     }
 
     private static MeshContact Contact(string label, string name)

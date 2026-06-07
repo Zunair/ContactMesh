@@ -33,7 +33,8 @@ public sealed class MicrosoftContactBatchWriterTests
                     {
                         Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
-                            [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-3"
+                            [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-3",
+                            [MicrosoftContactMapper.ContactFolderIdMetadataKey] = "folder-3"
                         }
                     }
                 }
@@ -45,7 +46,7 @@ public sealed class MicrosoftContactBatchWriterTests
             {
                 "create:user@example.org:directory-user-1::Directory",
                 "update:user@example.org:directory-user-2:contact-2:Directory",
-                "delete:user@example.org:contact-3"
+                "delete:user@example.org:folder-3:contact-3"
             },
             client.Calls);
     }
@@ -133,9 +134,13 @@ public sealed class MicrosoftContactBatchWriterTests
             return Task.CompletedTask;
         }
 
-        public Task DeleteAsync(string userId, string contactId, CancellationToken cancellationToken)
+        public Task DeleteAsync(
+            string userId,
+            string contactId,
+            string? contactFolderId,
+            CancellationToken cancellationToken)
         {
-            this.Calls.Add($"delete:{userId}:{contactId}");
+            this.Calls.Add($"delete:{userId}:{contactFolderId}:{contactId}");
 
             return Task.CompletedTask;
         }

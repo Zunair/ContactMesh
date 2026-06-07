@@ -64,7 +64,7 @@ public sealed class ContactSyncOrchestratorTests
             Assert.Contains(changes.Creates, contact => contact.SourceId == "group:team");
             Assert.Contains(changes.Creates, contact => contact.SourceId == "external-1");
             Assert.DoesNotContain(changes.Creates, contact => contact.SourceId == "blocked");
-            Assert.DoesNotContain(changes.Creates, contact => contact.SourceId == "suspended");
+            Assert.Contains(changes.Creates, contact => contact.SourceId == "suspended");
         });
         var managedContacts = contactProvider.AppliedChanges.Values
             .SelectMany(changes => changes.Creates);
@@ -358,6 +358,213 @@ public sealed class ContactSyncOrchestratorTests
         Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "outside");
         Assert.All(applied.Creates.Where(contact => contact.SourceId is "direct" or "nested" or "contractor"), contact =>
             Assert.Contains("-Directory", contact.Labels));
+    }
+
+    [Fact]
+    public async Task RunAsync_MainContactsGroup_Updates_Disabled_Member_Source_Contact()
+    {
+        var disabledUser = new MeshUser
+        {
+            Id = "disabled",
+            Email = "disabled@example.org",
+            DisplayName = "Disabled Person",
+            CompanyName = "New Company",
+            Department = "New Department",
+            JobTitle = "New Title",
+            IsSuspended = true
+        };
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            disabledUser
+        });
+        var rootGroup = new MeshGroup
+        {
+            Id = "root",
+            Email = "staff@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "disabled",
+                    Email = "disabled@example.org",
+                    Type = MeshGroupMemberType.User
+                }
+            }
+        };
+        var existingContact = new MeshContact
+        {
+            SourceId = "disabled",
+            DisplayName = "Disabled Person",
+            CompanyName = "Old Company",
+            Department = "Old Department",
+            JobTitle = "Old Title",
+            Emails = new[] { new ContactEmail("disabled@example.org", "work", true) },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "-Directory",
+                "Personal"
+            }
+        };
+        var contactProvider = new CapturingContactProvider
+        {
+            ContactsByUserId =
+            {
+                ["target"] = new[] { existingContact }
+            }
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { rootGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    MainContactsGroupEmails = new[] { "staff@example.org" },
+                    MainContactsGroupLabel = "-MHP Directory"
+                }
+            },
+            CancellationToken.None);
+
+        var syncResult = Assert.Single(result.Results);
+        Assert.Equal("target", syncResult.TargetUserId);
+        Assert.Equal(1, syncResult.UpdateCount);
+        Assert.Empty(result.Warnings);
+        Assert.DoesNotContain(result.Results, resultEntry => resultEntry.TargetUserId == "disabled");
+
+        var updated = Assert.Single(Assert.Single(contactProvider.AppliedChanges).Value.Updates);
+        Assert.Equal("disabled", updated.SourceId);
+        Assert.Equal("New Company", updated.CompanyName);
+        Assert.Equal("New Department", updated.Department);
+        Assert.Equal("New Title", updated.JobTitle);
+        Assert.Contains("-MHP Directory", updated.Labels);
+        Assert.Contains("Personal", updated.Labels);
+        Assert.DoesNotContain("-Directory", updated.Labels);
+    }
+
+    [Fact]
+    public async Task RunAsync_MainContactsGroup_Updates_Disabled_Member_Source_Contact_When_Only_Label_Changed()
+    {
+        var disabledUser = new MeshUser
+        {
+            Id = "disabled",
+            Email = "disabled@example.org",
+            DisplayName = "Disabled Person",
+            IsSuspended = true
+        };
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            disabledUser
+        });
+        var rootGroup = new MeshGroup
+        {
+            Id = "root",
+            Email = "staff@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "disabled",
+                    Email = "disabled@example.org",
+                    Type = MeshGroupMemberType.User
+                }
+            }
+        };
+        var existingContact = new MeshContact
+        {
+            SourceId = "disabled",
+            DisplayName = "Disabled Person",
+            Emails = new[] { new ContactEmail("disabled@example.org", "work", true) },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "-Directory",
+                "Personal"
+            }
+        };
+        var contactProvider = new CapturingContactProvider
+        {
+            ContactsByUserId =
+            {
+                ["target"] = new[] { existingContact }
+            }
+        };
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { rootGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        var result = await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    MainContactsGroupEmails = new[] { "staff@example.org" },
+                    MainContactsGroupLabel = "-MHP Directory"
+                }
+            },
+            CancellationToken.None);
+
+        var syncResult = Assert.Single(result.Results);
+        Assert.Equal(1, syncResult.UpdateCount);
+
+        var updated = Assert.Single(Assert.Single(contactProvider.AppliedChanges).Value.Updates);
+        Assert.Contains("-MHP Directory", updated.Labels);
+        Assert.Contains("Personal", updated.Labels);
+        Assert.DoesNotContain("-Directory", updated.Labels);
+    }
+
+    [Fact]
+    public async Task RunAsync_MainContactsGroup_Does_Not_Keep_Disabled_User_Outside_Source_Scope_Or_External_Guest()
+    {
+        var directoryProvider = new FakeDirectoryProvider(new[]
+        {
+            User("target", "target@example.org"),
+            User("disabled-outside", "disabled-outside@example.org", isSuspended: true),
+            User("external", "external@example.org", isExternal: true)
+        });
+        var rootGroup = new MeshGroup
+        {
+            Id = "root",
+            Email = "staff@example.org",
+            Members = new[]
+            {
+                new MeshGroupMember
+                {
+                    Id = "external",
+                    Email = "external@example.org",
+                    Type = MeshGroupMemberType.User
+                }
+            }
+        };
+        var contactProvider = new CapturingContactProvider();
+        var orchestrator = new ContactSyncOrchestrator(
+            directoryProvider,
+            new FakeGroupProvider(new[] { rootGroup }, new Dictionary<string, IReadOnlyList<MeshContact>>()),
+            contactProvider);
+
+        await orchestrator.RunAsync(
+            new ContactMeshOptions
+            {
+                DryRun = false,
+                Rules = new SyncRuleOptions
+                {
+                    TargetUsers = new[] { "target@example.org" },
+                    MainContactsGroupEmails = new[] { "staff@example.org" }
+                }
+            },
+            CancellationToken.None);
+
+        var applied = Assert.Single(contactProvider.AppliedChanges).Value;
+        Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "disabled-outside");
+        Assert.DoesNotContain(applied.Creates, contact => contact.SourceId == "external");
     }
 
     [Fact]
@@ -791,9 +998,9 @@ public sealed class ContactSyncOrchestratorTests
         Assert.DoesNotContain("unit@example.org", groupContact.Labels);
     }
 
-    private static MeshUser User(string id, string email, bool isSuspended = false)
+    private static MeshUser User(string id, string email, bool isSuspended = false, bool isExternal = false)
     {
-        return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended };
+        return new MeshUser { Id = id, Email = email, IsSuspended = isSuspended, IsExternal = isExternal };
     }
 
     private static MeshGroup Group(

@@ -45,6 +45,7 @@ public sealed class MicrosoftDirectoryMapperTests
         Assert.Equal("Engineering", user.Department);
         Assert.Equal("Director", user.JobTitle);
         Assert.True(user.IsSuspended);
+        Assert.False(user.IsExternal);
         Assert.Collection(
             user.Phones,
             phone =>
@@ -104,7 +105,8 @@ public sealed class MicrosoftDirectoryMapperTests
             UserType = "Guest"
         });
 
-        Assert.True(user.IsSuspended);
+        Assert.False(user.IsSuspended);
+        Assert.True(user.IsExternal);
         Assert.Equal("external@partner.example.net", user.Email);
         Assert.Contains("#EXT#", Assert.Single(user.AlternateEmails), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("mismatched email identity values", Assert.Single(user.Warnings));
@@ -114,7 +116,7 @@ public sealed class MicrosoftDirectoryMapperTests
     [InlineData("Guest")]
     [InlineData("guest")]
     [InlineData("ExternalMember")]
-    public void ToMeshUser_Marks_Non_Member_UserType_As_Suspended(string userType)
+    public void ToMeshUser_Marks_Non_Member_UserType_As_External(string userType)
     {
         var user = MicrosoftDirectoryMapper.ToMeshUser(new MicrosoftGraphUser
         {
@@ -124,11 +126,12 @@ public sealed class MicrosoftDirectoryMapperTests
             UserType = userType
         });
 
-        Assert.True(user.IsSuspended);
+        Assert.False(user.IsSuspended);
+        Assert.True(user.IsExternal);
     }
 
     [Fact]
-    public void ToMeshUser_Does_Not_Mark_Member_UserType_As_Suspended()
+    public void ToMeshUser_Does_Not_Mark_Member_UserType_As_External()
     {
         var user = MicrosoftDirectoryMapper.ToMeshUser(new MicrosoftGraphUser
         {
@@ -139,5 +142,6 @@ public sealed class MicrosoftDirectoryMapperTests
         });
 
         Assert.False(user.IsSuspended);
+        Assert.False(user.IsExternal);
     }
 }

@@ -4,6 +4,8 @@ public sealed record MicrosoftGraphContact
 {
     public string? Id { get; init; }
     public string? ChangeKey { get; init; }
+    public string? ContactFolderId { get; init; }
+    public string? ContactFolderDisplayName { get; init; }
     public string? SourceId { get; init; }
     public string? DisplayName { get; init; }
     public string? GivenName { get; init; }

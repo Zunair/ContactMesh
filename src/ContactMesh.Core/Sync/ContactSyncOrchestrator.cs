@@ -72,14 +72,15 @@ public sealed class ContactSyncOrchestrator
                 options.Rules.ExcludedOrganizationUnits),
             targetUsers: effectiveTargetUsers);
 
-        var eligibleUsers = ruleEngine.CreateEligibleUsers(users);
-        var runWarnings = CollectRunWarnings(eligibleUsers, mappedGroups, options.ManagedEmailDomains);
-        var sourceUsers = ResolveDirectorySourceUsers(eligibleUsers, mappedGroups, options.Rules);
+        var sourceEligibleUsers = ruleEngine.CreateSourceEligibleUsers(users);
+        var targetEligibleUsers = ruleEngine.CreateEligibleUsers(users);
+        var runWarnings = CollectRunWarnings(sourceEligibleUsers, mappedGroups, options.ManagedEmailDomains);
+        var sourceUsers = ResolveDirectorySourceUsers(sourceEligibleUsers, mappedGroups, options.Rules);
         var directoryLabel = ResolveDirectoryLabel(options.Rules);
         var groupContactPrefix = ResolveGroupContactPrefix(options.Rules);
         var targetUsers = ruleEngine.CreateTargets(users)
             .ToDictionary(target => target.UserId, StringComparer.OrdinalIgnoreCase);
-        var targetEligibleUsers = eligibleUsers
+        targetEligibleUsers = targetEligibleUsers
             .Where(user => targetUsers.ContainsKey(user.Id))
             .ToList();
 
@@ -91,7 +92,7 @@ public sealed class ContactSyncOrchestrator
                 TargetUserEmail: null,
                 TargetIndex: 0,
                 TargetCount: targetEligibleUsers.Count,
-                Message: BuildScopeDescription(options.Rules, globalGroupUsers, eligibleUsers.Count)),
+                Message: BuildScopeDescription(options.Rules, globalGroupUsers, targetEligibleUsers.Count)),
             cancellationToken).ConfigureAwait(false);
 
         var results = new List<SyncResult>();
@@ -532,6 +533,8 @@ public sealed class ContactSyncOrchestrator
     {
         var managedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            DirectoryLabel,
+            "-Directory",
             ResolveDirectoryLabel(options.Rules)
         };
 

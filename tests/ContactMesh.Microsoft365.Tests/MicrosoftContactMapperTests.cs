@@ -27,6 +27,8 @@ public sealed class MicrosoftContactMapperTests
         {
             Id = "contact-1",
             ChangeKey = "change-1",
+            ContactFolderId = "folder-1",
+            ContactFolderDisplayName = "-Directory",
             SourceId = "directory-user-1",
             DisplayName = "Jane Doe",
             GivenName = "Jane",
@@ -52,6 +54,7 @@ public sealed class MicrosoftContactMapperTests
         Assert.Equal("Doe", contact.FamilyName);
         Assert.Equal("contact-1", contact.Metadata[MicrosoftContactMapper.ContactIdMetadataKey]);
         Assert.Equal("change-1", contact.Metadata[MicrosoftContactMapper.ChangeKeyMetadataKey]);
+        Assert.Equal("folder-1", contact.Metadata[MicrosoftContactMapper.ContactFolderIdMetadataKey]);
         Assert.Equal("managed", contact.Notes);
         Assert.Equal("jane@example.org", contact.Emails[0].Address);
         Assert.Equal("work", contact.Emails[0].Type);
@@ -61,6 +64,7 @@ public sealed class MicrosoftContactMapperTests
         Assert.Contains(new ContactPhone("+1 215 555 0100", "work"), contact.Phones);
         Assert.Contains(new ContactPhone("+1 215 555 0101", "mobile"), contact.Phones);
         Assert.Contains("Directory", contact.Labels);
+        Assert.Contains("-Directory", contact.Labels);
     }
 
     [Fact]
@@ -112,12 +116,14 @@ public sealed class MicrosoftContactMapperTests
             Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-1",
-                [MicrosoftContactMapper.ChangeKeyMetadataKey] = "change-1"
+                [MicrosoftContactMapper.ChangeKeyMetadataKey] = "change-1",
+                [MicrosoftContactMapper.ContactFolderIdMetadataKey] = "folder-1"
             }
         });
 
         Assert.Equal("contact-1", contact.Id);
         Assert.Equal("change-1", contact.ChangeKey);
+        Assert.Equal("folder-1", contact.ContactFolderId);
         Assert.Equal("directory-user-1", contact.SourceId);
         Assert.Equal("Doe", contact.Surname);
         Assert.Equal("jane@example.org", contact.PrimaryEmailAddress?.Address);

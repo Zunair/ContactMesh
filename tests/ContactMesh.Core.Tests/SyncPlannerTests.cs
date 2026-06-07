@@ -1,3 +1,4 @@
+using ContactMesh.Core.Merge;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 using Xunit;
@@ -43,6 +44,49 @@ public sealed class SyncPlannerTests
         Assert.Equal(SyncOperationType.Update, operation.OperationType);
         Assert.Equal("Engineering", operation.DesiredContact.Department);
         Assert.Equal("new", operation.DesiredContact.Metadata["etag"]);
+    }
+
+    [Fact]
+    public void CreatePlan_Merges_And_Deletes_Duplicate_Existing_Contact_With_Same_Managed_Email()
+    {
+        var desired = Contact("user-1", "Chin Ha Yi") with
+        {
+            Emails = new[] { new ContactEmail("cyi@example.org", "work", true) },
+            Phones = new[] { new ContactPhone("215-636-6309", "work") },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "-MHP Directory" }
+        };
+        var current = desired with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["provider.contactId"] = "current-id"
+            }
+        };
+        var duplicate = new MeshContact
+        {
+            DisplayName = "Chin Ha Yi",
+            Emails = new[] { new ContactEmail("cyi@example.org", "work", true) },
+            Phones = new[] { new ContactPhone("+12675073825", "mobile") },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "-Directory" },
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["provider.contactId"] = "duplicate-id"
+            }
+        };
+
+        var operations = Planner().CreatePlan(new[] { desired }, new[] { current, duplicate });
+
+        var update = Assert.Single(operations, operation => operation.OperationType == SyncOperationType.Update);
+        Assert.Equal(current, update.ExistingContact);
+        Assert.Equal("current-id", update.DesiredContact.Metadata["provider.contactId"]);
+        Assert.Contains(update.DesiredContact.Phones, phone => phone.Number == "215-636-6309" && phone.Type == "work");
+        Assert.Contains(update.DesiredContact.Phones, phone => phone.Number == "267-507-3825" && phone.Type == "mobile");
+        Assert.Contains("-MHP Directory", update.DesiredContact.Labels);
+        Assert.DoesNotContain("-Directory", update.DesiredContact.Labels);
+        Assert.Contains("duplicate contacts were merged", update.Reason, StringComparison.Ordinal);
+
+        var delete = Assert.Single(operations, operation => operation.OperationType == SyncOperationType.Delete);
+        Assert.Equal(duplicate, delete.DesiredContact);
     }
 
     [Fact]
@@ -243,6 +287,73 @@ public sealed class SyncPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_Removes_Legacy_Directory_Label_From_Unmanaged_Managed_Email_Contact()
+    {
+        var stale = new MeshContact
+        {
+            DisplayName = "Jane Doe",
+            Emails = new[] { new ContactEmail("jane@example.org", "work", true) },
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "-Directory",
+                "Personal"
+            }
+        };
+
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+        Assert.Empty(operation.DesiredContact.Emails);
+        Assert.DoesNotContain("-Directory", operation.DesiredContact.Labels);
+        Assert.Contains("Personal", operation.DesiredContact.Labels);
+        Assert.Contains("labels=[Personal]", operation.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CreatePlan_Deletes_Unmanaged_Stale_Contact_With_Managed_Label_Only()
+    {
+        var stale = new MeshContact
+        {
+            DisplayName = "Jane Doe",
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "-Directory" },
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["provider.contactId"] = "contact-1"
+            }
+        };
+
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Delete, operation.OperationType);
+        Assert.Equal(stale, operation.DesiredContact);
+        Assert.Equal("Managed contact is stale and has no user-owned details.", operation.Reason);
+    }
+
+    [Fact]
+    public void CreatePlan_Preserves_Unmanaged_Stale_Contact_With_Managed_Label_And_User_Label()
+    {
+        var stale = new MeshContact
+        {
+            DisplayName = "Jane Doe",
+            Labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "-Directory",
+                "Personal"
+            }
+        };
+
+        var operations = Planner().CreatePlan(Array.Empty<MeshContact>(), new[] { stale });
+
+        var operation = Assert.Single(operations);
+        Assert.Equal(SyncOperationType.Update, operation.OperationType);
+        Assert.DoesNotContain("-Directory", operation.DesiredContact.Labels);
+        Assert.Contains("Personal", operation.DesiredContact.Labels);
+        Assert.Contains("labels=[Personal]", operation.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CreatePlan_Ignores_Existing_Contacts_Without_SourceId()
     {
         var personalContact = new MeshContact
@@ -270,11 +381,18 @@ public sealed class SyncPlannerTests
 
     private static SyncPlanner Planner()
     {
+        var managedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory", "-Directory", "-MHP Directory" };
+
         return new SyncPlanner(
+            mergeEngine: new ContactMergeEngine(options: new ContactMergeOptions
+            {
+                ManagedLabels = managedLabels
+            }),
             staleContactCleanupEngine: new StaleContactCleanupEngine(new StaleContactCleanupOptions
             {
                 ManagedEmailDomains = new[] { "example.org" },
-                ManagedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Directory" }
+                ManagedLabels = managedLabels,
+                OperationalMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "provider.contactId" }
             }));
     }
 

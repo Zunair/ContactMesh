@@ -71,9 +71,9 @@ public sealed class ContactMergeEngine
             DisplayName = sourceContact.DisplayName ?? existingContact.DisplayName,
             GivenName = sourceContact.GivenName ?? existingContact.GivenName,
             FamilyName = sourceContact.FamilyName ?? existingContact.FamilyName,
-            CompanyName = sourceContact.CompanyName ?? existingContact.CompanyName,
-            Department = sourceContact.Department ?? existingContact.Department,
-            JobTitle = sourceContact.JobTitle ?? existingContact.JobTitle,
+            CompanyName = NormalizeManagedField(sourceContact.CompanyName),
+            Department = NormalizeManagedField(sourceContact.Department),
+            JobTitle = NormalizeManagedField(sourceContact.JobTitle),
             Emails = sourceEmails.Concat(userOwnedEmails).ToList(),
             MatchEmails = sourceContact.MatchEmails.ToList(),
             Phones = sourcePhones.Concat(userOwnedPhones).ToList(),
@@ -116,5 +116,10 @@ public sealed class ContactMergeEngine
         }
 
         return merged;
+    }
+
+    private static string? NormalizeManagedField(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 }

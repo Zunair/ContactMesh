@@ -40,8 +40,43 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         var contacts = new List<MicrosoftGraphContact>();
-        Uri? requestUri = this.BuildUri(
+        if (!await this.ListContactsFromPathAsync(
+            contacts,
             $"v1.0/users/{EscapePathSegment(userId)}/contacts",
+            contactFolderId: null,
+            contactFolderDisplayName: null,
+            cancellationToken).ConfigureAwait(false))
+        {
+            return contacts;
+        }
+
+        foreach (var folder in await this.ListContactFoldersAsync(userId, cancellationToken).ConfigureAwait(false))
+        {
+            if (string.IsNullOrWhiteSpace(folder.Id))
+            {
+                continue;
+            }
+
+            await this.ListContactsFromPathAsync(
+                contacts,
+                $"v1.0/users/{EscapePathSegment(userId)}/contactFolders/{EscapePathSegment(folder.Id)}/contacts",
+                folder.Id,
+                folder.DisplayName,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return contacts;
+    }
+
+    private async Task<bool> ListContactsFromPathAsync(
+        List<MicrosoftGraphContact> contacts,
+        string relativePath,
+        string? contactFolderId,
+        string? contactFolderDisplayName,
+        CancellationToken cancellationToken)
+    {
+        Uri? requestUri = this.BuildUri(
+            relativePath,
             new Dictionary<string, string?>
             {
                 ["$select"] = ContactSelectFields,
@@ -57,23 +92,90 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
 
             if (await IsNoMailboxResponseAsync(response, cancellationToken).ConfigureAwait(false))
             {
-                return contacts;
+                return false;
             }
 
             await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
 
-            //var payload1 = await response.Content.ReadAsStringAsync();
             var payload = await response.Content.ReadFromJsonAsync<GraphCollectionResponse<ContactResource>>(
                 JsonOptions,
                 cancellationToken).ConfigureAwait(false);
 
-            contacts.AddRange((payload?.Value ?? Enumerable.Empty<ContactResource>()).Select(ToMicrosoftGraphContact));
+            contacts.AddRange((payload?.Value ?? Enumerable.Empty<ContactResource>())
+                .Select(contact => ToMicrosoftGraphContact(contact, contactFolderId, contactFolderDisplayName)));
             requestUri = string.IsNullOrWhiteSpace(payload?.NextLink)
                 ? null
                 : new Uri(payload.NextLink, UriKind.Absolute);
         }
 
-        return contacts;
+        return true;
+    }
+
+    private async Task<IReadOnlyList<ContactFolderResource>> ListContactFoldersAsync(
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        var folders = new List<ContactFolderResource>();
+        var pendingChildFolders = new Queue<string>();
+
+        await this.ListContactFoldersFromPathAsync(
+            folders,
+            pendingChildFolders,
+            $"v1.0/users/{EscapePathSegment(userId)}/contactFolders",
+            cancellationToken).ConfigureAwait(false);
+
+        while (pendingChildFolders.Count > 0)
+        {
+            var parentFolderId = pendingChildFolders.Dequeue();
+            await this.ListContactFoldersFromPathAsync(
+                folders,
+                pendingChildFolders,
+                $"v1.0/users/{EscapePathSegment(userId)}/contactFolders/{EscapePathSegment(parentFolderId)}/childFolders",
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return folders;
+    }
+
+    private async Task ListContactFoldersFromPathAsync(
+        List<ContactFolderResource> folders,
+        Queue<string> pendingChildFolders,
+        string relativePath,
+        CancellationToken cancellationToken)
+    {
+        Uri? requestUri = this.BuildUri(
+            relativePath,
+            new Dictionary<string, string?>
+            {
+                ["$select"] = "id,displayName",
+                ["$top"] = "999"
+            });
+
+        while (requestUri is not null)
+        {
+            using var request = await this.CreateRequestAsync(HttpMethod.Get, requestUri, cancellationToken)
+                .ConfigureAwait(false);
+            using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, request, cancellationToken).ConfigureAwait(false);
+
+            var payload = await response.Content.ReadFromJsonAsync<GraphCollectionResponse<ContactFolderResource>>(
+                JsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            foreach (var folder in payload?.Value ?? Enumerable.Empty<ContactFolderResource>())
+            {
+                folders.Add(folder);
+                if (!string.IsNullOrWhiteSpace(folder.Id))
+                {
+                    pendingChildFolders.Enqueue(folder.Id);
+                }
+            }
+
+            requestUri = string.IsNullOrWhiteSpace(payload?.NextLink)
+                ? null
+                : new Uri(payload.NextLink, UriKind.Absolute);
+        }
     }
 
     public async Task<MicrosoftGraphContact> GetContactBetaAsync(
@@ -134,7 +236,7 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         ArgumentException.ThrowIfNullOrWhiteSpace(contact.Id);
 
         var requestUri = this.BuildUri(
-            $"v1.0/users/{EscapePathSegment(userId)}/contacts/{EscapePathSegment(contact.Id)}",
+            BuildContactPath(userId, contact.Id, contact.ContactFolderId),
             new Dictionary<string, string?>());
 
         return this.SendJsonAsync(
@@ -176,13 +278,17 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
             cancellationToken);
     }
 
-    public async Task DeleteAsync(string userId, string contactId, CancellationToken cancellationToken)
+    public async Task DeleteAsync(
+        string userId,
+        string contactId,
+        string? contactFolderId,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(contactId);
 
         var requestUri = this.BuildUri(
-            $"v1.0/users/{EscapePathSegment(userId)}/contacts/{EscapePathSegment(contactId)}",
+            BuildContactPath(userId, contactId, contactFolderId),
             new Dictionary<string, string?>());
         using var request = await this.CreateRequestAsync(HttpMethod.Delete, requestUri, cancellationToken)
             .ConfigureAwait(false);
@@ -273,12 +379,25 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         return body.Contains("MailboxNotEnabledForRESTAPI", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static MicrosoftGraphContact ToMicrosoftGraphContact(ContactResource contact)
+    private static string BuildContactPath(string userId, string contactId, string? contactFolderId)
+    {
+        var userPath = $"v1.0/users/{EscapePathSegment(userId)}";
+        return string.IsNullOrWhiteSpace(contactFolderId)
+            ? $"{userPath}/contacts/{EscapePathSegment(contactId)}"
+            : $"{userPath}/contactFolders/{EscapePathSegment(contactFolderId)}/contacts/{EscapePathSegment(contactId)}";
+    }
+
+    private static MicrosoftGraphContact ToMicrosoftGraphContact(
+        ContactResource contact,
+        string? contactFolderId = null,
+        string? contactFolderDisplayName = null)
     {
         return new MicrosoftGraphContact
         {
             Id = contact.Id,
             ChangeKey = contact.ChangeKey,
+            ContactFolderId = contactFolderId,
+            ContactFolderDisplayName = contactFolderDisplayName,
             SourceId = GetSourceId(contact),
             DisplayName = contact.DisplayName,
             GivenName = contact.GivenName,
@@ -398,8 +517,14 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         public string? DisplayName { get; init; }
         public string? GivenName { get; init; }
         public string? Surname { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public string? CompanyName { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public string? Department { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public string? JobTitle { get; init; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
@@ -420,6 +545,12 @@ public sealed class MicrosoftGraphContactClient : IMicrosoftGraphContactClient
         public List<string>? Categories { get; init; }
         public string? PersonalNotes { get; init; }
         public List<SingleValueExtendedPropertyResource>? SingleValueExtendedProperties { get; init; }
+    }
+
+    private sealed class ContactFolderResource
+    {
+        public string? Id { get; init; }
+        public string? DisplayName { get; init; }
     }
 
     private sealed class EmailAddressResource

@@ -63,7 +63,11 @@ public sealed class MicrosoftContactProviderTests
             return Task.CompletedTask;
         }
 
-        public Task DeleteAsync(string userId, string contactId, CancellationToken cancellationToken)
+        public Task DeleteAsync(
+            string userId,
+            string contactId,
+            string? contactFolderId,
+            CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
