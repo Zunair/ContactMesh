@@ -22,6 +22,7 @@ public sealed class ContactSyncOrchestrator
     private readonly GroupMappingEngine groupMappingEngine;
     private readonly IReadOnlyList<string> additionalManagedMetadataKeys;
     private readonly IReadOnlyList<string> additionalOperationalMetadataKeys;
+    private readonly IReadOnlyList<string> additionalManagedMarkerMetadataKeys;
 
     public ContactSyncOrchestrator(
         IDirectoryProvider directoryProvider,
@@ -31,7 +32,8 @@ public sealed class ContactSyncOrchestrator
         GroupContactFactory? groupContactFactory = null,
         GroupMappingEngine? groupMappingEngine = null,
         IEnumerable<string>? additionalManagedMetadataKeys = null,
-        IEnumerable<string>? additionalOperationalMetadataKeys = null)
+        IEnumerable<string>? additionalOperationalMetadataKeys = null,
+        IEnumerable<string>? additionalManagedMarkerMetadataKeys = null)
     {
         this.directoryProvider = directoryProvider;
         this.groupProvider = groupProvider;
@@ -45,6 +47,9 @@ public sealed class ContactSyncOrchestrator
         this.additionalOperationalMetadataKeys = additionalOperationalMetadataKeys is null
             ? Array.Empty<string>()
             : additionalOperationalMetadataKeys.ToList();
+        this.additionalManagedMarkerMetadataKeys = additionalManagedMarkerMetadataKeys is null
+            ? Array.Empty<string>()
+            : additionalManagedMarkerMetadataKeys.ToList();
     }
 
     public async Task<ContactSyncRunResult> RunAsync(
@@ -101,7 +106,8 @@ public sealed class ContactSyncOrchestrator
             groupContactSources,
             groupContactPrefix,
             this.additionalManagedMetadataKeys,
-            this.additionalOperationalMetadataKeys);
+            this.additionalOperationalMetadataKeys,
+            this.additionalManagedMarkerMetadataKeys);
         var syncEngine = new ContactSyncEngine(
             this.contactProvider,
             planner,
@@ -529,7 +535,8 @@ public sealed class ContactSyncOrchestrator
         IReadOnlyList<GroupContactSource> groupContactSources,
         string groupContactPrefix,
         IReadOnlyList<string> additionalManagedMetadataKeys,
-        IReadOnlyList<string> additionalOperationalMetadataKeys)
+        IReadOnlyList<string> additionalOperationalMetadataKeys,
+        IReadOnlyList<string> additionalManagedMarkerMetadataKeys)
     {
         var managedLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -571,6 +578,8 @@ public sealed class ContactSyncOrchestrator
                 ManagedEmailDomains = options.ManagedEmailDomains,
                 ManagedLabels = managedLabels,
                 ManagedMetadataKeys = managedMetadataKeys,
+                ManagedMarkerMetadataKeys = additionalManagedMarkerMetadataKeys
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
                 ForceResetLabels = options.ForceResetLabels,
                 OperationalMetadataKeys = operationalMetadataKeys
             }),

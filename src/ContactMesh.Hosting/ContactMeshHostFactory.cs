@@ -129,7 +129,12 @@ public static class ContactMeshHostFactory
             {
                 MicrosoftContactMapper.ContactIdMetadataKey,
                 MicrosoftContactMapper.ChangeKeyMetadataKey,
-                MicrosoftContactMapper.ContactFolderIdMetadataKey
+                MicrosoftContactMapper.ContactFolderIdMetadataKey,
+                MicrosoftContactMapper.ManagedFolderLabelMetadataKey
+            },
+            additionalManagedMarkerMetadataKeys: new[]
+            {
+                MicrosoftContactMapper.ManagedFolderLabelMetadataKey
             });
     }
 

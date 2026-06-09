@@ -10,6 +10,7 @@ public static class MicrosoftContactMapper
     public const string ContactIdMetadataKey = "microsoft.graph.contactId";
     public const string ChangeKeyMetadataKey = "microsoft.graph.changeKey";
     public const string ContactFolderIdMetadataKey = "microsoft.graph.contactFolderId";
+    public const string ManagedFolderLabelMetadataKey = "microsoft.graph.managedFolderLabel";
 
     public static MeshContact ToMeshContact(string sourceId, string displayName, string email)
     {
@@ -41,13 +42,14 @@ public static class MicrosoftContactMapper
             metadata[ContactFolderIdMetadataKey] = contact.ContactFolderId;
         }
 
+        if (IsManagedFolderLabelCandidate(contact.ContactFolderDisplayName))
+        {
+            metadata[ManagedFolderLabelMetadataKey] = contact.ContactFolderDisplayName!.Trim();
+        }
+
         var labels = contact.Categories
             .Where(category => !string.IsNullOrWhiteSpace(category))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (IsManagedFolderLabelCandidate(contact.ContactFolderDisplayName))
-        {
-            labels.Add(contact.ContactFolderDisplayName!.Trim());
-        }
 
         return new MeshContact
         {

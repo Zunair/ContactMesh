@@ -18,6 +18,13 @@ public sealed record StaleContactCleanupOptions
     public IReadOnlySet<string> ManagedLabels { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Metadata keys that identify a contact as app-managed for stale cleanup. These markers are
+    /// separate from <see cref="ManagedMetadataKeys"/> so providers can preserve write-routing
+    /// metadata while still using it to recognize legacy managed contacts.
+    /// </summary>
+    public IReadOnlySet<string> ManagedMarkerMetadataKeys { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// When true, all labels are treated as managed and removed from stale contacts, regardless
     /// of whether they appear in <see cref="ManagedLabels"/>. Use this to clean up labels that
     /// were applied by a previous sync configuration that is no longer active.

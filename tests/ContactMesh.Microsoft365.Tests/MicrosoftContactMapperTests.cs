@@ -55,6 +55,7 @@ public sealed class MicrosoftContactMapperTests
         Assert.Equal("contact-1", contact.Metadata[MicrosoftContactMapper.ContactIdMetadataKey]);
         Assert.Equal("change-1", contact.Metadata[MicrosoftContactMapper.ChangeKeyMetadataKey]);
         Assert.Equal("folder-1", contact.Metadata[MicrosoftContactMapper.ContactFolderIdMetadataKey]);
+        Assert.Equal("-Directory", contact.Metadata[MicrosoftContactMapper.ManagedFolderLabelMetadataKey]);
         Assert.Equal("managed", contact.Notes);
         Assert.Equal("jane@example.org", contact.Emails[0].Address);
         Assert.Equal("work", contact.Emails[0].Type);
@@ -64,7 +65,24 @@ public sealed class MicrosoftContactMapperTests
         Assert.Contains(new ContactPhone("+1 215 555 0100", "work"), contact.Phones);
         Assert.Contains(new ContactPhone("+1 215 555 0101", "mobile"), contact.Phones);
         Assert.Contains("Directory", contact.Labels);
-        Assert.Contains("-Directory", contact.Labels);
+        Assert.DoesNotContain("-Directory", contact.Labels);
+    }
+
+    [Fact]
+    public void ToMeshContact_Maps_Managed_Folder_Name_As_Metadata_Not_Label()
+    {
+        var contact = MicrosoftContactMapper.ToMeshContact(new MicrosoftGraphContact
+        {
+            Id = "contact-1",
+            ContactFolderId = "folder-1",
+            ContactFolderDisplayName = "-Directory",
+            DisplayName = "Jane Doe",
+            Categories = new[] { "-MHP Directory" }
+        });
+
+        Assert.Equal("-Directory", contact.Metadata[MicrosoftContactMapper.ManagedFolderLabelMetadataKey]);
+        Assert.Contains("-MHP Directory", contact.Labels);
+        Assert.DoesNotContain("-Directory", contact.Labels);
     }
 
     [Fact]
