@@ -15,6 +15,8 @@ ContactMesh is now a provider-neutral .NET 8 solution with runnable CLI, Worker,
 
 The legacy Google implementation is preserved under `tools/migration/` as reference material. Production Docker/hosted worker mode is still pending; `samples/docker-compose.sample.yml` is only a starting point.
 
+Provider maturity: Microsoft 365 is the primary path and is mostly implemented with broad unit coverage plus live dry-run validation. Google Workspace has useful provider pieces and migration reference code, but it has not been brought to the same tested/production-ready level yet.
+
 ## Repository Layout
 
 ```text
@@ -186,9 +188,21 @@ Google Workspace:
 Microsoft 365:
 
 1. Register an Entra ID application for ContactMesh.
-2. Grant the Graph application permissions needed for users, groups, memberships, and mailbox contacts.
+2. Grant the recommended Microsoft Graph application permissions below, then grant admin consent.
 3. Configure `Microsoft365:TenantId`, `Microsoft365:ClientId`, and `Microsoft365:ClientSecret`.
 4. Keep the default `https://graph.microsoft.com/.default` scope unless your tenant strategy requires otherwise.
+
+Recommended app registration API permissions:
+
+| API / permissions name | Type | Description | Admin consent required |
+| --- | --- | --- | --- |
+| Microsoft Graph / `Contacts.ReadWrite` | Application | Read and write contacts in all mailboxes | Yes |
+| Microsoft Graph / `Directory.Read.All` | Application | Read directory data | Yes |
+| Microsoft Graph / `GroupMember.Read.All` | Application | Read all group memberships | Yes |
+| Microsoft Graph / `Mail.Send` | Application | Send mail as any user | Yes |
+| Microsoft Graph / `Member.Read.Hidden` | Application | Read all hidden memberships | Yes |
+| Microsoft Graph / `OrgContact.Read.All` | Application | Read organizational contacts | Yes |
+| Microsoft Graph / `User.Read.All` | Application | Read all users' full profiles | Yes |
 
 ## Roadmap
 
