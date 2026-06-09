@@ -12,7 +12,7 @@ public sealed record Microsoft365Options
 
     public string? TenantId { get; init; }
     public string? ClientId { get; init; }
-    public string? ClientSecret { get; init; }
+    public string? ClientSecret { get; set; }
     public IReadOnlyList<string> Scopes { get; init; } = Array.Empty<string>();
     public Microsoft365ContactDiagnosticOptions ContactDiagnostic { get; init; } = new();
 

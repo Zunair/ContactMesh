@@ -1,4 +1,5 @@
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Security;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 using ContactMesh.Web.Settings;
@@ -246,7 +247,7 @@ public sealed class SettingsPageRendererTests
                 new GoogleWorkspaceOptions(),
                 new Microsoft365Options { ClientSecret = "existing-secret" });
 
-            await settings.SaveAsync(configPath, TestContext.Current.CancellationToken);
+            await settings.SaveAsync(configPath, new FakeSecretProtector(), TestContext.Current.CancellationToken);
             var json = await File.ReadAllTextAsync(configPath, TestContext.Current.CancellationToken);
 
             Assert.Contains("\"Provider\": \"Microsoft365\"", json);
@@ -271,7 +272,8 @@ public sealed class SettingsPageRendererTests
             Assert.Contains("\"GroupTypes\": [", json);
             Assert.Contains("\"Microsoft365\"", json);
             Assert.Contains("\"Distribution\"", json);
-            Assert.Contains("\"ClientSecret\": \"existing-secret\"", json);
+            Assert.DoesNotContain("existing-secret", json);
+            Assert.Contains("\"ClientSecret\": \"cmenc:v1:protected:6578697374696E672D736563726574\"", json);
         }
         finally
         {
@@ -279,6 +281,75 @@ public sealed class SettingsPageRendererTests
             {
                 File.Delete(configPath);
             }
+        }
+    }
+
+    [Fact]
+    public async Task SettingsFormModelSavesNewSecretEncrypted()
+    {
+        var form = new FormCollection(new Dictionary<string, StringValues>
+        {
+            ["Microsoft365.ClientSecret"] = "new-secret"
+        });
+        var configPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+
+        try
+        {
+            var settings = SettingsFormModel.FromForm(
+                form,
+                new ContactMeshOptions(),
+                new GoogleWorkspaceOptions(),
+                new Microsoft365Options());
+
+            await settings.SaveAsync(configPath, new FakeSecretProtector(), TestContext.Current.CancellationToken);
+            var json = await File.ReadAllTextAsync(configPath, TestContext.Current.CancellationToken);
+
+            Assert.DoesNotContain("new-secret", json);
+            Assert.Contains("\"ClientSecret\": \"cmenc:v1:protected:6E65772D736563726574\"", json);
+        }
+        finally
+        {
+            if (File.Exists(configPath))
+            {
+                File.Delete(configPath);
+            }
+        }
+    }
+
+    [Fact]
+    public void RenderDoesNotLeakProtectedSecretPayload()
+    {
+        var html = SettingsPageRenderer.Render(
+            new ContactMeshOptions(),
+            new GoogleWorkspaceOptions(),
+            new Microsoft365Options
+            {
+                ClientSecret = "cmenc:v1:protected:super-secret"
+            },
+            "appsettings.json",
+            null);
+
+        Assert.Contains("Configured", html);
+        Assert.DoesNotContain("cmenc:v1", html);
+        Assert.DoesNotContain("super-secret", html);
+    }
+
+    private sealed class FakeSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext)
+        {
+            return "protected:" + Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(plaintext));
+        }
+
+        public string Unprotect(string protectedValue)
+        {
+            const string prefix = "protected:";
+            if (!protectedValue.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Invalid test payload.");
+            }
+
+            return System.Text.Encoding.UTF8.GetString(Convert.FromHexString(protectedValue[prefix.Length..]));
         }
     }
 }

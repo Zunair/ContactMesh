@@ -2,6 +2,7 @@ using System.Text.Json;
 using ContactMesh.Core.Audit;
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Notifications;
+using ContactMesh.Core.Security;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 using Microsoft.AspNetCore.Http;
@@ -90,8 +91,13 @@ public sealed record SettingsFormModel(
         return new SettingsFormModel(contactMesh, googleWorkspace, microsoft365);
     }
 
-    public async Task SaveAsync(string configPath, CancellationToken cancellationToken)
+    public async Task SaveAsync(
+        string configPath,
+        ISecretProtector secretProtector,
+        CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(secretProtector);
+
         var fullPath = Path.GetFullPath(configPath);
         var directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -99,7 +105,13 @@ public sealed record SettingsFormModel(
             Directory.CreateDirectory(directory);
         }
 
-        var settings = new SettingsFile(this.ContactMesh, this.GoogleWorkspace, this.Microsoft365);
+        var settings = new SettingsFile(
+            this.ContactMesh,
+            this.GoogleWorkspace,
+            this.Microsoft365 with
+            {
+                ClientSecret = ProtectedSecret.ProtectIfNeeded(this.Microsoft365.ClientSecret, secretProtector)
+            });
         await using var stream = File.Create(fullPath);
         await JsonSerializer.SerializeAsync(stream, settings, JsonOptions, cancellationToken);
         await stream.WriteAsync("\n"u8.ToArray(), cancellationToken);

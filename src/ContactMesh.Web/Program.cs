@@ -1,4 +1,5 @@
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Security;
 using ContactMesh.Google.Auth;
 using ContactMesh.Hosting;
 using ContactMesh.Hosting.Notifications;
@@ -38,6 +39,7 @@ async Task<IResult> SaveSettings(
     IOptionsMonitor<ContactMeshOptions> contactMesh,
     IOptionsMonitor<GoogleWorkspaceOptions> googleWorkspace,
     IOptionsMonitor<Microsoft365Options> microsoft365,
+    ISecretProtector secretProtector,
     CancellationToken cancellationToken)
 {
     var form = await request.ReadFormAsync(cancellationToken);
@@ -46,7 +48,7 @@ async Task<IResult> SaveSettings(
         contactMesh.CurrentValue,
         googleWorkspace.CurrentValue,
         microsoft365.CurrentValue);
-    await settings.SaveAsync(configPath, cancellationToken);
+    await settings.SaveAsync(configPath, secretProtector, cancellationToken);
 
     return Results.Content(
         SettingsPageRenderer.Render(

@@ -305,7 +305,7 @@ public static class SettingsPageRenderer
         html.AppendLine("<h3 id=\"microsoft-heading\">Microsoft 365</h3>");
         AppendDetailInput(html, "Tenant ID", "Microsoft365.TenantId", "Microsoft Entra tenant used for Graph client-credentials authentication.", microsoft365.TenantId);
         AppendDetailInput(html, "Client ID", "Microsoft365.ClientId", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
-        AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
+        AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret. Web saves encrypt it for this local app/user key ring; re-enter it if the config moves to another machine or service account.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
         AppendDetailTextarea(html, "Scopes", "Microsoft365.Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", microsoft365.Scopes);
         AppendGroupTypesPicker(html, microsoft365.GroupTypes);
         html.AppendLine("</section>");

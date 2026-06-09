@@ -1,7 +1,10 @@
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Security;
 using ContactMesh.Google.Auth;
 using ContactMesh.Hosting;
+using ContactMesh.Hosting.Security;
 using ContactMesh.Microsoft365.Auth;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -171,6 +174,125 @@ public sealed class ContactMeshConfigurationTests
         finally
         {
             File.Delete(configPath);
+        }
+    }
+
+    [Fact]
+    public void AddContactMeshOptions_Decrypts_Protected_ClientSecret()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["Microsoft365:ClientSecret"] = "cmenc:v1:protected:client-secret"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<ISecretProtector, FakeSecretProtector>();
+        using var serviceProvider = services
+            .AddContactMeshOptions(configuration)
+            .BuildServiceProvider();
+
+        var microsoft365 = serviceProvider.GetRequiredService<IOptions<Microsoft365Options>>().Value;
+
+        Assert.Equal("client-secret", microsoft365.ClientSecret);
+    }
+
+    [Fact]
+    public void AddContactMeshOptions_Leaves_Plaintext_ClientSecret_Unchanged()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["Microsoft365:ClientSecret"] = "client-secret"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+        using var serviceProvider = new ServiceCollection()
+            .AddContactMeshOptions(configuration)
+            .BuildServiceProvider();
+
+        var microsoft365 = serviceProvider.GetRequiredService<IOptions<Microsoft365Options>>().Value;
+
+        Assert.Equal("client-secret", microsoft365.ClientSecret);
+    }
+
+    [Fact]
+    public void AddContactMeshOptions_Reports_Clear_Error_For_Invalid_Protected_ClientSecret()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["Microsoft365:ClientSecret"] = "cmenc:v1:not-valid"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<ISecretProtector, ThrowingSecretProtector>();
+        using var serviceProvider = services
+            .AddContactMeshOptions(configuration)
+            .BuildServiceProvider();
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => serviceProvider.GetRequiredService<IOptions<Microsoft365Options>>().Value);
+
+        Assert.Contains("encrypted for another user, machine, or Data Protection key ring", exception.Message);
+    }
+
+    [Fact]
+    public void DataProtectionSecretProtector_RoundTrips_Secret()
+    {
+        var keyDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var dataProtectionProvider = DataProtectionProvider.Create(new DirectoryInfo(keyDirectory));
+            var protector = new DataProtectionSecretProtector(dataProtectionProvider);
+
+            var protectedValue = protector.Protect("client-secret");
+            var plaintext = protector.Unprotect(protectedValue);
+
+            Assert.NotEqual("client-secret", protectedValue);
+            Assert.Equal("client-secret", plaintext);
+        }
+        finally
+        {
+            if (Directory.Exists(keyDirectory))
+            {
+                Directory.Delete(keyDirectory, recursive: true);
+            }
+        }
+    }
+
+    private sealed class FakeSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext)
+        {
+            return "protected:" + plaintext;
+        }
+
+        public string Unprotect(string protectedValue)
+        {
+            const string prefix = "protected:";
+            if (!protectedValue.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Invalid test payload.");
+            }
+
+            return protectedValue[prefix.Length..];
+        }
+    }
+
+    private sealed class ThrowingSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext)
+        {
+            return plaintext;
+        }
+
+        public string Unprotect(string protectedValue)
+        {
+            throw new InvalidOperationException("Cannot decrypt.");
         }
     }
 }

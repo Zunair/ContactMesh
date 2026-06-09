@@ -1,8 +1,12 @@
 using ContactMesh.Core.Models;
+using ContactMesh.Core.Security;
 using ContactMesh.Google.Auth;
+using ContactMesh.Hosting.Security;
 using ContactMesh.Microsoft365.Auth;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ContactMesh.Hosting;
 
@@ -39,6 +43,10 @@ public static class ContactMeshConfiguration
 
     public static IServiceCollection AddContactMeshOptions(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddDataProtection()
+            .SetApplicationName("ContactMesh");
+        services.TryAddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+
         services.AddOptions<ContactMeshOptions>()
             .Bind(configuration.GetSection(ContactMeshOptions.SectionName));
         services.AddOptions<SyncRuleOptions>()
@@ -46,7 +54,11 @@ public static class ContactMeshConfiguration
         services.AddOptions<GoogleWorkspaceOptions>()
             .Bind(configuration.GetSection(GoogleWorkspaceOptions.SectionName));
         services.AddOptions<Microsoft365Options>()
-            .Bind(configuration.GetSection(Microsoft365Options.SectionName));
+            .Bind(configuration.GetSection(Microsoft365Options.SectionName))
+            .PostConfigure<ISecretProtector>((options, secretProtector) =>
+            {
+                options.ClientSecret = ProtectedSecret.UnprotectIfNeeded(options.ClientSecret, secretProtector);
+            });
 
         return services;
     }

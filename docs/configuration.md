@@ -57,6 +57,10 @@ The command also accepts `--beta-email-type <type>` for testing Microsoft Graph 
 
 Keep secrets out of repository files. Use environment variables, user secrets, mounted files, or your hosting platform's secret store.
 
+When the Web settings page saves `Microsoft365:ClientSecret`, it writes the value in protected form with a `cmenc:v1:` prefix. The hosts decrypt that value after configuration binding, so CLI, Worker, Web test email, and Graph auth still receive the normal plaintext secret at runtime. Plaintext secrets from existing JSON files, environment variables, and command-line overrides remain supported; they are encrypted the next time the Web settings page saves the JSON file.
+
+The protected value is intended for the local app/user key ring. If the JSON config is moved to another machine, container, Windows user, or service account without the same ASP.NET Core Data Protection key ring, ContactMesh cannot decrypt it. Re-enter the client secret from the Web settings page in that environment, or restore the original key ring.
+
 ## Run audit logs and email notifications
 
 `ContactMesh:AuditLog` writes a per-run detail and summary CSV to disk for every sync run. `ContactMesh:Notifications` sends a success or failure summary email (Microsoft 365 only) after each non-dry-run. See [audit-and-notifications.md](audit-and-notifications.md) for the full schema and options reference.
