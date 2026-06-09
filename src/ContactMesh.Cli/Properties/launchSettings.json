@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "ContactMesh.Cli": {
+      "commandName": "Project"
+    }
+  }
+}
