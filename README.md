@@ -9,9 +9,9 @@ ContactMesh is now a provider-neutral .NET 8 solution with runnable CLI, Worker,
 - `ContactMesh.Core` owns provider-neutral models, rules, merge logic, sync planning, execution, and dry-run reporting.
 - `ContactMesh.Google` includes delegated Google Workspace auth plus People API contact and contact-group label clients.
 - `ContactMesh.Microsoft365` includes Microsoft Graph auth, user, group, transitive membership, contact, and contact write clients.
-- `ContactMesh.Hosting` binds shared configuration and wires the selected provider into the sync orchestrator.
+- `ContactMesh.Hosting` binds shared configuration, decrypts protected local config secrets, and wires the selected provider into the sync orchestrator.
 - `ContactMesh.Cli` and `ContactMesh.Worker` run a sync pass and print the dry-run/applied operation report.
-- `ContactMesh.Web` renders a server-side settings overview at `/` and `/settings`.
+- `ContactMesh.Web` renders a server-side settings editor at `/` and `/settings`.
 
 The legacy Google implementation is preserved under `tools/migration/` as reference material. Production Docker/hosted worker mode is still pending; `samples/docker-compose.sample.yml` is only a starting point.
 
@@ -21,10 +21,10 @@ The legacy Google implementation is preserved under `tools/migration/` as refere
 src/ContactMesh.Core/          Provider-neutral models, rules, merge, and sync logic
 src/ContactMesh.Google/        Google Workspace auth, directory/group shells, People API contacts
 src/ContactMesh.Microsoft365/  Microsoft Graph auth, users, groups, memberships, contacts
-src/ContactMesh.Hosting/       Shared config binding and provider host wiring
+src/ContactMesh.Hosting/       Shared config binding, secret protection, and provider host wiring
 src/ContactMesh.Cli/           Console runner
 src/ContactMesh.Worker/        Worker-style sync runner
-src/ContactMesh.Web/           Settings overview UI
+src/ContactMesh.Web/           Settings editor UI
 tests/                         Unit tests
 docs/                          Architecture, setup, sync rules, and roadmap docs
 samples/                       Sample configuration and Docker compose files
@@ -72,9 +72,25 @@ The central config shape is:
     "Provider": "Google",
     "DryRun": true,
     "DisableDeletes": false,
+    "ForceResetLabels": false,
     "ForceDeduplicatePhones": false,
     "ForceNormalizeEmailTypes": false,
     "ManagedEmailDomains": [ "example.org" ],
+    "AuditLog": {
+      "Enabled": false,
+      "Directory": "audit-logs",
+      "IncludeNoChange": false,
+      "IncludeDryRunPlannedAsWrites": false
+    },
+    "Notifications": {
+      "Enabled": false,
+      "From": "",
+      "SuccessTo": [],
+      "FailureTo": [],
+      "SubjectPrefix": "[ContactMesh]",
+      "AttachCsvOnFailure": true,
+      "MaxAttachmentBytes": 5242880
+    },
     "Rules": {
       "GlobalUserGroups": [],
       "MainContactsGroupEmails": [ "company-directory@example.org" ],
@@ -94,6 +110,10 @@ The central config shape is:
 
 Provider-specific sections are `GoogleWorkspace` and `Microsoft365`. Keep credentials out of the repository and provide secrets with user secrets, environment variables, mounted files, or your deployment secret store.
 
+When the Web settings page saves `Microsoft365:ClientSecret`, it writes a protected value with a `cmenc:v1:` prefix. CLI, Worker, and Web decrypt that value during configuration binding, so Microsoft Graph auth still receives the normal plaintext secret at runtime. Existing plaintext JSON secrets and environment-variable overrides continue to work; plaintext JSON is encrypted the next time the Web editor saves the file.
+
+Protected Web-saved secrets are tied to the local ASP.NET Core Data Protection key ring for the account running the app. For scheduled tasks or services, run the Web editor and the CLI/Worker under the same dedicated service account, or re-enter the secret from the Web editor in the account/environment that will run the sync.
+
 Use `GroupsToSyncByGroup` for contact labels: each configured container group's direct subgroups become managed group contacts, and subgroup display names become labels for their members. Regular visible groups control visibility and contact inclusion but do not create labels.
 
 Common overrides:
@@ -105,6 +125,10 @@ dotnet run --no-build --project .\src\ContactMesh.Cli\ContactMesh.Cli.csproj -- 
 ```
 
 Keep `DryRun` enabled until the generated plan has been reviewed. Setting `ContactMesh:DryRun` to `false` allows provider writes. Set `ContactMesh:DisableDeletes` to `true` when you want live runs to create and update contacts but skip all planned contact delete writes.
+
+Set `ContactMesh:AuditLog:Enabled` to `true` to write per-run detail and summary CSV files. Set `ContactMesh:Notifications:Enabled` to `true` to send live-run success/failure email through Microsoft Graph sendMail. Failure notifications can attach the audit CSVs; see `docs/audit-and-notifications.md`.
+
+Set `ContactMesh:ForceResetLabels` to `true` for a one-time cleanup when old managed labels need to be replaced completely. Review the dry-run, run once with writes enabled, then set it back to `false`.
 
 For old managed contacts that have the same phone number in multiple fields, set `ContactMesh:ForceDeduplicatePhones` to `true`, review the dry-run, run the cleanup once with writes enabled, then set it back to `false`.
 
@@ -141,13 +165,13 @@ Run the Worker host. It currently runs the same sync job once; hosted scheduling
 dotnet run --no-build --project .\src\ContactMesh.Worker\ContactMesh.Worker.csproj -- .\appsettings.local.json
 ```
 
-Run the Web settings overview:
+Run the Web settings editor:
 
 ```powershell
 dotnet run --no-build --project .\src\ContactMesh.Web\ContactMesh.Web.csproj -- .\appsettings.local.json --urls http://localhost:5050
 ```
 
-Open `http://localhost:5050/` or `http://localhost:5050/settings`.
+Open `http://localhost:5050/` or `http://localhost:5050/settings`. The Web editor saves the selected JSON config file and preserves masked secrets; Microsoft 365 client secrets are encrypted on save.
 
 ## Provider Setup
 
