@@ -1,42 +1,47 @@
+// File: PhoneNormalizer.cs
+// Author: Zunair
+// Producer: Copilot
+
 using System.Text.RegularExpressions;
 
-namespace ContactMesh.Core.Merge;
-
-public sealed class PhoneNormalizer
+namespace ContactMesh.Core.Merge
 {
-    private static readonly Regex ExtensionPattern = new(@"(ext\.?|x|p)\s*\d+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    public string NormalizeForComparison(string? phoneNumber)
+    public sealed class PhoneNormalizer
     {
-        if (string.IsNullOrWhiteSpace(phoneNumber))
+        private static readonly Regex ExtensionPattern = new(@"(ext\.?|x|p)\s*\d+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public string NormalizeForComparison(string? phoneNumber)
         {
-            return string.Empty;
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                return string.Empty;
+            }
+
+            var withoutExtension = ExtensionPattern.Replace(phoneNumber, string.Empty);
+            var digits = new string(withoutExtension.Where(char.IsDigit).ToArray());
+
+            if (digits.Length == 11 && digits.StartsWith("1", StringComparison.Ordinal))
+            {
+                digits = digits[1..];
+            }
+
+            return digits;
         }
 
-        var withoutExtension = ExtensionPattern.Replace(phoneNumber, string.Empty);
-        var digits = new string(withoutExtension.Where(char.IsDigit).ToArray());
-
-        if (digits.Length == 11 && digits.StartsWith("1", StringComparison.Ordinal))
+        public string FormatForDisplay(string? phoneNumber)
         {
-            digits = digits[1..];
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                return string.Empty;
+            }
+
+            var normalized = this.NormalizeForComparison(phoneNumber);
+            if (normalized.Length == 10)
+            {
+                return $"{normalized[..3]}-{normalized[3..6]}-{normalized[6..]}";
+            }
+
+            return phoneNumber.Trim();
         }
-
-        return digits;
-    }
-
-    public string FormatForDisplay(string? phoneNumber)
-    {
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            return string.Empty;
-        }
-
-        var normalized = this.NormalizeForComparison(phoneNumber);
-        if (normalized.Length == 10)
-        {
-            return $"{normalized[..3]}-{normalized[3..6]}-{normalized[6..]}";
-        }
-
-        return phoneNumber.Trim();
     }
 }

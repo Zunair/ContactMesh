@@ -1,45 +1,50 @@
-namespace ContactMesh.Core.Security;
+// File: ProtectedSecret.cs
+// Author: Zunair
+// Producer: Copilot
 
-public static class ProtectedSecret
+namespace ContactMesh.Core.Security
 {
-    public const string Prefix = "cmenc:v1:";
-
-    public static bool IsProtected(string? value)
+    public static class ProtectedSecret
     {
-        return !string.IsNullOrWhiteSpace(value)
-            && value.StartsWith(Prefix, StringComparison.Ordinal);
-    }
+        public const string Prefix = "cmenc:v1:";
 
-    public static string? ProtectIfNeeded(string? value, ISecretProtector secretProtector)
-    {
-        ArgumentNullException.ThrowIfNull(secretProtector);
-
-        if (string.IsNullOrWhiteSpace(value) || IsProtected(value))
+        public static bool IsProtected(string? value)
         {
-            return value;
+            return !string.IsNullOrWhiteSpace(value)
+                && value.StartsWith(Prefix, StringComparison.Ordinal);
         }
 
-        return Prefix + secretProtector.Protect(value);
-    }
-
-    public static string? UnprotectIfNeeded(string? value, ISecretProtector secretProtector)
-    {
-        ArgumentNullException.ThrowIfNull(secretProtector);
-
-        if (!IsProtected(value))
+        public static string? ProtectIfNeeded(string? value, ISecretProtector secretProtector)
         {
-            return value;
+            ArgumentNullException.ThrowIfNull(secretProtector);
+
+            if (string.IsNullOrWhiteSpace(value) || IsProtected(value))
+            {
+                return value;
+            }
+
+            return Prefix + secretProtector.Protect(value);
         }
 
-        try
+        public static string? UnprotectIfNeeded(string? value, ISecretProtector secretProtector)
         {
-            return secretProtector.Unprotect(value![Prefix.Length..]);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            throw new InvalidOperationException(
-                "The configured secret could not be decrypted. It may have been encrypted for another user, machine, or Data Protection key ring. Re-enter the secret in the Web settings UI or restore the original key ring.",
-                ex);
+            ArgumentNullException.ThrowIfNull(secretProtector);
+
+            if (!IsProtected(value))
+            {
+                return value;
+            }
+
+            try
+            {
+                return secretProtector.Unprotect(value![Prefix.Length..]);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    "The configured secret could not be decrypted. It may have been encrypted for another user, machine, or Data Protection key ring. Re-enter the secret in the Web settings UI or restore the original key ring.",
+                    ex);
+            }
         }
     }
 }

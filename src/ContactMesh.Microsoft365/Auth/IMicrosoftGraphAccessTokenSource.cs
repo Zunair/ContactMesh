@@ -1,8 +1,13 @@
-namespace ContactMesh.Microsoft365.Auth;
+// File: IMicrosoftGraphAccessTokenSource.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IMicrosoftGraphAccessTokenSource
+namespace ContactMesh.Microsoft365.Auth
 {
-    Task<string> GetAccessTokenAsync(
-        MicrosoftGraphTokenRequest request,
-        CancellationToken cancellationToken);
+    public interface IMicrosoftGraphAccessTokenSource
+    {
+        Task<string> GetAccessTokenAsync(
+            MicrosoftGraphTokenRequest request,
+            CancellationToken cancellationToken);
+    }
 }

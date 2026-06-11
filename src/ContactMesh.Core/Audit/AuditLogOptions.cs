@@ -1,9 +1,14 @@
-namespace ContactMesh.Core.Audit;
+// File: AuditLogOptions.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record AuditLogOptions
+namespace ContactMesh.Core.Audit
 {
-    public bool Enabled { get; init; } = true;
-    public string Directory { get; init; } = "logs/audit";
-    public bool IncludeNoChange { get; init; } = false;
-    public bool IncludeDryRunPlannedAsWrites { get; init; } = false;
+    public sealed record AuditLogOptions
+    {
+        public bool Enabled { get; init; } = true;
+        public string Directory { get; init; } = "logs/audit";
+        public bool IncludeNoChange { get; init; } = false;
+        public bool IncludeDryRunPlannedAsWrites { get; init; } = false;
+    }
 }

@@ -1,36 +1,41 @@
-namespace ContactMesh.Core.Models;
+// File: MeshGroup.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record MeshGroup
+namespace ContactMesh.Core.Models
 {
-    public required string Id { get; init; }
-    public required string Email { get; init; }
-    public string? DisplayName { get; init; }
-    public MeshGroupVisibility GroupVisibility { get; init; } = MeshGroupVisibility.Hidden;
-    public MeshGroupVisibility MemberVisibility { get; init; } = MeshGroupVisibility.Hidden;
-    public IReadOnlyList<MeshGroupMember> Members { get; init; } = Array.Empty<MeshGroupMember>();
-}
+    public sealed record MeshGroup
+    {
+        public required string Id { get; init; }
+        public required string Email { get; init; }
+        public string? DisplayName { get; init; }
+        public MeshGroupVisibility GroupVisibility { get; init; } = MeshGroupVisibility.Hidden;
+        public MeshGroupVisibility MemberVisibility { get; init; } = MeshGroupVisibility.Hidden;
+        public IReadOnlyList<MeshGroupMember> Members { get; init; } = Array.Empty<MeshGroupMember>();
+    }
 
-public sealed record MeshGroupMember
-{
-    public required string Id { get; init; }
-    public required string Email { get; init; }
-    public required MeshGroupMemberType Type { get; init; }
-    public string? DisplayName { get; init; }
-    public IReadOnlyList<string> AlternateEmails { get; init; } = Array.Empty<string>();
-    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
-}
+    public sealed record MeshGroupMember
+    {
+        public required string Id { get; init; }
+        public required string Email { get; init; }
+        public required MeshGroupMemberType Type { get; init; }
+        public string? DisplayName { get; init; }
+        public IReadOnlyList<string> AlternateEmails { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+    }
 
-public enum MeshGroupMemberType
-{
-    User,
-    Group,
-    Contact,
-    Unknown
-}
+    public enum MeshGroupMemberType
+    {
+        User,
+        Group,
+        Contact,
+        Unknown
+    }
 
-public enum MeshGroupVisibility
-{
-    Hidden,
-    Members,
-    Domain
+    public enum MeshGroupVisibility
+    {
+        Hidden,
+        Members,
+        Domain
+    }
 }

@@ -1,15 +1,20 @@
-namespace ContactMesh.Core.Notifications;
+// File: IRunNotificationSender.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record NotificationMessage(
-    string From,
-    IReadOnlyList<string> To,
-    string Subject,
-    string Body,
-    IReadOnlyList<NotificationAttachment> Attachments);
-
-public sealed record NotificationAttachment(string FileName, string ContentType, byte[] Content);
-
-public interface IRunNotificationSender
+namespace ContactMesh.Core.Notifications
 {
-    Task SendAsync(NotificationMessage message, CancellationToken cancellationToken);
+    public sealed record NotificationMessage(
+        string From,
+        IReadOnlyList<string> To,
+        string Subject,
+        string Body,
+        IReadOnlyList<NotificationAttachment> Attachments);
+
+    public sealed record NotificationAttachment(string FileName, string ContentType, byte[] Content);
+
+    public interface IRunNotificationSender
+    {
+        Task SendAsync(NotificationMessage message, CancellationToken cancellationToken);
+    }
 }

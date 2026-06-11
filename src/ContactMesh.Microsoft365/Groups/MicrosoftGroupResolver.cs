@@ -1,11 +1,16 @@
+// File: MicrosoftGroupResolver.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Microsoft365.Groups;
-
-public sealed class MicrosoftGroupResolver
+namespace ContactMesh.Microsoft365.Groups
 {
-    public IReadOnlySet<string> ResolveMemberEmails(MeshGroup group)
+    public sealed class MicrosoftGroupResolver
     {
-        return group.Members.Select(member => member.Email).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        public IReadOnlySet<string> ResolveMemberEmails(MeshGroup group)
+        {
+            return group.Members.Select(member => member.Email).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
     }
 }

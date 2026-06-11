@@ -1,6 +1,11 @@
-namespace ContactMesh.Google.Auth;
+// File: GoogleDelegatedCredentialRequest.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record GoogleDelegatedCredentialRequest(
-    string ServiceAccountFile,
-    string SubjectUserEmail,
-    IReadOnlyList<string> Scopes);
+namespace ContactMesh.Google.Auth
+{
+    public sealed record GoogleDelegatedCredentialRequest(
+        string ServiceAccountFile,
+        string SubjectUserEmail,
+        IReadOnlyList<string> Scopes);
+}

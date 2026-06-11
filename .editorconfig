@@ -10,6 +10,36 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
+# StyleCop is enabled for file headers and lightweight consistency.
+# Suppress legacy/default rules that would require a broad unrelated rewrite.
+dotnet_diagnostic.AD0001.severity = none
+dotnet_diagnostic.SA0001.severity = none
+dotnet_diagnostic.SA1000.severity = none
+dotnet_diagnostic.SA1009.severity = none
+dotnet_diagnostic.SA1011.severity = none
+dotnet_diagnostic.SA1025.severity = none
+dotnet_diagnostic.SA1101.severity = none
+dotnet_diagnostic.SA1107.severity = none
+dotnet_diagnostic.SA1118.severity = none
+dotnet_diagnostic.SA1122.severity = none
+dotnet_diagnostic.SA1134.severity = none
+dotnet_diagnostic.SA1137.severity = none
+dotnet_diagnostic.SA1201.severity = none
+dotnet_diagnostic.SA1202.severity = none
+dotnet_diagnostic.SA1204.severity = none
+dotnet_diagnostic.SA1206.severity = none
+dotnet_diagnostic.SA1210.severity = none
+dotnet_diagnostic.SA1313.severity = none
+dotnet_diagnostic.SA1402.severity = none
+dotnet_diagnostic.SA1413.severity = none
+dotnet_diagnostic.SA1502.severity = none
+dotnet_diagnostic.SA1503.severity = none
+dotnet_diagnostic.SA1507.severity = none
+dotnet_diagnostic.SA1513.severity = none
+dotnet_diagnostic.SA1515.severity = none
+dotnet_diagnostic.SA1516.severity = none
+dotnet_diagnostic.SA1649.severity = none
+
 [*.{json,yml,yaml,md}]
 indent_style = space
 indent_size = 2

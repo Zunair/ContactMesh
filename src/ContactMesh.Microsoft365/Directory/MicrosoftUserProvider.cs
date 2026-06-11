@@ -1,32 +1,37 @@
+// File: MicrosoftUserProvider.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Abstractions;
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Microsoft365.Directory;
-
-public sealed class MicrosoftUserProvider : IDirectoryProvider
+namespace ContactMesh.Microsoft365.Directory
 {
-    private readonly IMicrosoftGraphDirectoryClient? client;
-
-    public MicrosoftUserProvider(IMicrosoftGraphDirectoryClient? client = null)
+    public sealed class MicrosoftUserProvider : IDirectoryProvider
     {
-        this.client = client;
-    }
+        private readonly IMicrosoftGraphDirectoryClient? client;
 
-    public async Task<IReadOnlyList<MeshUser>> GetUsersAsync(CancellationToken cancellationToken)
-    {
-        if (this.client is null)
+        public MicrosoftUserProvider(IMicrosoftGraphDirectoryClient? client = null)
         {
-            return Array.Empty<MeshUser>();
+            this.client = client;
         }
 
-        var users = await this.client.ListUsersAsync(cancellationToken).ConfigureAwait(false);
+        public async Task<IReadOnlyList<MeshUser>> GetUsersAsync(CancellationToken cancellationToken)
+        {
+            if (this.client is null)
+            {
+                return Array.Empty<MeshUser>();
+            }
 
-        return users
-            .Where(user => !string.IsNullOrWhiteSpace(user.Id)
-                && (!string.IsNullOrWhiteSpace(user.Mail)
-                    || !string.IsNullOrWhiteSpace(user.UserPrincipalName)
-                    || user.ProxyAddresses.Any(address => !string.IsNullOrWhiteSpace(address))))
-            .Select(MicrosoftDirectoryMapper.ToMeshUser)
-            .ToList();
+            var users = await this.client.ListUsersAsync(cancellationToken).ConfigureAwait(false);
+
+            return users
+                .Where(user => !string.IsNullOrWhiteSpace(user.Id)
+                    && (!string.IsNullOrWhiteSpace(user.Mail)
+                        || !string.IsNullOrWhiteSpace(user.UserPrincipalName)
+                        || user.ProxyAddresses.Any(address => !string.IsNullOrWhiteSpace(address))))
+                .Select(MicrosoftDirectoryMapper.ToMeshUser)
+                .ToList();
+        }
     }
 }

@@ -1,6 +1,11 @@
-namespace ContactMesh.Core.Sync;
+// File: ContactPruneOptions.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record ContactPruneOptions
+namespace ContactMesh.Core.Sync
 {
-    public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
+    public sealed record ContactPruneOptions
+    {
+        public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
+    }
 }

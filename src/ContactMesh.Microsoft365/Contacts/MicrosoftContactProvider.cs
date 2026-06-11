@@ -1,39 +1,44 @@
+// File: MicrosoftContactProvider.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Abstractions;
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Microsoft365.Contacts;
-
-public sealed class MicrosoftContactProvider : IContactProvider
+namespace ContactMesh.Microsoft365.Contacts
 {
-    private readonly IMicrosoftGraphContactClient? client;
-    private readonly MicrosoftContactBatchWriter writer;
-
-    public MicrosoftContactProvider(
-        IMicrosoftGraphContactClient? client = null,
-        MicrosoftContactBatchWriter? writer = null)
+    public sealed class MicrosoftContactProvider : IContactProvider
     {
-        this.client = client;
-        this.writer = writer ?? new MicrosoftContactBatchWriter();
-    }
+        private readonly IMicrosoftGraphContactClient? client;
+        private readonly MicrosoftContactBatchWriter writer;
 
-    public async Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-
-        if (this.client is null)
+        public MicrosoftContactProvider(
+            IMicrosoftGraphContactClient? client = null,
+            MicrosoftContactBatchWriter? writer = null)
         {
-            return Array.Empty<MeshContact>();
+            this.client = client;
+            this.writer = writer ?? new MicrosoftContactBatchWriter();
         }
 
-        var contacts = await this.client.ListAsync(userId, cancellationToken).ConfigureAwait(false);
+        public async Task<IReadOnlyList<MeshContact>> GetContactsAsync(string userId, CancellationToken cancellationToken)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        return contacts
-            .Select(MicrosoftContactMapper.ToMeshContact)
-            .ToList();
-    }
+            if (this.client is null)
+            {
+                return Array.Empty<MeshContact>();
+            }
 
-    public Task ApplyChangesAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)
-    {
-        return this.writer.ApplyAsync(userId, changes, cancellationToken);
+            var contacts = await this.client.ListAsync(userId, cancellationToken).ConfigureAwait(false);
+
+            return contacts
+                .Select(MicrosoftContactMapper.ToMeshContact)
+                .ToList();
+        }
+
+        public Task ApplyChangesAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)
+        {
+            return this.writer.ApplyAsync(userId, changes, cancellationToken);
+        }
     }
 }

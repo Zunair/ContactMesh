@@ -1,8 +1,13 @@
-namespace ContactMesh.Google.Auth;
+// File: IGoogleDelegatedAccessTokenSource.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IGoogleDelegatedAccessTokenSource
+namespace ContactMesh.Google.Auth
 {
-    Task<string> GetAccessTokenAsync(
-        GoogleDelegatedCredentialRequest request,
-        CancellationToken cancellationToken);
+    public interface IGoogleDelegatedAccessTokenSource
+    {
+        Task<string> GetAccessTokenAsync(
+            GoogleDelegatedCredentialRequest request,
+            CancellationToken cancellationToken);
+    }
 }

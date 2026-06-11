@@ -1,3 +1,7 @@
+// File: ContactMeshConfiguration.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Security;
 using ContactMesh.Google.Auth;
@@ -8,81 +12,82 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace ContactMesh.Hosting;
-
-public static class ContactMeshConfiguration
+namespace ContactMesh.Hosting
 {
-    private const string LocalConfigFileName = "appsettings.local.json";
-    private const string DefaultConfigFileName = "appsettings.json";
-
-    public static string ResolveConfigPath(IEnumerable<string> args)
+    public static class ContactMeshConfiguration
     {
-        return args.FirstOrDefault(arg => arg.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            ?? FindDefaultConfigPath();
-    }
+        private const string LocalConfigFileName = "appsettings.local.json";
+        private const string DefaultConfigFileName = "appsettings.json";
 
-    public static IConfigurationBuilder AddContactMeshConfigFile(
-        this IConfigurationBuilder configuration,
-        string configPath,
-        IEnumerable<string>? args = null)
-    {
-        if (File.Exists(configPath))
+        public static string ResolveConfigPath(IEnumerable<string> args)
         {
-            configuration.AddJsonFile(configPath, optional: true, reloadOnChange: true);
+            return args.FirstOrDefault(arg => arg.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                ?? FindDefaultConfigPath();
         }
 
-        configuration.AddEnvironmentVariables();
-
-        if (args is not null)
+        public static IConfigurationBuilder AddContactMeshConfigFile(
+            this IConfigurationBuilder configuration,
+            string configPath,
+            IEnumerable<string>? args = null)
         {
-            configuration.AddCommandLine(args.ToArray());
-        }
-
-        return configuration;
-    }
-
-    public static IServiceCollection AddContactMeshOptions(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.AddDataProtection()
-            .SetApplicationName("ContactMesh");
-        services.TryAddSingleton<ISecretProtector, DataProtectionSecretProtector>();
-
-        services.AddOptions<ContactMeshOptions>()
-            .Bind(configuration.GetSection(ContactMeshOptions.SectionName));
-        services.AddOptions<SyncRuleOptions>()
-            .Bind(configuration.GetSection($"{ContactMeshOptions.SectionName}:Rules"));
-        services.AddOptions<GoogleWorkspaceOptions>()
-            .Bind(configuration.GetSection(GoogleWorkspaceOptions.SectionName));
-        services.AddOptions<Microsoft365Options>()
-            .Bind(configuration.GetSection(Microsoft365Options.SectionName))
-            .PostConfigure<ISecretProtector>((options, secretProtector) =>
+            if (File.Exists(configPath))
             {
-                options.ClientSecret = ProtectedSecret.UnprotectIfNeeded(options.ClientSecret, secretProtector);
-            });
-
-        return services;
-    }
-
-    private static string FindDefaultConfigPath()
-    {
-        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
-        while (directory is not null)
-        {
-            var localPath = Path.Combine(directory.FullName, LocalConfigFileName);
-            if (File.Exists(localPath))
-            {
-                return localPath;
+                configuration.AddJsonFile(configPath, optional: true, reloadOnChange: true);
             }
 
-            var solutionPath = Path.Combine(directory.FullName, "ContactMesh.sln");
-            if (File.Exists(solutionPath))
+            configuration.AddEnvironmentVariables();
+
+            if (args is not null)
             {
-                return Path.Combine(directory.FullName, DefaultConfigFileName);
+                configuration.AddCommandLine(args.ToArray());
             }
 
-            directory = directory.Parent;
+            return configuration;
         }
 
-        return DefaultConfigFileName;
+        public static IServiceCollection AddContactMeshOptions(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddDataProtection()
+                .SetApplicationName("ContactMesh");
+            services.TryAddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+
+            services.AddOptions<ContactMeshOptions>()
+                .Bind(configuration.GetSection(ContactMeshOptions.SectionName));
+            services.AddOptions<SyncRuleOptions>()
+                .Bind(configuration.GetSection($"{ContactMeshOptions.SectionName}:Rules"));
+            services.AddOptions<GoogleWorkspaceOptions>()
+                .Bind(configuration.GetSection(GoogleWorkspaceOptions.SectionName));
+            services.AddOptions<Microsoft365Options>()
+                .Bind(configuration.GetSection(Microsoft365Options.SectionName))
+                .PostConfigure<ISecretProtector>((options, secretProtector) =>
+                {
+                    options.ClientSecret = ProtectedSecret.UnprotectIfNeeded(options.ClientSecret, secretProtector);
+                });
+
+            return services;
+        }
+
+        private static string FindDefaultConfigPath()
+        {
+            var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+            while (directory is not null)
+            {
+                var localPath = Path.Combine(directory.FullName, LocalConfigFileName);
+                if (File.Exists(localPath))
+                {
+                    return localPath;
+                }
+
+                var solutionPath = Path.Combine(directory.FullName, "ContactMesh.sln");
+                if (File.Exists(solutionPath))
+                {
+                    return Path.Combine(directory.FullName, DefaultConfigFileName);
+                }
+
+                directory = directory.Parent;
+            }
+
+            return DefaultConfigFileName;
+        }
     }
 }

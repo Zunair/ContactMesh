@@ -1,27 +1,32 @@
+// File: DataProtectionSecretProtector.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace ContactMesh.Hosting.Security;
-
-public sealed class DataProtectionSecretProtector : ISecretProtector
+namespace ContactMesh.Hosting.Security
 {
-    public const string Purpose = "ContactMesh.ConfigurationSecrets.v1";
-
-    private readonly IDataProtector protector;
-
-    public DataProtectionSecretProtector(IDataProtectionProvider dataProtectionProvider)
+    public sealed class DataProtectionSecretProtector : ISecretProtector
     {
-        ArgumentNullException.ThrowIfNull(dataProtectionProvider);
-        this.protector = dataProtectionProvider.CreateProtector(Purpose);
-    }
+        public const string Purpose = "ContactMesh.ConfigurationSecrets.v1";
 
-    public string Protect(string plaintext)
-    {
-        return this.protector.Protect(plaintext);
-    }
+        private readonly IDataProtector protector;
 
-    public string Unprotect(string protectedValue)
-    {
-        return this.protector.Unprotect(protectedValue);
+        public DataProtectionSecretProtector(IDataProtectionProvider dataProtectionProvider)
+        {
+            ArgumentNullException.ThrowIfNull(dataProtectionProvider);
+            this.protector = dataProtectionProvider.CreateProtector(Purpose);
+        }
+
+        public string Protect(string plaintext)
+        {
+            return this.protector.Protect(plaintext);
+        }
+
+        public string Unprotect(string protectedValue)
+        {
+            return this.protector.Unprotect(protectedValue);
+        }
     }
 }

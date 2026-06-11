@@ -1,8 +1,13 @@
-namespace ContactMesh.Core.Security;
+// File: ISecretProtector.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface ISecretProtector
+namespace ContactMesh.Core.Security
 {
-    string Protect(string plaintext);
+    public interface ISecretProtector
+    {
+        string Protect(string plaintext);
 
-    string Unprotect(string protectedValue);
+        string Unprotect(string protectedValue);
+    }
 }

@@ -1,9 +1,14 @@
-namespace ContactMesh.Microsoft365.Contacts;
+// File: IMicrosoftGraphContactClient.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IMicrosoftGraphContactClient
+namespace ContactMesh.Microsoft365.Contacts
 {
-    Task<IReadOnlyList<MicrosoftGraphContact>> ListAsync(string userId, CancellationToken cancellationToken);
-    Task CreateAsync(string userId, MicrosoftGraphContact contact, CancellationToken cancellationToken);
-    Task UpdateAsync(string userId, MicrosoftGraphContact contact, CancellationToken cancellationToken);
-    Task DeleteAsync(string userId, string contactId, string? contactFolderId, CancellationToken cancellationToken);
+    public interface IMicrosoftGraphContactClient
+    {
+        Task<IReadOnlyList<MicrosoftGraphContact>> ListAsync(string userId, CancellationToken cancellationToken);
+        Task CreateAsync(string userId, MicrosoftGraphContact contact, CancellationToken cancellationToken);
+        Task UpdateAsync(string userId, MicrosoftGraphContact contact, CancellationToken cancellationToken);
+        Task DeleteAsync(string userId, string contactId, string? contactFolderId, CancellationToken cancellationToken);
+    }
 }

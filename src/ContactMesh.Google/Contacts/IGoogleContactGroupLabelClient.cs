@@ -1,12 +1,17 @@
-namespace ContactMesh.Google.Contacts;
+// File: IGoogleContactGroupLabelClient.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IGoogleContactGroupLabelClient
+namespace ContactMesh.Google.Contacts
 {
-    Task<IReadOnlyList<GoogleContactGroupLabel>> ListAsync(string userId, CancellationToken cancellationToken);
+    public interface IGoogleContactGroupLabelClient
+    {
+        Task<IReadOnlyList<GoogleContactGroupLabel>> ListAsync(string userId, CancellationToken cancellationToken);
 
-    Task CreateAsync(string userId, string labelName, IReadOnlyDictionary<string, string> clientData, CancellationToken cancellationToken);
+        Task CreateAsync(string userId, string labelName, IReadOnlyDictionary<string, string> clientData, CancellationToken cancellationToken);
 
-    Task UpdateAsync(string userId, string resourceName, string labelName, IReadOnlyDictionary<string, string> clientData, CancellationToken cancellationToken);
+        Task UpdateAsync(string userId, string resourceName, string labelName, IReadOnlyDictionary<string, string> clientData, CancellationToken cancellationToken);
 
-    Task DeleteAsync(string userId, string resourceName, CancellationToken cancellationToken);
+        Task DeleteAsync(string userId, string resourceName, CancellationToken cancellationToken);
+    }
 }

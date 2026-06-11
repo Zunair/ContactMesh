@@ -1,3 +1,7 @@
+// File: ContactMeshAppHost.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 using Microsoft.Extensions.Configuration;
@@ -5,40 +9,41 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace ContactMesh.Hosting;
-
-public sealed class ContactMeshAppHost : IDisposable
+namespace ContactMesh.Hosting
 {
-    private readonly IHost host;
-
-    private ContactMeshAppHost(IHost host, string configPath)
+    public sealed class ContactMeshAppHost : IDisposable
     {
-        this.host = host;
-        this.ConfigPath = configPath;
-    }
+        private readonly IHost host;
 
-    public string ConfigPath { get; }
+        private ContactMeshAppHost(IHost host, string configPath)
+        {
+            this.host = host;
+            this.ConfigPath = configPath;
+        }
 
-    public IServiceProvider Services => this.host.Services;
+        public string ConfigPath { get; }
 
-    public ContactMeshOptions Options => this.Services.GetRequiredService<IOptions<ContactMeshOptions>>().Value;
+        public IServiceProvider Services => this.host.Services;
 
-    public ContactSyncOrchestrator Orchestrator => this.Services.GetRequiredService<ContactSyncOrchestrator>();
+        public ContactMeshOptions Options => this.Services.GetRequiredService<IOptions<ContactMeshOptions>>().Value;
 
-    public ContactSyncRunPipeline Pipeline => this.Services.GetRequiredService<ContactSyncRunPipeline>();
+        public ContactSyncOrchestrator Orchestrator => this.Services.GetRequiredService<ContactSyncOrchestrator>();
 
-    public static ContactMeshAppHost Build(string[] args)
-    {
-        var configPath = ContactMeshConfiguration.ResolveConfigPath(args);
-        var builder = Host.CreateApplicationBuilder(args);
-        builder.Configuration.AddContactMeshConfigFile(configPath, args);
-        builder.Services.AddContactMeshApp(builder.Configuration);
+        public ContactSyncRunPipeline Pipeline => this.Services.GetRequiredService<ContactSyncRunPipeline>();
 
-        return new ContactMeshAppHost(builder.Build(), configPath);
-    }
+        public static ContactMeshAppHost Build(string[] args)
+        {
+            var configPath = ContactMeshConfiguration.ResolveConfigPath(args);
+            var builder = Host.CreateApplicationBuilder(args);
+            builder.Configuration.AddContactMeshConfigFile(configPath, args);
+            builder.Services.AddContactMeshApp(builder.Configuration);
 
-    public void Dispose()
-    {
-        this.host.Dispose();
+            return new ContactMeshAppHost(builder.Build(), configPath);
+        }
+
+        public void Dispose()
+        {
+            this.host.Dispose();
+        }
     }
 }

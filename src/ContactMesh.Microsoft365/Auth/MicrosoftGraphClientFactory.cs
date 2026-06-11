@@ -1,23 +1,28 @@
-namespace ContactMesh.Microsoft365.Auth;
+// File: MicrosoftGraphClientFactory.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed class MicrosoftGraphClientFactory
+namespace ContactMesh.Microsoft365.Auth
 {
-    private readonly Microsoft365Options options;
-
-    public MicrosoftGraphClientFactory(Microsoft365Options options)
+    public sealed class MicrosoftGraphClientFactory
     {
-        this.options = options;
-    }
+        private readonly Microsoft365Options options;
 
-    public string? GetTenantId()
-    {
-        return this.options.TenantId;
-    }
+        public MicrosoftGraphClientFactory(Microsoft365Options options)
+        {
+            this.options = options;
+        }
 
-    public IMicrosoftGraphAccessTokenProvider CreateAccessTokenProvider(HttpClient httpClient)
-    {
-        return new MicrosoftClientCredentialsAccessTokenProvider(
-            this.options,
-            new MicrosoftClientCredentialsTokenSource(httpClient));
+        public string? GetTenantId()
+        {
+            return this.options.TenantId;
+        }
+
+        public IMicrosoftGraphAccessTokenProvider CreateAccessTokenProvider(HttpClient httpClient)
+        {
+            return new MicrosoftClientCredentialsAccessTokenProvider(
+                this.options,
+                new MicrosoftClientCredentialsTokenSource(httpClient));
+        }
     }
 }

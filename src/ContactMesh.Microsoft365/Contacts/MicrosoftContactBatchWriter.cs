@@ -1,55 +1,60 @@
+// File: MicrosoftContactBatchWriter.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Microsoft365.Contacts;
-
-public sealed class MicrosoftContactBatchWriter
+namespace ContactMesh.Microsoft365.Contacts
 {
-    private readonly IMicrosoftGraphContactClient? client;
-
-    public MicrosoftContactBatchWriter(IMicrosoftGraphContactClient? client = null)
+    public sealed class MicrosoftContactBatchWriter
     {
-        this.client = client;
-    }
+        private readonly IMicrosoftGraphContactClient? client;
 
-    public async Task ApplyAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        ArgumentNullException.ThrowIfNull(changes);
-
-        if (this.client is null)
+        public MicrosoftContactBatchWriter(IMicrosoftGraphContactClient? client = null)
         {
-            return;
+            this.client = client;
         }
 
-        foreach (var contact in changes.Creates)
+        public async Task ApplyAsync(string userId, ContactChangeSet changes, CancellationToken cancellationToken)
         {
-            await this.client.CreateAsync(
-                userId,
-                MicrosoftContactMapper.ToMicrosoftGraphContact(contact),
-                cancellationToken).ConfigureAwait(false);
-        }
+            ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+            ArgumentNullException.ThrowIfNull(changes);
 
-        foreach (var contact in changes.Updates)
-        {
-            var graphContact = MicrosoftContactMapper.ToMicrosoftGraphContact(contact);
-            if (!string.IsNullOrWhiteSpace(graphContact.Id))
+            if (this.client is null)
             {
-                await this.client.UpdateAsync(userId, graphContact, cancellationToken).ConfigureAwait(false);
+                return;
             }
-        }
 
-        foreach (var contact in changes.DeleteWritesDisabled ? Array.Empty<MeshContact>() : changes.Deletes)
-        {
-            var graphContact = MicrosoftContactMapper.ToMicrosoftGraphContact(contact);
-            if (!string.IsNullOrWhiteSpace(graphContact.Id)
-                && contact.Metadata.TryGetValue(MicrosoftContactMapper.ContactIdMetadataKey, out var contactId)
-                && !string.IsNullOrWhiteSpace(contactId))
+            foreach (var contact in changes.Creates)
             {
-                await this.client.DeleteAsync(
+                await this.client.CreateAsync(
                     userId,
-                    contactId,
-                    graphContact.ContactFolderId,
+                    MicrosoftContactMapper.ToMicrosoftGraphContact(contact),
                     cancellationToken).ConfigureAwait(false);
+            }
+
+            foreach (var contact in changes.Updates)
+            {
+                var graphContact = MicrosoftContactMapper.ToMicrosoftGraphContact(contact);
+                if (!string.IsNullOrWhiteSpace(graphContact.Id))
+                {
+                    await this.client.UpdateAsync(userId, graphContact, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            foreach (var contact in changes.DeleteWritesDisabled ? Array.Empty<MeshContact>() : changes.Deletes)
+            {
+                var graphContact = MicrosoftContactMapper.ToMicrosoftGraphContact(contact);
+                if (!string.IsNullOrWhiteSpace(graphContact.Id)
+                    && contact.Metadata.TryGetValue(MicrosoftContactMapper.ContactIdMetadataKey, out var contactId)
+                    && !string.IsNullOrWhiteSpace(contactId))
+                {
+                    await this.client.DeleteAsync(
+                        userId,
+                        contactId,
+                        graphContact.ContactFolderId,
+                        cancellationToken).ConfigureAwait(false);
+                }
             }
         }
     }

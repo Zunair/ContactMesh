@@ -1,11 +1,16 @@
-namespace ContactMesh.Core.Merge;
+// File: EmailNormalizer.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed class EmailNormalizer
+namespace ContactMesh.Core.Merge
 {
-    public string NormalizeForComparison(string? email)
+    public sealed class EmailNormalizer
     {
-        return string.IsNullOrWhiteSpace(email)
-            ? string.Empty
-            : email.Trim().ToLowerInvariant();
+        public string NormalizeForComparison(string? email)
+        {
+            return string.IsNullOrWhiteSpace(email)
+                ? string.Empty
+                : email.Trim().ToLowerInvariant();
+        }
     }
 }

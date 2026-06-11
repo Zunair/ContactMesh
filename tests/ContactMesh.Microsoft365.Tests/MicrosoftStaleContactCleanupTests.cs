@@ -1,70 +1,75 @@
+// File: MicrosoftStaleContactCleanupTests.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 using ContactMesh.Core.Sync;
 using ContactMesh.Microsoft365.Contacts;
 using Xunit;
 
-namespace ContactMesh.Microsoft365.Tests;
-
-public sealed class MicrosoftStaleContactCleanupTests
+namespace ContactMesh.Microsoft365.Tests
 {
-    [Fact]
-    public void Clean_Treats_Graph_Contact_Metadata_As_Managed()
+    public sealed class MicrosoftStaleContactCleanupTests
     {
-        var contact = new MeshContact
+        [Fact]
+        public void Clean_Treats_Graph_Contact_Metadata_As_Managed()
         {
-            DisplayName = "Former Employee",
-            CompanyName = "Example",
-            Emails = new[] { new ContactEmail("former@example.org", "work", true) },
-            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            var contact = new MeshContact
             {
-                [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-1",
-                [MicrosoftContactMapper.ChangeKeyMetadataKey] = "change-1"
-            }
-        };
-        var engine = new StaleContactCleanupEngine(new StaleContactCleanupOptions
+                DisplayName = "Former Employee",
+                CompanyName = "Example",
+                Emails = new[] { new ContactEmail("former@example.org", "work", true) },
+                Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-1",
+                    [MicrosoftContactMapper.ChangeKeyMetadataKey] = "change-1"
+                }
+            };
+            var engine = new StaleContactCleanupEngine(new StaleContactCleanupOptions
+            {
+                ManagedEmailDomains = new[] { "example.org" },
+                ManagedMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    MicrosoftContactMapper.ContactIdMetadataKey,
+                    MicrosoftContactMapper.ChangeKeyMetadataKey
+                }
+            });
+
+            var result = engine.Clean(contact);
+
+            Assert.True(result.ShouldDelete);
+            Assert.Equal("Managed contact is stale and has no user-owned details.", result.Reason);
+        }
+
+        [Fact]
+        public void HasManagedMarker_Treats_Managed_Folder_Metadata_As_Marker()
         {
-            ManagedEmailDomains = new[] { "example.org" },
-            ManagedMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            var contact = new MeshContact
             {
-                MicrosoftContactMapper.ContactIdMetadataKey,
-                MicrosoftContactMapper.ChangeKeyMetadataKey
-            }
-        });
-
-        var result = engine.Clean(contact);
-
-        Assert.True(result.ShouldDelete);
-        Assert.Equal("Managed contact is stale and has no user-owned details.", result.Reason);
-    }
-
-    [Fact]
-    public void HasManagedMarker_Treats_Managed_Folder_Metadata_As_Marker()
-    {
-        var contact = new MeshContact
-        {
-            DisplayName = "Legacy Folder Contact",
-            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                DisplayName = "Legacy Folder Contact",
+                Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-1",
+                    [MicrosoftContactMapper.ContactFolderIdMetadataKey] = "folder-1",
+                    [MicrosoftContactMapper.ManagedFolderLabelMetadataKey] = "-Directory"
+                }
+            };
+            var engine = new StaleContactCleanupEngine(new StaleContactCleanupOptions
             {
-                [MicrosoftContactMapper.ContactIdMetadataKey] = "contact-1",
-                [MicrosoftContactMapper.ContactFolderIdMetadataKey] = "folder-1",
-                [MicrosoftContactMapper.ManagedFolderLabelMetadataKey] = "-Directory"
-            }
-        };
-        var engine = new StaleContactCleanupEngine(new StaleContactCleanupOptions
-        {
-            ManagedMarkerMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                MicrosoftContactMapper.ManagedFolderLabelMetadataKey
-            },
-            OperationalMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                MicrosoftContactMapper.ContactIdMetadataKey,
-                MicrosoftContactMapper.ContactFolderIdMetadataKey,
-                MicrosoftContactMapper.ManagedFolderLabelMetadataKey
-            }
-        });
+                ManagedMarkerMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    MicrosoftContactMapper.ManagedFolderLabelMetadataKey
+                },
+                OperationalMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    MicrosoftContactMapper.ContactIdMetadataKey,
+                    MicrosoftContactMapper.ContactFolderIdMetadataKey,
+                    MicrosoftContactMapper.ManagedFolderLabelMetadataKey
+                }
+            });
 
-        Assert.True(engine.HasManagedMarker(contact));
-        Assert.True(engine.Clean(contact).ShouldDelete);
+            Assert.True(engine.HasManagedMarker(contact));
+            Assert.True(engine.Clean(contact).ShouldDelete);
+        }
     }
 }

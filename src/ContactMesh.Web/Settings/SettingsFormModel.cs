@@ -1,3 +1,7 @@
+// File: SettingsFormModel.cs
+// Author: Zunair
+// Producer: Copilot
+
 using System.Text.Json;
 using ContactMesh.Core.Audit;
 using ContactMesh.Core.Models;
@@ -7,169 +11,170 @@ using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 using Microsoft.AspNetCore.Http;
 
-namespace ContactMesh.Web.Settings;
-
-public sealed record SettingsFormModel(
-    ContactMeshOptions ContactMesh,
-    GoogleWorkspaceOptions GoogleWorkspace,
-    Microsoft365Options Microsoft365)
+namespace ContactMesh.Web.Settings
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true
-    };
-
-    public static SettingsFormModel FromForm(
-        IFormCollection form,
-        ContactMeshOptions currentContactMesh,
-        GoogleWorkspaceOptions currentGoogleWorkspace,
-        Microsoft365Options currentMicrosoft365)
-    {
-        var microsoftClientSecret = Read(form, "Microsoft365.ClientSecret");
-        var googleWorkspace = new GoogleWorkspaceOptions
-        {
-            ServiceAccountFile = Read(form, "GoogleWorkspace.ServiceAccountFile"),
-            AdminUserEmail = Read(form, "GoogleWorkspace.AdminUserEmail"),
-            Scopes = Lines(form, "GoogleWorkspace.Scopes")
-        };
-        var microsoft365 = new Microsoft365Options
-        {
-            TenantId = Read(form, "Microsoft365.TenantId"),
-            ClientId = Read(form, "Microsoft365.ClientId"),
-            ClientSecret = string.IsNullOrWhiteSpace(microsoftClientSecret)
-                ? currentMicrosoft365.ClientSecret
-                : microsoftClientSecret,
-            Scopes = Lines(form, "Microsoft365.Scopes"),
-            GroupTypes = Values(form, "Microsoft365.GroupTypes")
-        };
-        var contactMesh = new ContactMeshOptions
-        {
-            Provider = Read(form, "ContactMesh.Provider"),
-            DryRun = form.ContainsKey("ContactMesh.DryRun"),
-            DisableDeletes = form.ContainsKey("ContactMesh.DisableDeletes"),
-            ForceResetLabels = form.ContainsKey("ContactMesh.ForceResetLabels"),
-            ForceDeduplicatePhones = form.ContainsKey("ContactMesh.ForceDeduplicatePhones"),
-            ForceNormalizeEmailTypes = form.ContainsKey("ContactMesh.ForceNormalizeEmailTypes"),
-            ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
-            AuditLog = new AuditLogOptions
-            {
-                Enabled = form.ContainsKey("ContactMesh.AuditLog.Enabled"),
-                Directory = Coalesce(Read(form, "ContactMesh.AuditLog.Directory"), new AuditLogOptions().Directory),
-                IncludeNoChange = form.ContainsKey("ContactMesh.AuditLog.IncludeNoChange"),
-                IncludeDryRunPlannedAsWrites = form.ContainsKey("ContactMesh.AuditLog.IncludeDryRunPlannedAsWrites")
-            },
-            Notifications = new NotificationOptions
-            {
-                Enabled = form.ContainsKey("ContactMesh.Notifications.Enabled"),
-                From = Read(form, "ContactMesh.Notifications.From"),
-                SuccessTo = Lines(form, "ContactMesh.Notifications.SuccessTo"),
-                FailureTo = Lines(form, "ContactMesh.Notifications.FailureTo"),
-                SubjectPrefix = Read(form, "ContactMesh.Notifications.SubjectPrefix"),
-                AttachCsvOnFailure = form.ContainsKey("ContactMesh.Notifications.AttachCsvOnFailure"),
-                MaxAttachmentBytes = ReadInt(
-                    form,
-                    "ContactMesh.Notifications.MaxAttachmentBytes",
-                    new NotificationOptions().MaxAttachmentBytes)
-            },
-            Rules = new SyncRuleOptions
-            {
-                MainContactsGroupEmails = Lines(form, "ContactMesh.Rules.MainContactsGroupEmails"),
-                MainContactsGroupLabel = Read(form, "ContactMesh.Rules.MainContactsGroupLabel"),
-                GroupContactPrefix = Read(form, "ContactMesh.Rules.GroupContactPrefix"),
-                TargetUsers = Lines(form, "ContactMesh.Rules.TargetUsers"),
-                GlobalUserGroups = Lines(form, "ContactMesh.Rules.GlobalUserGroups"),
-                GlobalExternalContactGroups = Lines(form, "ContactMesh.Rules.GlobalExternalContactGroups"),
-                GroupsToSyncByGroup = Lines(form, "ContactMesh.Rules.GroupsToSyncByGroup"),
-                ExclusionGroups = Lines(form, "ContactMesh.Rules.ExclusionGroups"),
-                ScopedGroupRoots = currentContactMesh.Rules.ScopedGroupRoots,
-                IncludedOrganizationUnits = Lines(form, "ContactMesh.Rules.IncludedOrganizationUnits"),
-                ExcludedOrganizationUnits = Lines(form, "ContactMesh.Rules.ExcludedOrganizationUnits"),
-                GroupMappings = Mappings(form, "ContactMesh.Rules.GroupMappings")
-            }
-        };
-
-        return new SettingsFormModel(contactMesh, googleWorkspace, microsoft365);
-    }
-
-    public async Task SaveAsync(
-        string configPath,
-        ISecretProtector secretProtector,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(secretProtector);
-
-        var fullPath = Path.GetFullPath(configPath);
-        var directory = Path.GetDirectoryName(fullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var settings = new SettingsFile(
-            this.ContactMesh,
-            this.GoogleWorkspace,
-            this.Microsoft365 with
-            {
-                ClientSecret = ProtectedSecret.ProtectIfNeeded(this.Microsoft365.ClientSecret, secretProtector)
-            });
-        await using var stream = File.Create(fullPath);
-        await JsonSerializer.SerializeAsync(stream, settings, JsonOptions, cancellationToken);
-        await stream.WriteAsync("\n"u8.ToArray(), cancellationToken);
-    }
-
-    private static string Read(IFormCollection form, string key)
-    {
-        return form.TryGetValue(key, out var value) ? value.ToString().Trim() : string.Empty;
-    }
-
-    private static IReadOnlyList<string> Lines(IFormCollection form, string key)
-    {
-        return Read(form, key)
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    }
-
-    private static IReadOnlyList<string> Values(IFormCollection form, string key)
-    {
-        if (!form.TryGetValue(key, out var value))
-        {
-            return Array.Empty<string>();
-        }
-
-        return value
-            .Where(item => item is not null)
-            .SelectMany(item => item!.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .ToArray();
-    }
-
-    private static int ReadInt(IFormCollection form, string key, int fallback)
-    {
-        return int.TryParse(Read(form, key), out var value) ? value : fallback;
-    }
-
-    private static string Coalesce(string value, string fallback)
-    {
-        return string.IsNullOrWhiteSpace(value) ? fallback : value;
-    }
-
-    private static IReadOnlyList<GroupMapping> Mappings(IFormCollection form, string key)
-    {
-        return Lines(form, key)
-            .Select(ParseMapping)
-            .Where(mapping => !string.IsNullOrWhiteSpace(mapping.From) && !string.IsNullOrWhiteSpace(mapping.To))
-            .ToArray();
-    }
-
-    private static GroupMapping ParseMapping(string line)
-    {
-        var parts = line.Split("->", 2, StringSplitOptions.TrimEntries);
-        return parts.Length == 2
-            ? new GroupMapping(parts[0], parts[1])
-            : new GroupMapping(line, string.Empty);
-    }
-
-    private sealed record SettingsFile(
+    public sealed record SettingsFormModel(
         ContactMeshOptions ContactMesh,
         GoogleWorkspaceOptions GoogleWorkspace,
-        Microsoft365Options Microsoft365);
+        Microsoft365Options Microsoft365)
+    {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true
+        };
+
+        public static SettingsFormModel FromForm(
+            IFormCollection form,
+            ContactMeshOptions currentContactMesh,
+            GoogleWorkspaceOptions currentGoogleWorkspace,
+            Microsoft365Options currentMicrosoft365)
+        {
+            var microsoftClientSecret = Read(form, "Microsoft365.ClientSecret");
+            var googleWorkspace = new GoogleWorkspaceOptions
+            {
+                ServiceAccountFile = Read(form, "GoogleWorkspace.ServiceAccountFile"),
+                AdminUserEmail = Read(form, "GoogleWorkspace.AdminUserEmail"),
+                Scopes = Lines(form, "GoogleWorkspace.Scopes")
+            };
+            var microsoft365 = new Microsoft365Options
+            {
+                TenantId = Read(form, "Microsoft365.TenantId"),
+                ClientId = Read(form, "Microsoft365.ClientId"),
+                ClientSecret = string.IsNullOrWhiteSpace(microsoftClientSecret)
+                    ? currentMicrosoft365.ClientSecret
+                    : microsoftClientSecret,
+                Scopes = Lines(form, "Microsoft365.Scopes"),
+                GroupTypes = Values(form, "Microsoft365.GroupTypes")
+            };
+            var contactMesh = new ContactMeshOptions
+            {
+                Provider = Read(form, "ContactMesh.Provider"),
+                DryRun = form.ContainsKey("ContactMesh.DryRun"),
+                DisableDeletes = form.ContainsKey("ContactMesh.DisableDeletes"),
+                ForceResetLabels = form.ContainsKey("ContactMesh.ForceResetLabels"),
+                ForceDeduplicatePhones = form.ContainsKey("ContactMesh.ForceDeduplicatePhones"),
+                ForceNormalizeEmailTypes = form.ContainsKey("ContactMesh.ForceNormalizeEmailTypes"),
+                ManagedEmailDomains = Lines(form, "ContactMesh.ManagedEmailDomains"),
+                AuditLog = new AuditLogOptions
+                {
+                    Enabled = form.ContainsKey("ContactMesh.AuditLog.Enabled"),
+                    Directory = Coalesce(Read(form, "ContactMesh.AuditLog.Directory"), new AuditLogOptions().Directory),
+                    IncludeNoChange = form.ContainsKey("ContactMesh.AuditLog.IncludeNoChange"),
+                    IncludeDryRunPlannedAsWrites = form.ContainsKey("ContactMesh.AuditLog.IncludeDryRunPlannedAsWrites")
+                },
+                Notifications = new NotificationOptions
+                {
+                    Enabled = form.ContainsKey("ContactMesh.Notifications.Enabled"),
+                    From = Read(form, "ContactMesh.Notifications.From"),
+                    SuccessTo = Lines(form, "ContactMesh.Notifications.SuccessTo"),
+                    FailureTo = Lines(form, "ContactMesh.Notifications.FailureTo"),
+                    SubjectPrefix = Read(form, "ContactMesh.Notifications.SubjectPrefix"),
+                    AttachCsvOnFailure = form.ContainsKey("ContactMesh.Notifications.AttachCsvOnFailure"),
+                    MaxAttachmentBytes = ReadInt(
+                        form,
+                        "ContactMesh.Notifications.MaxAttachmentBytes",
+                        new NotificationOptions().MaxAttachmentBytes)
+                },
+                Rules = new SyncRuleOptions
+                {
+                    MainContactsGroupEmails = Lines(form, "ContactMesh.Rules.MainContactsGroupEmails"),
+                    MainContactsGroupLabel = Read(form, "ContactMesh.Rules.MainContactsGroupLabel"),
+                    GroupContactPrefix = Read(form, "ContactMesh.Rules.GroupContactPrefix"),
+                    TargetUsers = Lines(form, "ContactMesh.Rules.TargetUsers"),
+                    GlobalUserGroups = Lines(form, "ContactMesh.Rules.GlobalUserGroups"),
+                    GlobalExternalContactGroups = Lines(form, "ContactMesh.Rules.GlobalExternalContactGroups"),
+                    GroupsToSyncByGroup = Lines(form, "ContactMesh.Rules.GroupsToSyncByGroup"),
+                    ExclusionGroups = Lines(form, "ContactMesh.Rules.ExclusionGroups"),
+                    ScopedGroupRoots = currentContactMesh.Rules.ScopedGroupRoots,
+                    IncludedOrganizationUnits = Lines(form, "ContactMesh.Rules.IncludedOrganizationUnits"),
+                    ExcludedOrganizationUnits = Lines(form, "ContactMesh.Rules.ExcludedOrganizationUnits"),
+                    GroupMappings = Mappings(form, "ContactMesh.Rules.GroupMappings")
+                }
+            };
+
+            return new SettingsFormModel(contactMesh, googleWorkspace, microsoft365);
+        }
+
+        public async Task SaveAsync(
+            string configPath,
+            ISecretProtector secretProtector,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(secretProtector);
+
+            var fullPath = Path.GetFullPath(configPath);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var settings = new SettingsFile(
+                this.ContactMesh,
+                this.GoogleWorkspace,
+                this.Microsoft365 with
+                {
+                    ClientSecret = ProtectedSecret.ProtectIfNeeded(this.Microsoft365.ClientSecret, secretProtector)
+                });
+            await using var stream = File.Create(fullPath);
+            await JsonSerializer.SerializeAsync(stream, settings, JsonOptions, cancellationToken);
+            await stream.WriteAsync("\n"u8.ToArray(), cancellationToken);
+        }
+
+        private static string Read(IFormCollection form, string key)
+        {
+            return form.TryGetValue(key, out var value) ? value.ToString().Trim() : string.Empty;
+        }
+
+        private static IReadOnlyList<string> Lines(IFormCollection form, string key)
+        {
+            return Read(form, key)
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        private static IReadOnlyList<string> Values(IFormCollection form, string key)
+        {
+            if (!form.TryGetValue(key, out var value))
+            {
+                return Array.Empty<string>();
+            }
+
+            return value
+                .Where(item => item is not null)
+                .SelectMany(item => item!.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .ToArray();
+        }
+
+        private static int ReadInt(IFormCollection form, string key, int fallback)
+        {
+            return int.TryParse(Read(form, key), out var value) ? value : fallback;
+        }
+
+        private static string Coalesce(string value, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        private static IReadOnlyList<GroupMapping> Mappings(IFormCollection form, string key)
+        {
+            return Lines(form, key)
+                .Select(ParseMapping)
+                .Where(mapping => !string.IsNullOrWhiteSpace(mapping.From) && !string.IsNullOrWhiteSpace(mapping.To))
+                .ToArray();
+        }
+
+        private static GroupMapping ParseMapping(string line)
+        {
+            var parts = line.Split("->", 2, StringSplitOptions.TrimEntries);
+            return parts.Length == 2
+                ? new GroupMapping(parts[0], parts[1])
+                : new GroupMapping(line, string.Empty);
+        }
+
+        private sealed record SettingsFile(
+            ContactMeshOptions ContactMesh,
+            GoogleWorkspaceOptions GoogleWorkspace,
+            Microsoft365Options Microsoft365);
+    }
 }

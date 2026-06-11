@@ -1,18 +1,23 @@
+// File: ContactDiffEngine.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Core.Sync;
-
-public sealed class ContactDiffEngine
+namespace ContactMesh.Core.Sync
 {
-    private readonly SyncPlanner planner;
-
-    public ContactDiffEngine(SyncPlanner? planner = null)
+    public sealed class ContactDiffEngine
     {
-        this.planner = planner ?? new SyncPlanner();
-    }
+        private readonly SyncPlanner planner;
 
-    public ContactChangeSet Diff(IReadOnlyList<MeshContact> desiredContacts, IReadOnlyList<MeshContact> existingContacts)
-    {
-        return ContactChangeSet.FromOperations(this.planner.CreatePlan(desiredContacts, existingContacts));
+        public ContactDiffEngine(SyncPlanner? planner = null)
+        {
+            this.planner = planner ?? new SyncPlanner();
+        }
+
+        public ContactChangeSet Diff(IReadOnlyList<MeshContact> desiredContacts, IReadOnlyList<MeshContact> existingContacts)
+        {
+            return ContactChangeSet.FromOperations(this.planner.CreatePlan(desiredContacts, existingContacts));
+        }
     }
 }

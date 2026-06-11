@@ -1,16 +1,21 @@
-namespace ContactMesh.Google.Auth;
+// File: GoogleWorkspaceOptions.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record GoogleWorkspaceOptions
+namespace ContactMesh.Google.Auth
 {
-    public const string SectionName = "GoogleWorkspace";
-    public const string PeopleContactsScope = "https://www.googleapis.com/auth/contacts";
-
-    public static readonly IReadOnlyList<string> DefaultPeopleApiScopes = new[]
+    public sealed record GoogleWorkspaceOptions
     {
-        PeopleContactsScope
-    };
+        public const string SectionName = "GoogleWorkspace";
+        public const string PeopleContactsScope = "https://www.googleapis.com/auth/contacts";
 
-    public string ServiceAccountFile { get; init; } = "client_secret_svc.json";
-    public string? AdminUserEmail { get; init; }
-    public IReadOnlyList<string> Scopes { get; init; } = Array.Empty<string>();
+        public static readonly IReadOnlyList<string> DefaultPeopleApiScopes = new[]
+        {
+            PeopleContactsScope
+        };
+
+        public string ServiceAccountFile { get; init; } = "client_secret_svc.json";
+        public string? AdminUserEmail { get; init; }
+        public IReadOnlyList<string> Scopes { get; init; } = Array.Empty<string>();
+    }
 }

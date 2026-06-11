@@ -1,7 +1,12 @@
-namespace ContactMesh.Core.Sync;
+// File: ContactEmailPolicyOptions.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record ContactEmailPolicyOptions
+namespace ContactMesh.Core.Sync
 {
-    public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
-    public bool ForceNormalizeEmailTypes { get; init; }
+    public sealed record ContactEmailPolicyOptions
+    {
+        public IReadOnlyList<string> ManagedEmailDomains { get; init; } = Array.Empty<string>();
+        public bool ForceNormalizeEmailTypes { get; init; }
+    }
 }

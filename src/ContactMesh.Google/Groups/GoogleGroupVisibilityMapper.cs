@@ -1,16 +1,21 @@
+// File: GoogleGroupVisibilityMapper.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Google.Groups;
-
-public static class GoogleGroupVisibilityMapper
+namespace ContactMesh.Google.Groups
 {
-    public static MeshGroupVisibility FromGoogleSetting(string? value)
+    public static class GoogleGroupVisibilityMapper
     {
-        return value?.Trim().ToUpperInvariant() switch
+        public static MeshGroupVisibility FromGoogleSetting(string? value)
         {
-            "ALL_IN_DOMAIN_CAN_VIEW" => MeshGroupVisibility.Domain,
-            "ALL_MEMBERS_CAN_VIEW" => MeshGroupVisibility.Members,
-            _ => MeshGroupVisibility.Hidden
-        };
+            return value?.Trim().ToUpperInvariant() switch
+            {
+                "ALL_IN_DOMAIN_CAN_VIEW" => MeshGroupVisibility.Domain,
+                "ALL_MEMBERS_CAN_VIEW" => MeshGroupVisibility.Members,
+                _ => MeshGroupVisibility.Hidden
+            };
+        }
     }
 }

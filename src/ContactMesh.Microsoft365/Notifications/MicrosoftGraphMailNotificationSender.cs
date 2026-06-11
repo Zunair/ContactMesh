@@ -1,3 +1,7 @@
+// File: MicrosoftGraphMailNotificationSender.cs
+// Author: Zunair
+// Producer: Copilot
+
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -7,146 +11,147 @@ using System.Text.Json.Serialization;
 using ContactMesh.Core.Notifications;
 using ContactMesh.Microsoft365.Auth;
 
-namespace ContactMesh.Microsoft365.Notifications;
-
-public sealed class MicrosoftGraphMailNotificationSender : IRunNotificationSender
+namespace ContactMesh.Microsoft365.Notifications
 {
-    private static readonly Uri DefaultBaseAddress = new("https://graph.microsoft.com/");
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    public sealed class MicrosoftGraphMailNotificationSender : IRunNotificationSender
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    private readonly HttpClient httpClient;
-    private readonly IMicrosoftGraphAccessTokenProvider accessTokenProvider;
-    private readonly Uri baseAddress;
-
-    public MicrosoftGraphMailNotificationSender(
-        HttpClient httpClient,
-        IMicrosoftGraphAccessTokenProvider accessTokenProvider,
-        Uri? baseAddress = null)
-    {
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(accessTokenProvider);
-
-        this.httpClient = httpClient;
-        this.accessTokenProvider = accessTokenProvider;
-        this.baseAddress = baseAddress ?? httpClient.BaseAddress ?? DefaultBaseAddress;
-    }
-
-    public async Task SendAsync(NotificationMessage message, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(message);
-        if (string.IsNullOrWhiteSpace(message.From))
+        private static readonly Uri DefaultBaseAddress = new("https://graph.microsoft.com/");
+        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
         {
-            throw new InvalidOperationException("NotificationMessage.From must be set for Microsoft Graph sendMail.");
-        }
-        if (message.To.Count == 0)
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        private readonly HttpClient httpClient;
+        private readonly IMicrosoftGraphAccessTokenProvider accessTokenProvider;
+        private readonly Uri baseAddress;
+
+        public MicrosoftGraphMailNotificationSender(
+            HttpClient httpClient,
+            IMicrosoftGraphAccessTokenProvider accessTokenProvider,
+            Uri? baseAddress = null)
         {
-            throw new InvalidOperationException("NotificationMessage.To must contain at least one recipient.");
+            ArgumentNullException.ThrowIfNull(httpClient);
+            ArgumentNullException.ThrowIfNull(accessTokenProvider);
+
+            this.httpClient = httpClient;
+            this.accessTokenProvider = accessTokenProvider;
+            this.baseAddress = baseAddress ?? httpClient.BaseAddress ?? DefaultBaseAddress;
         }
 
-        var payload = new SendMailPayload
+        public async Task SendAsync(NotificationMessage message, CancellationToken cancellationToken)
         {
-            Message = new GraphMessage
+            ArgumentNullException.ThrowIfNull(message);
+            if (string.IsNullOrWhiteSpace(message.From))
             {
-                Subject = message.Subject,
-                Body = new GraphItemBody
+                throw new InvalidOperationException("NotificationMessage.From must be set for Microsoft Graph sendMail.");
+            }
+            if (message.To.Count == 0)
+            {
+                throw new InvalidOperationException("NotificationMessage.To must contain at least one recipient.");
+            }
+
+            var payload = new SendMailPayload
+            {
+                Message = new GraphMessage
                 {
-                    ContentType = "Text",
-                    Content = message.Body
+                    Subject = message.Subject,
+                    Body = new GraphItemBody
+                    {
+                        ContentType = "Text",
+                        Content = message.Body
+                    },
+                    ToRecipients = message.To
+                        .Select(address => new GraphRecipient { EmailAddress = new GraphEmailAddress { Address = address } })
+                        .ToList(),
+                    Attachments = message.Attachments.Count == 0
+                        ? null
+                        : message.Attachments
+                            .Select(attachment => new GraphFileAttachment
+                            {
+                                Name = attachment.FileName,
+                                ContentType = attachment.ContentType,
+                                ContentBytes = Convert.ToBase64String(attachment.Content)
+                            })
+                            .ToList()
                 },
-                ToRecipients = message.To
-                    .Select(address => new GraphRecipient { EmailAddress = new GraphEmailAddress { Address = address } })
-                    .ToList(),
-                Attachments = message.Attachments.Count == 0
-                    ? null
-                    : message.Attachments
-                        .Select(attachment => new GraphFileAttachment
-                        {
-                            Name = attachment.FileName,
-                            ContentType = attachment.ContentType,
-                            ContentBytes = Convert.ToBase64String(attachment.Content)
-                        })
-                        .ToList()
-            },
-            SaveToSentItems = false
-        };
+                SaveToSentItems = false
+            };
 
-        var requestUri = new Uri(this.baseAddress, $"v1.0/users/{Uri.EscapeDataString(message.From.Trim())}/sendMail");
-        var accessToken = await this.accessTokenProvider.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            throw new InvalidOperationException("Microsoft Graph access token provider returned an empty token.");
+            var requestUri = new Uri(this.baseAddress, $"v1.0/users/{Uri.EscapeDataString(message.From.Trim())}/sendMail");
+            var accessToken = await this.accessTokenProvider.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                throw new InvalidOperationException("Microsoft Graph access token provider returned an empty token.");
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = JsonContent.Create(payload, options: JsonOptions)
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var body = response.Content is null
+                ? string.Empty
+                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var excerpt = body.Length <= 2048 ? body : body[..2048];
+            throw new HttpRequestException(BuildFailureMessage(response, excerpt, message.From));
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+        private static string BuildFailureMessage(HttpResponseMessage response, string excerpt, string from)
         {
-            Content = JsonContent.Create(payload, options: JsonOptions)
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var message = $"Microsoft Graph sendMail failed: {(int)response.StatusCode} ({response.ReasonPhrase}). Response: {excerpt}";
+            if (response.StatusCode == HttpStatusCode.Forbidden
+                && excerpt.Contains("ErrorAccessDenied", StringComparison.OrdinalIgnoreCase))
+            {
+                message += " Required Azure permission: add Microsoft Graph > Application permissions > Mail.Send to the app registration and grant admin consent. If Mail.Send is already granted, check any Exchange Application Access Policy allows the configured From mailbox"
+                    + (string.IsNullOrWhiteSpace(from) ? "." : $" ({from.Trim()}).");
+            }
 
-        using var response = await this.httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        if (response.IsSuccessStatusCode)
-        {
-            return;
+            return message;
         }
 
-        var body = response.Content is null
-            ? string.Empty
-            : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        var excerpt = body.Length <= 2048 ? body : body[..2048];
-        throw new HttpRequestException(BuildFailureMessage(response, excerpt, message.From));
-    }
-
-    private static string BuildFailureMessage(HttpResponseMessage response, string excerpt, string from)
-    {
-        var message = $"Microsoft Graph sendMail failed: {(int)response.StatusCode} ({response.ReasonPhrase}). Response: {excerpt}";
-        if (response.StatusCode == HttpStatusCode.Forbidden
-            && excerpt.Contains("ErrorAccessDenied", StringComparison.OrdinalIgnoreCase))
+        private sealed class SendMailPayload
         {
-            message += " Required Azure permission: add Microsoft Graph > Application permissions > Mail.Send to the app registration and grant admin consent. If Mail.Send is already granted, check any Exchange Application Access Policy allows the configured From mailbox"
-                + (string.IsNullOrWhiteSpace(from) ? "." : $" ({from.Trim()}).");
+            [JsonPropertyName("message")] public GraphMessage Message { get; set; } = new();
+            [JsonPropertyName("saveToSentItems")] public bool SaveToSentItems { get; set; }
         }
 
-        return message;
-    }
+        private sealed class GraphMessage
+        {
+            [JsonPropertyName("subject")] public string Subject { get; set; } = string.Empty;
+            [JsonPropertyName("body")] public GraphItemBody Body { get; set; } = new();
+            [JsonPropertyName("toRecipients")] public List<GraphRecipient> ToRecipients { get; set; } = new();
+            [JsonPropertyName("attachments")] public List<GraphFileAttachment>? Attachments { get; set; }
+        }
 
-    private sealed class SendMailPayload
-    {
-        [JsonPropertyName("message")] public GraphMessage Message { get; set; } = new();
-        [JsonPropertyName("saveToSentItems")] public bool SaveToSentItems { get; set; }
-    }
+        private sealed class GraphItemBody
+        {
+            [JsonPropertyName("contentType")] public string ContentType { get; set; } = "Text";
+            [JsonPropertyName("content")] public string Content { get; set; } = string.Empty;
+        }
 
-    private sealed class GraphMessage
-    {
-        [JsonPropertyName("subject")] public string Subject { get; set; } = string.Empty;
-        [JsonPropertyName("body")] public GraphItemBody Body { get; set; } = new();
-        [JsonPropertyName("toRecipients")] public List<GraphRecipient> ToRecipients { get; set; } = new();
-        [JsonPropertyName("attachments")] public List<GraphFileAttachment>? Attachments { get; set; }
-    }
+        private sealed class GraphRecipient
+        {
+            [JsonPropertyName("emailAddress")] public GraphEmailAddress EmailAddress { get; set; } = new();
+        }
 
-    private sealed class GraphItemBody
-    {
-        [JsonPropertyName("contentType")] public string ContentType { get; set; } = "Text";
-        [JsonPropertyName("content")] public string Content { get; set; } = string.Empty;
-    }
+        private sealed class GraphEmailAddress
+        {
+            [JsonPropertyName("address")] public string Address { get; set; } = string.Empty;
+        }
 
-    private sealed class GraphRecipient
-    {
-        [JsonPropertyName("emailAddress")] public GraphEmailAddress EmailAddress { get; set; } = new();
-    }
-
-    private sealed class GraphEmailAddress
-    {
-        [JsonPropertyName("address")] public string Address { get; set; } = string.Empty;
-    }
-
-    private sealed class GraphFileAttachment
-    {
-        [JsonPropertyName("@odata.type")] public string OdataType { get; set; } = "#microsoft.graph.fileAttachment";
-        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
-        [JsonPropertyName("contentType")] public string ContentType { get; set; } = "application/octet-stream";
-        [JsonPropertyName("contentBytes")] public string ContentBytes { get; set; } = string.Empty;
+        private sealed class GraphFileAttachment
+        {
+            [JsonPropertyName("@odata.type")] public string OdataType { get; set; } = "#microsoft.graph.fileAttachment";
+            [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+            [JsonPropertyName("contentType")] public string ContentType { get; set; } = "application/octet-stream";
+            [JsonPropertyName("contentBytes")] public string ContentBytes { get; set; } = string.Empty;
+        }
     }
 }

@@ -1,7 +1,7 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-06-09",
+  "updated": "2026-06-10",
   "head": "58a6acd",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
@@ -120,7 +120,10 @@
     { "id": "microsoft-folder-label-idempotency", "commit": null, "state": "done-local", "note": "Fixed repeated Microsoft365 category cleanup planning by mapping managed-looking contact folder names (for example -Directory) into provider metadata instead of normal labels. Core now supports provider-neutral managed marker metadata for stale cleanup, preserving marker metadata as operational so folder-only stale contacts can still be detected without causing source-backed contacts to plan non-persistable label removals. Reproduced live dry-run before fix at 0 create, 114 update, 0 delete; reran after fix at 0 create, 0 update, 0 delete, 39,522 unchanged. Build passed with NU1900 sandbox feed warnings; tests passed 278, skipped 1." },
     { "id": "visual-studio-publish-profiles", "commit": null, "state": "done-local", "note": "Committed safe Visual Studio project launch/publish profile files for CLI/Core publish workflows, excluding user-specific .pubxml.user history files. Prior build passed with NU1900 sandbox feed warnings; tests passed 278, skipped 1." },
     { "id": "web-client-secret-encryption", "commit": "58a6acd", "state": "done", "note": "Added provider-neutral secret protection helpers, ASP.NET Core Data Protection-backed Hosting encryption/decryption, Microsoft365 ClientSecret decrypt-on-bind, Web save encryption with cmenc:v1 prefix, docs/UI copy, and Core/Hosting/Web tests. Build passed with NU1900 sandbox warnings; tests passed 287, skipped 1." },
-    { "id": "readme-publish-refresh", "commit": null, "state": "done-local", "note": "Updated README before GitHub publish to describe the current Web settings editor, encrypted Microsoft365 ClientSecret save/decrypt behavior, Data Protection account scope, audit logs, notifications, current config shape, provider maturity, and recommended Microsoft Graph application permissions for app registration." }
+    { "id": "readme-publish-refresh", "commit": null, "state": "done-local", "note": "Updated README before GitHub publish to describe the current Web settings editor, encrypted Microsoft365 ClientSecret save/decrypt behavior, Data Protection account scope, audit logs, notifications, current config shape, provider maturity, and recommended Microsoft Graph application permissions for app registration." },
+    { "id": "stylecop-headers-block-namespaces", "commit": null, "state": "done-local", "note": "Added stable StyleCop.Analyzers package wiring with stylecop.json, inserted Copilot & Zunair file headers across all tracked src/tests C# files, converted file-scoped namespaces to block-scoped namespaces, wrapped top-level entrypoints in explicit Program classes, and suppressed unrelated legacy StyleCop defaults. Build passed with 0 warnings; tests passed 287, skipped 1." },
+    { "id": "bin-obj-ignore-instruction", "commit": null, "state": "done-local", "note": "Updated AGENTS.md to treat bin/obj as ignored build output and stop requiring routine cleanup after verification unless a task specifically needs artifact removal." },
+    { "id": "header-author-producer", "commit": null, "state": "done-local", "note": "Changed tracked src/tests C# file headers and StyleCop template to use Author: Zunair and Producer: Copilot instead of a combined author line. Build passed; only NU1900 package vulnerability feed warnings appeared because NuGet was unreachable." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

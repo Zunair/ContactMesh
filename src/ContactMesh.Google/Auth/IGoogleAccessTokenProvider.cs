@@ -1,6 +1,11 @@
-namespace ContactMesh.Google.Auth;
+// File: IGoogleAccessTokenProvider.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IGoogleAccessTokenProvider
+namespace ContactMesh.Google.Auth
 {
-    Task<string> GetAccessTokenAsync(string userId, CancellationToken cancellationToken);
+    public interface IGoogleAccessTokenProvider
+    {
+        Task<string> GetAccessTokenAsync(string userId, CancellationToken cancellationToken);
+    }
 }

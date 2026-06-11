@@ -1,6 +1,11 @@
-namespace ContactMesh.Microsoft365.Directory;
+// File: IMicrosoftGraphDirectoryClient.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IMicrosoftGraphDirectoryClient
+namespace ContactMesh.Microsoft365.Directory
 {
-    Task<IReadOnlyList<MicrosoftGraphUser>> ListUsersAsync(CancellationToken cancellationToken);
+    public interface IMicrosoftGraphDirectoryClient
+    {
+        Task<IReadOnlyList<MicrosoftGraphUser>> ListUsersAsync(CancellationToken cancellationToken);
+    }
 }

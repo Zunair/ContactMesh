@@ -1,32 +1,37 @@
+// File: ExclusionRule.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Core.Rules;
-
-public sealed class ExclusionRule
+namespace ContactMesh.Core.Rules
 {
-    private readonly IReadOnlySet<string> excludedUserIds;
-
-    public ExclusionRule(IEnumerable<string> excludedUserIds)
+    public sealed class ExclusionRule
     {
-        this.excludedUserIds = excludedUserIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
+        private readonly IReadOnlySet<string> excludedUserIds;
 
-    public bool IsExcluded(MeshUser user)
-    {
-        return this.excludedUserIds.Contains(user.Id)
-            || GetUserEmails(user).Any(this.excludedUserIds.Contains);
-    }
-
-    private static IEnumerable<string> GetUserEmails(MeshUser user)
-    {
-        if (!string.IsNullOrWhiteSpace(user.Email))
+        public ExclusionRule(IEnumerable<string> excludedUserIds)
         {
-            yield return user.Email;
+            this.excludedUserIds = excludedUserIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
-        foreach (var email in user.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+        public bool IsExcluded(MeshUser user)
         {
-            yield return email;
+            return this.excludedUserIds.Contains(user.Id)
+                || GetUserEmails(user).Any(this.excludedUserIds.Contains);
+        }
+
+        private static IEnumerable<string> GetUserEmails(MeshUser user)
+        {
+            if (!string.IsNullOrWhiteSpace(user.Email))
+            {
+                yield return user.Email;
+            }
+
+            foreach (var email in user.AlternateEmails.Where(email => !string.IsNullOrWhiteSpace(email)))
+            {
+                yield return email;
+            }
         }
     }
 }

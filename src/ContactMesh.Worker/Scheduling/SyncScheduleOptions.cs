@@ -1,8 +1,13 @@
-namespace ContactMesh.Worker.Scheduling;
+// File: SyncScheduleOptions.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record SyncScheduleOptions
+namespace ContactMesh.Worker.Scheduling
 {
-    public const string SectionName = "Schedule";
+    public sealed record SyncScheduleOptions
+    {
+        public const string SectionName = "Schedule";
 
-    public string Cron { get; init; } = "0 */6 * * *";
+        public string Cron { get; init; } = "0 */6 * * *";
+    }
 }

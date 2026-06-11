@@ -1,19 +1,24 @@
-namespace ContactMesh.Google.Contacts;
+// File: GoogleContactGroupLabel.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record GoogleContactGroupLabel(
-    string? ResourceName,
-    string Name,
-    IReadOnlyDictionary<string, string> ClientData)
+namespace ContactMesh.Google.Contacts
 {
-    public bool IsOwnedBy(string appId)
+    public sealed record GoogleContactGroupLabel(
+        string? ResourceName,
+        string Name,
+        IReadOnlyDictionary<string, string> ClientData)
     {
-        return ClientData.TryGetValue(GoogleContactGroupLabelReconciler.AppIdClientDataKey, out var owner)
-            && string.Equals(owner, appId, StringComparison.Ordinal);
-    }
+        public bool IsOwnedBy(string appId)
+        {
+            return ClientData.TryGetValue(GoogleContactGroupLabelReconciler.AppIdClientDataKey, out var owner)
+                && string.Equals(owner, appId, StringComparison.Ordinal);
+        }
 
-    public string ManagedLabelName => ClientData.TryGetValue(
-        GoogleContactGroupLabelReconciler.LabelNameClientDataKey,
-        out var labelName)
-            ? labelName
-            : Name;
+        public string ManagedLabelName => ClientData.TryGetValue(
+            GoogleContactGroupLabelReconciler.LabelNameClientDataKey,
+            out var labelName)
+                ? labelName
+                : Name;
+    }
 }

@@ -1,22 +1,27 @@
-namespace ContactMesh.Google.Auth;
+// File: GoogleCredentialFactory.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed class GoogleCredentialFactory
+namespace ContactMesh.Google.Auth
 {
-    private readonly GoogleWorkspaceOptions options;
-
-    public GoogleCredentialFactory(GoogleWorkspaceOptions options)
+    public sealed class GoogleCredentialFactory
     {
-        this.options = options;
-    }
+        private readonly GoogleWorkspaceOptions options;
 
-    public string GetCredentialPath()
-    {
-        return this.options.ServiceAccountFile;
-    }
+        public GoogleCredentialFactory(GoogleWorkspaceOptions options)
+        {
+            this.options = options;
+        }
 
-    public IGoogleAccessTokenProvider CreateDelegatedAccessTokenProvider(
-        IGoogleDelegatedAccessTokenSource? tokenSource = null)
-    {
-        return new GoogleDelegatedAccessTokenProvider(this.options, tokenSource);
+        public string GetCredentialPath()
+        {
+            return this.options.ServiceAccountFile;
+        }
+
+        public IGoogleAccessTokenProvider CreateDelegatedAccessTokenProvider(
+            IGoogleDelegatedAccessTokenSource? tokenSource = null)
+        {
+            return new GoogleDelegatedAccessTokenProvider(this.options, tokenSource);
+        }
     }
 }

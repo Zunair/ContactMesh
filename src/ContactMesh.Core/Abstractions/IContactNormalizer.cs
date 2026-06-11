@@ -1,8 +1,13 @@
+// File: IContactNormalizer.cs
+// Author: Zunair
+// Producer: Copilot
+
 using ContactMesh.Core.Models;
 
-namespace ContactMesh.Core.Abstractions;
-
-public interface IContactNormalizer
+namespace ContactMesh.Core.Abstractions
 {
-    MeshContact Normalize(MeshContact contact);
+    public interface IContactNormalizer
+    {
+        MeshContact Normalize(MeshContact contact);
+    }
 }

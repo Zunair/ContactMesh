@@ -15,4 +15,4 @@ dotnet build ContactMesh.sln -m:1
 dotnet test ContactMesh.sln -m:1 --no-build
 ```
 
-If generated `bin` or `obj` folders appear after verification, clean them before committing.
+Generated `bin` and `obj` folders are ignored build output. Do not spend session time cleaning them unless a task specifically requires removing build artifacts.

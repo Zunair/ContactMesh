@@ -1,3 +1,7 @@
+// File: SettingsPageRenderer.cs
+// Author: Zunair
+// Producer: Copilot
+
 using System.Text;
 using System.Text.Encodings.Web;
 using ContactMesh.Core.Audit;
@@ -7,1044 +11,1045 @@ using ContactMesh.Core.Sync;
 using ContactMesh.Google.Auth;
 using ContactMesh.Microsoft365.Auth;
 
-namespace ContactMesh.Web.Settings;
-
-public static class SettingsPageRenderer
+namespace ContactMesh.Web.Settings
 {
-    public static string Render(
-        ContactMeshOptions contactMesh,
-        GoogleWorkspaceOptions googleWorkspace,
-        Microsoft365Options microsoft365,
-        string configPath,
-        string? notice)
+    public static class SettingsPageRenderer
     {
-        var html = new StringBuilder();
-
-        html.AppendLine("<!doctype html>");
-        html.AppendLine("<html lang=\"en\">");
-        html.AppendLine("<head>");
-        html.AppendLine("<meta charset=\"utf-8\">");
-        html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-        html.AppendLine("<title>ContactMesh Settings</title>");
-        html.AppendLine("<style>");
-        html.AppendLine(Styles);
-        html.AppendLine("</style>");
-        html.AppendLine("</head>");
-        html.AppendLine("<body>");
-        html.AppendLine("<main class=\"page-shell\">");
-        html.AppendLine("<aside class=\"sidebar\" aria-label=\"Settings navigation\">");
-        html.AppendLine("<div class=\"brand-mark\" aria-hidden=\"true\">CM</div>");
-        html.AppendLine("<nav>");
-        html.AppendLine("<a href=\"#runtime\">Runtime</a>");
-        html.AppendLine("<a href=\"#notifications\">Notifications</a>");
-        html.AppendLine("<a href=\"#audit\">Audit log</a>");
-        html.AppendLine("<a href=\"#rules\">Rules</a>");
-        html.AppendLine("<a href=\"#providers\">Providers</a>");
-        html.AppendLine("</nav>");
-        html.AppendLine("</aside>");
-        html.AppendLine("<section class=\"workspace\">");
-        html.AppendLine("<header class=\"toolbar\">");
-        html.AppendLine("<div>");
-        html.AppendLine("<p class=\"eyebrow\">ContactMesh</p>");
-        html.AppendLine("<h1>Settings</h1>");
-        html.AppendLine("</div>");
-        html.AppendLine("<div class=\"status-strip\" aria-label=\"Run state\">");
-        AppendStatusPill(html, contactMesh.Provider, "Provider");
-        AppendStatusPill(html, contactMesh.DryRun ? "Dry run" : "Live writes", "Mode");
-        AppendStatusPill(html, contactMesh.DisableDeletes ? "Deletes off" : "Deletes on", "Deletes");
-        html.AppendLine("</div>");
-        html.AppendLine("</header>");
-        if (!string.IsNullOrWhiteSpace(notice))
+        public static string Render(
+            ContactMeshOptions contactMesh,
+            GoogleWorkspaceOptions googleWorkspace,
+            Microsoft365Options microsoft365,
+            string configPath,
+            string? notice)
         {
-            html.Append("<p class=\"notice\">");
-            html.Append(Encode(notice));
-            html.AppendLine("</p>");
+            var html = new StringBuilder();
+
+            html.AppendLine("<!doctype html>");
+            html.AppendLine("<html lang=\"en\">");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset=\"utf-8\">");
+            html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            html.AppendLine("<title>ContactMesh Settings</title>");
+            html.AppendLine("<style>");
+            html.AppendLine(Styles);
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
+            html.AppendLine("<main class=\"page-shell\">");
+            html.AppendLine("<aside class=\"sidebar\" aria-label=\"Settings navigation\">");
+            html.AppendLine("<div class=\"brand-mark\" aria-hidden=\"true\">CM</div>");
+            html.AppendLine("<nav>");
+            html.AppendLine("<a href=\"#runtime\">Runtime</a>");
+            html.AppendLine("<a href=\"#notifications\">Notifications</a>");
+            html.AppendLine("<a href=\"#audit\">Audit log</a>");
+            html.AppendLine("<a href=\"#rules\">Rules</a>");
+            html.AppendLine("<a href=\"#providers\">Providers</a>");
+            html.AppendLine("</nav>");
+            html.AppendLine("</aside>");
+            html.AppendLine("<section class=\"workspace\">");
+            html.AppendLine("<header class=\"toolbar\">");
+            html.AppendLine("<div>");
+            html.AppendLine("<p class=\"eyebrow\">ContactMesh</p>");
+            html.AppendLine("<h1>Settings</h1>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class=\"status-strip\" aria-label=\"Run state\">");
+            AppendStatusPill(html, contactMesh.Provider, "Provider");
+            AppendStatusPill(html, contactMesh.DryRun ? "Dry run" : "Live writes", "Mode");
+            AppendStatusPill(html, contactMesh.DisableDeletes ? "Deletes off" : "Deletes on", "Deletes");
+            html.AppendLine("</div>");
+            html.AppendLine("</header>");
+            if (!string.IsNullOrWhiteSpace(notice))
+            {
+                html.Append("<p class=\"notice\">");
+                html.Append(Encode(notice));
+                html.AppendLine("</p>");
+            }
+
+            html.AppendLine("<form method=\"post\" action=\"/settings\">");
+            AppendRuntimeSection(html, contactMesh, configPath);
+            AppendNotificationsSection(html, contactMesh.Notifications);
+            AppendAuditLogSection(html, contactMesh.AuditLog);
+            AppendRulesSection(html, contactMesh.Rules, contactMesh.ManagedEmailDomains);
+            AppendProvidersSection(html, googleWorkspace, microsoft365);
+            html.AppendLine("<div class=\"save-bar\">");
+            html.AppendLine("<button type=\"submit\">Save settings</button>");
+            html.AppendLine("</div>");
+            html.AppendLine("</form>");
+
+            html.AppendLine("</section>");
+            html.AppendLine("</main>");
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
+            return html.ToString();
         }
 
-        html.AppendLine("<form method=\"post\" action=\"/settings\">");
-        AppendRuntimeSection(html, contactMesh, configPath);
-        AppendNotificationsSection(html, contactMesh.Notifications);
-        AppendAuditLogSection(html, contactMesh.AuditLog);
-        AppendRulesSection(html, contactMesh.Rules, contactMesh.ManagedEmailDomains);
-        AppendProvidersSection(html, googleWorkspace, microsoft365);
-        html.AppendLine("<div class=\"save-bar\">");
-        html.AppendLine("<button type=\"submit\">Save settings</button>");
-        html.AppendLine("</div>");
-        html.AppendLine("</form>");
-
-        html.AppendLine("</section>");
-        html.AppendLine("</main>");
-        html.AppendLine("</body>");
-        html.AppendLine("</html>");
-
-        return html.ToString();
-    }
-
-    private static void AppendRuntimeSection(StringBuilder html, ContactMeshOptions options, string configPath)
-    {
-        html.AppendLine("<section id=\"runtime\" class=\"band\">");
-        html.AppendLine("<div class=\"band-header\">");
-        html.AppendLine("<h2>Runtime</h2>");
-        html.AppendLine("<span class=\"muted\">Read only</span>");
-        html.AppendLine("</div>");
-        html.AppendLine("<div class=\"settings-grid\">");
-        AppendProviderSelect(html, options.Provider);
-        AppendReadonlyField(html, "Config file", Path.GetFullPath(configPath), "The JSON file loaded first; environment variables and command-line values can override it.");
-        AppendReadonlyField(html, "Config status", File.Exists(configPath) ? "Loaded from disk" : "Will be created on save", "If this does not point at appsettings.local.json, launch the Web app with that JSON path.");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Dry run</span>");
-        html.AppendLine("<small>When enabled, ContactMesh logs planned changes but skips provider writes. Keep this on for live-provider validation.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.DryRun\" value=\"true\"");
-        if (options.DryRun)
+        private static void AppendRuntimeSection(StringBuilder html, ContactMeshOptions options, string configPath)
         {
-            html.Append(" checked");
+            html.AppendLine("<section id=\"runtime\" class=\"band\">");
+            html.AppendLine("<div class=\"band-header\">");
+            html.AppendLine("<h2>Runtime</h2>");
+            html.AppendLine("<span class=\"muted\">Read only</span>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class=\"settings-grid\">");
+            AppendProviderSelect(html, options.Provider);
+            AppendReadonlyField(html, "Config file", Path.GetFullPath(configPath), "The JSON file loaded first; environment variables and command-line values can override it.");
+            AppendReadonlyField(html, "Config status", File.Exists(configPath) ? "Loaded from disk" : "Will be created on save", "If this does not point at appsettings.local.json, launch the Web app with that JSON path.");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Dry run</span>");
+            html.AppendLine("<small>When enabled, ContactMesh logs planned changes but skips provider writes. Keep this on for live-provider validation.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.DryRun\" value=\"true\"");
+            if (options.DryRun)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Disable deletes</span>");
+            html.AppendLine("<small>When enabled, ContactMesh still plans delete operations for review, but live runs skip delete writes to providers.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.DisableDeletes\" value=\"true\"");
+            if (options.DisableDeletes)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Force deduplicate phones</span>");
+            html.AppendLine("<small>When enabled, ContactMesh collapses repeated phone numbers on managed contacts even when old fields used different phone types. Use once to clean legacy duplicates, then turn off.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceDeduplicatePhones\" value=\"true\"");
+            if (options.ForceDeduplicatePhones)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Force normalize email types</span>");
+            html.AppendLine("<small>When enabled, ContactMesh rewrites the selected email as primary work email so legacy managed contacts no longer show the organization address under Other email. Use once, then turn off.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceNormalizeEmailTypes\" value=\"true\"");
+            if (options.ForceNormalizeEmailTypes)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Force reset labels</span>");
+            html.AppendLine("<small>When enabled, ContactMesh replaces all labels on existing managed contacts instead of reconciling. Use once to clear stale labels accumulated by a previous sync bug, then turn off.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceResetLabels\" value=\"true\"");
+            if (options.ForceResetLabels)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("</div>");
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Disable deletes</span>");
-        html.AppendLine("<small>When enabled, ContactMesh still plans delete operations for review, but live runs skip delete writes to providers.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.DisableDeletes\" value=\"true\"");
-        if (options.DisableDeletes)
+        private static void AppendNotificationsSection(StringBuilder html, NotificationOptions options)
         {
-            html.Append(" checked");
+            html.AppendLine("<section id=\"notifications\" class=\"band\">");
+            html.AppendLine("<div class=\"band-header\">");
+            html.AppendLine("<h2>Notifications</h2>");
+            html.AppendLine("<span class=\"muted\">ContactMesh:Notifications</span>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class=\"settings-grid\">");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Email notifications</span>");
+            html.AppendLine("<small>When enabled, live sync runs send success or failure mail through the configured provider sender.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.Notifications.Enabled\" value=\"true\"");
+            if (options.Enabled)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            AppendField(html, "From mailbox", "ContactMesh.Notifications.From", options.From, "Mailbox used as the sender for Graph sendMail; for Microsoft 365 this must be a user Graph can send as.");
+            AppendField(html, "Subject prefix", "ContactMesh.Notifications.SubjectPrefix", options.SubjectPrefix, "Prefix applied to automated run emails and the dashboard test email.");
+            AppendListField(html, "Success recipients", "ContactMesh.Notifications.SuccessTo", "Recipients for successful live sync notifications. The test email uses these plus failure recipients.", options.SuccessTo);
+            AppendListField(html, "Failure recipients", "ContactMesh.Notifications.FailureTo", "Recipients for failed live sync notifications. Failure run emails can include CSV audit attachments.", options.FailureTo);
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Attach CSV on failure</span>");
+            html.AppendLine("<small>When enabled, failure notifications attach the audit summary and detail CSV files up to the configured byte limit.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.Notifications.AttachCsvOnFailure\" value=\"true\"");
+            if (options.AttachCsvOnFailure)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            AppendField(
+                html,
+                "Max attachment bytes",
+                "ContactMesh.Notifications.MaxAttachmentBytes",
+                options.MaxAttachmentBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "Maximum bytes kept per CSV attachment before truncation.");
+            html.AppendLine("<section class=\"rule-group permission-callout\">");
+            html.AppendLine("<h3>Azure permission</h3>");
+            html.AppendLine("<p class=\"description\">For Microsoft 365 test email, the app registration needs Microsoft Graph Application permission Mail.Send with admin consent. Use Application permissions, not Delegated permissions. If your tenant uses an Exchange Application Access Policy, include the From mailbox in the allowed policy scope.</p>");
+            html.AppendLine("</section>");
+            html.AppendLine("<section class=\"rule-group test-email-panel\">");
+            html.AppendLine("<h3>Test email</h3>");
+            html.AppendLine("<p class=\"description\">Sends one test message to all configured success and failure recipients using the current form values. This does not save settings.</p>");
+            html.AppendLine("<button type=\"submit\" formaction=\"/settings/test-email\">Send test email</button>");
+            html.AppendLine("</section>");
+            html.AppendLine("</div>");
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Force deduplicate phones</span>");
-        html.AppendLine("<small>When enabled, ContactMesh collapses repeated phone numbers on managed contacts even when old fields used different phone types. Use once to clean legacy duplicates, then turn off.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceDeduplicatePhones\" value=\"true\"");
-        if (options.ForceDeduplicatePhones)
+        private static void AppendAuditLogSection(StringBuilder html, AuditLogOptions options)
         {
-            html.Append(" checked");
+            html.AppendLine("<section id=\"audit\" class=\"band\">");
+            html.AppendLine("<div class=\"band-header\">");
+            html.AppendLine("<h2>Audit log</h2>");
+            html.AppendLine("<span class=\"muted\">ContactMesh:AuditLog</span>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class=\"settings-grid\">");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Write per-run CSV audit logs</span>");
+            html.AppendLine("<small>When enabled, every run writes a detail CSV and a summary CSV to the configured directory. Disabling stops both files but does not affect notifications.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.Enabled\" value=\"true\"");
+            if (options.Enabled)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            AppendField(
+                html,
+                "Audit log directory",
+                "ContactMesh.AuditLog.Directory",
+                options.Directory,
+                "Folder where per-run CSV files are written. Relative paths resolve from the running process's current working directory; absolute paths are used as-is. The directory is created if missing.");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Include no-change rows</span>");
+            html.AppendLine("<small>When enabled, the detail CSV includes one row per target contact that did not change. Useful for full-state audits, but increases file size significantly.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.IncludeNoChange\" value=\"true\"");
+            if (options.IncludeNoChange)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("<label class=\"setting-row switch-row\">");
+            html.AppendLine("<span>Treat dry-run rows as Written</span>");
+            html.AppendLine("<small>When enabled, dry-run detail rows use Status=Written instead of Planned so downstream dashboards count them the same as live writes. Audit CSVs are written for dry-runs regardless of this flag.</small>");
+            html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.IncludeDryRunPlannedAsWrites\" value=\"true\"");
+            if (options.IncludeDryRunPlannedAsWrites)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</label>");
+            html.AppendLine("</div>");
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Force normalize email types</span>");
-        html.AppendLine("<small>When enabled, ContactMesh rewrites the selected email as primary work email so legacy managed contacts no longer show the organization address under Other email. Use once, then turn off.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceNormalizeEmailTypes\" value=\"true\"");
-        if (options.ForceNormalizeEmailTypes)
+        private static void AppendRulesSection(
+            StringBuilder html,
+            SyncRuleOptions rules,
+            IReadOnlyList<string> managedEmailDomains)
         {
-            html.Append(" checked");
+            html.AppendLine("<section id=\"rules\" class=\"band\">");
+            html.AppendLine("<div class=\"band-header\">");
+            html.AppendLine("<h2>Rules</h2>");
+            html.AppendLine("<span class=\"muted\">ContactMesh:Rules</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<div class=\"rules-layout\">");
+            AppendListField(html, "Managed domains", "ContactMesh.ManagedEmailDomains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
+            AppendListField(html, "Main contacts groups", "ContactMesh.Rules.MainContactsGroupEmails", "Optional source groups whose user members, including nested group members when the provider supplies them, become directory contacts instead of every eligible tenant user.", ResolveMainContactsGroups(rules));
+            AppendField(html, "Main contacts label", "ContactMesh.Rules.MainContactsGroupLabel", ResolveDirectoryLabel(rules), "Compatibility label for directory contacts from the main contacts group; prefer group contact containers for new labels.");
+            AppendField(html, "Group contact prefix", "ContactMesh.Rules.GroupContactPrefix", ResolveGroupContactPrefix(rules), "Prefix added to managed group contact display names and group-derived categories; use + by default to distinguish groups from people.");
+            AppendListField(html, "Target users", "ContactMesh.Rules.TargetUsers", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
+            AppendListField(html, "Global user groups", "ContactMesh.Rules.GlobalUserGroups", "Groups whose user members should receive global managed contacts.", rules.GlobalUserGroups);
+            AppendListField(html, "Global external contacts", "ContactMesh.Rules.GlobalExternalContactGroups", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
+            AppendListField(html, "Group contact containers", "ContactMesh.Rules.GroupsToSyncByGroup", "Label containers whose direct group members become managed group-email contacts and display-name labels for their members.", rules.GroupsToSyncByGroup);
+            AppendListField(html, "Exclusion groups", "ContactMesh.Rules.ExclusionGroups", "Users or group members that should not receive managed contacts.", rules.ExclusionGroups);
+            AppendListField(html, "Included OUs", "ContactMesh.Rules.IncludedOrganizationUnits", "Organization unit prefixes allowed to receive managed contacts.", rules.IncludedOrganizationUnits);
+            AppendListField(html, "Excluded OUs", "ContactMesh.Rules.ExcludedOrganizationUnits", "Organization unit prefixes blocked from receiving managed contacts; append =Ignore to reduce expected noise.", rules.ExcludedOrganizationUnits);
+            AppendMappings(html, rules.GroupMappings);
+            html.AppendLine("</div>");
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Force reset labels</span>");
-        html.AppendLine("<small>When enabled, ContactMesh replaces all labels on existing managed contacts instead of reconciling. Use once to clear stale labels accumulated by a previous sync bug, then turn off.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.ForceResetLabels\" value=\"true\"");
-        if (options.ForceResetLabels)
+        private static void AppendProvidersSection(
+            StringBuilder html,
+            GoogleWorkspaceOptions googleWorkspace,
+            Microsoft365Options microsoft365)
         {
-            html.Append(" checked");
+            html.AppendLine("<section id=\"providers\" class=\"band\">");
+            html.AppendLine("<div class=\"band-header\">");
+            html.AppendLine("<h2>Providers</h2>");
+            html.AppendLine("<span class=\"muted\">Credentials hidden</span>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class=\"provider-grid\">");
+
+            html.AppendLine("<section class=\"provider-panel\" aria-labelledby=\"google-heading\">");
+            html.AppendLine("<h3 id=\"google-heading\">Google Workspace</h3>");
+            AppendDetailInput(html, "Service account", "GoogleWorkspace.ServiceAccountFile", "Path to the delegated service-account credential file. Keep the file outside the repository.", googleWorkspace.ServiceAccountFile);
+            AppendDetailInput(html, "Admin user", "GoogleWorkspace.AdminUserEmail", "Workspace admin account used for domain-wide delegated People API access.", googleWorkspace.AdminUserEmail);
+            AppendDetailTextarea(html, "Scopes", "GoogleWorkspace.Scopes", "Google OAuth scopes requested by the delegated token provider.", googleWorkspace.Scopes);
+            html.AppendLine("</section>");
+
+            html.AppendLine("<section class=\"provider-panel\" aria-labelledby=\"microsoft-heading\">");
+            html.AppendLine("<h3 id=\"microsoft-heading\">Microsoft 365</h3>");
+            AppendDetailInput(html, "Tenant ID", "Microsoft365.TenantId", "Microsoft Entra tenant used for Graph client-credentials authentication.", microsoft365.TenantId);
+            AppendDetailInput(html, "Client ID", "Microsoft365.ClientId", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
+            AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret. Web saves encrypt it for this local app/user key ring; re-enter it if the config moves to another machine or service account.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
+            AppendDetailTextarea(html, "Scopes", "Microsoft365.Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", microsoft365.Scopes);
+            AppendGroupTypesPicker(html, microsoft365.GroupTypes);
+            html.AppendLine("</section>");
+
+            html.AppendLine("</div>");
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("</div>");
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendNotificationsSection(StringBuilder html, NotificationOptions options)
-    {
-        html.AppendLine("<section id=\"notifications\" class=\"band\">");
-        html.AppendLine("<div class=\"band-header\">");
-        html.AppendLine("<h2>Notifications</h2>");
-        html.AppendLine("<span class=\"muted\">ContactMesh:Notifications</span>");
-        html.AppendLine("</div>");
-        html.AppendLine("<div class=\"settings-grid\">");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Email notifications</span>");
-        html.AppendLine("<small>When enabled, live sync runs send success or failure mail through the configured provider sender.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.Notifications.Enabled\" value=\"true\"");
-        if (options.Enabled)
+        private static void AppendStatusPill(StringBuilder html, string? value, string label)
         {
-            html.Append(" checked");
+            html.Append("<span class=\"status-pill\"><span>");
+            html.Append(Encode(label));
+            html.Append("</span>");
+            html.Append(Encode(Display(value)));
+            html.AppendLine("</span>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        AppendField(html, "From mailbox", "ContactMesh.Notifications.From", options.From, "Mailbox used as the sender for Graph sendMail; for Microsoft 365 this must be a user Graph can send as.");
-        AppendField(html, "Subject prefix", "ContactMesh.Notifications.SubjectPrefix", options.SubjectPrefix, "Prefix applied to automated run emails and the dashboard test email.");
-        AppendListField(html, "Success recipients", "ContactMesh.Notifications.SuccessTo", "Recipients for successful live sync notifications. The test email uses these plus failure recipients.", options.SuccessTo);
-        AppendListField(html, "Failure recipients", "ContactMesh.Notifications.FailureTo", "Recipients for failed live sync notifications. Failure run emails can include CSV audit attachments.", options.FailureTo);
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Attach CSV on failure</span>");
-        html.AppendLine("<small>When enabled, failure notifications attach the audit summary and detail CSV files up to the configured byte limit.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.Notifications.AttachCsvOnFailure\" value=\"true\"");
-        if (options.AttachCsvOnFailure)
+        private static void AppendField(StringBuilder html, string label, string name, string? value, string description)
         {
-            html.Append(" checked");
+            html.AppendLine("<label class=\"setting-row\">");
+            html.Append("<span>");
+            html.Append(Encode(label));
+            html.AppendLine("</span>");
+            html.Append("<small>");
+            html.Append(Encode(description));
+            html.AppendLine("</small>");
+            html.Append("<input name=\"");
+            html.Append(Encode(name));
+            html.Append("\" value=\"");
+            html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
+            html.AppendLine("\">");
+            html.AppendLine("</label>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        AppendField(
-            html,
-            "Max attachment bytes",
-            "ContactMesh.Notifications.MaxAttachmentBytes",
-            options.MaxAttachmentBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            "Maximum bytes kept per CSV attachment before truncation.");
-        html.AppendLine("<section class=\"rule-group permission-callout\">");
-        html.AppendLine("<h3>Azure permission</h3>");
-        html.AppendLine("<p class=\"description\">For Microsoft 365 test email, the app registration needs Microsoft Graph Application permission Mail.Send with admin consent. Use Application permissions, not Delegated permissions. If your tenant uses an Exchange Application Access Policy, include the From mailbox in the allowed policy scope.</p>");
-        html.AppendLine("</section>");
-        html.AppendLine("<section class=\"rule-group test-email-panel\">");
-        html.AppendLine("<h3>Test email</h3>");
-        html.AppendLine("<p class=\"description\">Sends one test message to all configured success and failure recipients using the current form values. This does not save settings.</p>");
-        html.AppendLine("<button type=\"submit\" formaction=\"/settings/test-email\">Send test email</button>");
-        html.AppendLine("</section>");
-        html.AppendLine("</div>");
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendAuditLogSection(StringBuilder html, AuditLogOptions options)
-    {
-        html.AppendLine("<section id=\"audit\" class=\"band\">");
-        html.AppendLine("<div class=\"band-header\">");
-        html.AppendLine("<h2>Audit log</h2>");
-        html.AppendLine("<span class=\"muted\">ContactMesh:AuditLog</span>");
-        html.AppendLine("</div>");
-        html.AppendLine("<div class=\"settings-grid\">");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Write per-run CSV audit logs</span>");
-        html.AppendLine("<small>When enabled, every run writes a detail CSV and a summary CSV to the configured directory. Disabling stops both files but does not affect notifications.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.Enabled\" value=\"true\"");
-        if (options.Enabled)
+        private static void AppendProviderSelect(StringBuilder html, string? value)
         {
-            html.Append(" checked");
+            var selectedValue = string.IsNullOrWhiteSpace(value) ? "Scaffolded" : value.Trim();
+            var knownProviders = new[] { "Microsoft365", "Google", "Scaffolded" };
+
+            html.AppendLine("<label class=\"setting-row\">");
+            html.AppendLine("<span>Provider</span>");
+            html.AppendLine("<small>Selects which provider host ContactMesh uses for directory, group, and contact reads or writes.</small>");
+            html.AppendLine("<select name=\"ContactMesh.Provider\">");
+            foreach (var provider in knownProviders)
+            {
+                AppendProviderOption(html, provider, selectedValue);
+            }
+
+            if (!knownProviders.Contains(selectedValue, StringComparer.OrdinalIgnoreCase))
+            {
+                AppendProviderOption(html, selectedValue, selectedValue);
+            }
+
+            html.AppendLine("</select>");
+            html.AppendLine("</label>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        AppendField(
-            html,
-            "Audit log directory",
-            "ContactMesh.AuditLog.Directory",
-            options.Directory,
-            "Folder where per-run CSV files are written. Relative paths resolve from the running process's current working directory; absolute paths are used as-is. The directory is created if missing.");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Include no-change rows</span>");
-        html.AppendLine("<small>When enabled, the detail CSV includes one row per target contact that did not change. Useful for full-state audits, but increases file size significantly.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.IncludeNoChange\" value=\"true\"");
-        if (options.IncludeNoChange)
+        private static void AppendProviderOption(StringBuilder html, string provider, string selectedValue)
         {
-            html.Append(" checked");
-        }
-
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("<label class=\"setting-row switch-row\">");
-        html.AppendLine("<span>Treat dry-run rows as Written</span>");
-        html.AppendLine("<small>When enabled, dry-run detail rows use Status=Written instead of Planned so downstream dashboards count them the same as live writes. Audit CSVs are written for dry-runs regardless of this flag.</small>");
-        html.Append("<input type=\"checkbox\" name=\"ContactMesh.AuditLog.IncludeDryRunPlannedAsWrites\" value=\"true\"");
-        if (options.IncludeDryRunPlannedAsWrites)
-        {
-            html.Append(" checked");
-        }
-
-        html.AppendLine(">");
-        html.AppendLine("</label>");
-        html.AppendLine("</div>");
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendRulesSection(
-        StringBuilder html,
-        SyncRuleOptions rules,
-        IReadOnlyList<string> managedEmailDomains)
-    {
-        html.AppendLine("<section id=\"rules\" class=\"band\">");
-        html.AppendLine("<div class=\"band-header\">");
-        html.AppendLine("<h2>Rules</h2>");
-        html.AppendLine("<span class=\"muted\">ContactMesh:Rules</span>");
-        html.AppendLine("</div>");
-
-        html.AppendLine("<div class=\"rules-layout\">");
-        AppendListField(html, "Managed domains", "ContactMesh.ManagedEmailDomains", "Email domains ContactMesh treats as organization-owned when cleaning duplicates, pruning stale contacts, and preferring work addresses.", managedEmailDomains);
-        AppendListField(html, "Main contacts groups", "ContactMesh.Rules.MainContactsGroupEmails", "Optional source groups whose user members, including nested group members when the provider supplies them, become directory contacts instead of every eligible tenant user.", ResolveMainContactsGroups(rules));
-        AppendField(html, "Main contacts label", "ContactMesh.Rules.MainContactsGroupLabel", ResolveDirectoryLabel(rules), "Compatibility label for directory contacts from the main contacts group; prefer group contact containers for new labels.");
-        AppendField(html, "Group contact prefix", "ContactMesh.Rules.GroupContactPrefix", ResolveGroupContactPrefix(rules), "Prefix added to managed group contact display names and group-derived categories; use + by default to distinguish groups from people.");
-        AppendListField(html, "Target users", "ContactMesh.Rules.TargetUsers", "Optional user IDs or email addresses that limit who receives managed contacts; source directory users remain eligible for those targets.", rules.TargetUsers);
-        AppendListField(html, "Global user groups", "ContactMesh.Rules.GlobalUserGroups", "Groups whose user members should receive global managed contacts.", rules.GlobalUserGroups);
-        AppendListField(html, "Global external contacts", "ContactMesh.Rules.GlobalExternalContactGroups", "Shared external contact groups that are copied into eligible targets.", rules.GlobalExternalContactGroups);
-        AppendListField(html, "Group contact containers", "ContactMesh.Rules.GroupsToSyncByGroup", "Label containers whose direct group members become managed group-email contacts and display-name labels for their members.", rules.GroupsToSyncByGroup);
-        AppendListField(html, "Exclusion groups", "ContactMesh.Rules.ExclusionGroups", "Users or group members that should not receive managed contacts.", rules.ExclusionGroups);
-        AppendListField(html, "Included OUs", "ContactMesh.Rules.IncludedOrganizationUnits", "Organization unit prefixes allowed to receive managed contacts.", rules.IncludedOrganizationUnits);
-        AppendListField(html, "Excluded OUs", "ContactMesh.Rules.ExcludedOrganizationUnits", "Organization unit prefixes blocked from receiving managed contacts; append =Ignore to reduce expected noise.", rules.ExcludedOrganizationUnits);
-        AppendMappings(html, rules.GroupMappings);
-        html.AppendLine("</div>");
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendProvidersSection(
-        StringBuilder html,
-        GoogleWorkspaceOptions googleWorkspace,
-        Microsoft365Options microsoft365)
-    {
-        html.AppendLine("<section id=\"providers\" class=\"band\">");
-        html.AppendLine("<div class=\"band-header\">");
-        html.AppendLine("<h2>Providers</h2>");
-        html.AppendLine("<span class=\"muted\">Credentials hidden</span>");
-        html.AppendLine("</div>");
-        html.AppendLine("<div class=\"provider-grid\">");
-
-        html.AppendLine("<section class=\"provider-panel\" aria-labelledby=\"google-heading\">");
-        html.AppendLine("<h3 id=\"google-heading\">Google Workspace</h3>");
-        AppendDetailInput(html, "Service account", "GoogleWorkspace.ServiceAccountFile", "Path to the delegated service-account credential file. Keep the file outside the repository.", googleWorkspace.ServiceAccountFile);
-        AppendDetailInput(html, "Admin user", "GoogleWorkspace.AdminUserEmail", "Workspace admin account used for domain-wide delegated People API access.", googleWorkspace.AdminUserEmail);
-        AppendDetailTextarea(html, "Scopes", "GoogleWorkspace.Scopes", "Google OAuth scopes requested by the delegated token provider.", googleWorkspace.Scopes);
-        html.AppendLine("</section>");
-
-        html.AppendLine("<section class=\"provider-panel\" aria-labelledby=\"microsoft-heading\">");
-        html.AppendLine("<h3 id=\"microsoft-heading\">Microsoft 365</h3>");
-        AppendDetailInput(html, "Tenant ID", "Microsoft365.TenantId", "Microsoft Entra tenant used for Graph client-credentials authentication.", microsoft365.TenantId);
-        AppendDetailInput(html, "Client ID", "Microsoft365.ClientId", "Application registration ID granted Graph permissions for users, groups, memberships, and contacts.", microsoft365.ClientId);
-        AppendDetailInput(html, "Client secret", "Microsoft365.ClientSecret", "Secret value is masked here; leave blank to keep the current secret. Web saves encrypt it for this local app/user key ring; re-enter it if the config moves to another machine or service account.", null, string.IsNullOrWhiteSpace(microsoft365.ClientSecret) ? "Not configured" : "Configured");
-        AppendDetailTextarea(html, "Scopes", "Microsoft365.Scopes", "Graph OAuth scopes requested by the client-credentials token provider.", microsoft365.Scopes);
-        AppendGroupTypesPicker(html, microsoft365.GroupTypes);
-        html.AppendLine("</section>");
-
-        html.AppendLine("</div>");
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendStatusPill(StringBuilder html, string? value, string label)
-    {
-        html.Append("<span class=\"status-pill\"><span>");
-        html.Append(Encode(label));
-        html.Append("</span>");
-        html.Append(Encode(Display(value)));
-        html.AppendLine("</span>");
-    }
-
-    private static void AppendField(StringBuilder html, string label, string name, string? value, string description)
-    {
-        html.AppendLine("<label class=\"setting-row\">");
-        html.Append("<span>");
-        html.Append(Encode(label));
-        html.AppendLine("</span>");
-        html.Append("<small>");
-        html.Append(Encode(description));
-        html.AppendLine("</small>");
-        html.Append("<input name=\"");
-        html.Append(Encode(name));
-        html.Append("\" value=\"");
-        html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
-        html.AppendLine("\">");
-        html.AppendLine("</label>");
-    }
-
-    private static void AppendProviderSelect(StringBuilder html, string? value)
-    {
-        var selectedValue = string.IsNullOrWhiteSpace(value) ? "Scaffolded" : value.Trim();
-        var knownProviders = new[] { "Microsoft365", "Google", "Scaffolded" };
-
-        html.AppendLine("<label class=\"setting-row\">");
-        html.AppendLine("<span>Provider</span>");
-        html.AppendLine("<small>Selects which provider host ContactMesh uses for directory, group, and contact reads or writes.</small>");
-        html.AppendLine("<select name=\"ContactMesh.Provider\">");
-        foreach (var provider in knownProviders)
-        {
-            AppendProviderOption(html, provider, selectedValue);
-        }
-
-        if (!knownProviders.Contains(selectedValue, StringComparer.OrdinalIgnoreCase))
-        {
-            AppendProviderOption(html, selectedValue, selectedValue);
-        }
-
-        html.AppendLine("</select>");
-        html.AppendLine("</label>");
-    }
-
-    private static void AppendProviderOption(StringBuilder html, string provider, string selectedValue)
-    {
-        html.Append("<option value=\"");
-        html.Append(Encode(provider));
-        html.Append("\"");
-        if (string.Equals(provider, selectedValue, StringComparison.OrdinalIgnoreCase))
-        {
-            html.Append(" selected");
-        }
-
-        html.Append(">");
-        html.Append(Encode(provider));
-        html.AppendLine("</option>");
-    }
-
-    private static void AppendReadonlyField(StringBuilder html, string label, string? value, string description)
-    {
-        html.AppendLine("<label class=\"setting-row\">");
-        html.Append("<span>");
-        html.Append(Encode(label));
-        html.AppendLine("</span>");
-        html.Append("<small>");
-        html.Append(Encode(description));
-        html.AppendLine("</small>");
-        html.Append("<input value=\"");
-        html.Append(Encode(Display(value)));
-        html.AppendLine("\" readonly>");
-        html.AppendLine("</label>");
-    }
-
-    private static void AppendListField(
-        StringBuilder html,
-        string title,
-        string name,
-        string description,
-        IReadOnlyList<string> values)
-    {
-        html.AppendLine("<section class=\"rule-group\">");
-        html.Append("<h3>");
-        html.Append(Encode(title));
-        html.AppendLine("</h3>");
-        html.Append("<p class=\"description\">");
-        html.Append(Encode(description));
-        html.AppendLine("</p>");
-        AppendTextarea(html, name, values);
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendMappings(StringBuilder html, IReadOnlyList<GroupMapping> mappings)
-    {
-        html.AppendLine("<section class=\"rule-group mappings\">");
-        html.AppendLine("<h3>Group mappings</h3>");
-        html.AppendLine("<p class=\"description\">Merge contacts from one source group into another target group label.</p>");
-        html.Append("<textarea name=\"ContactMesh.Rules.GroupMappings\" rows=\"");
-        html.Append(Math.Max(3, mappings.Count));
-        html.AppendLine("\">");
-        foreach (var mapping in mappings)
-        {
-            html.Append(Encode(mapping.From));
-            html.Append(" -> ");
-            html.AppendLine(Encode(mapping.To));
-        }
-
-        html.AppendLine("</textarea>");
-        html.AppendLine("</section>");
-    }
-
-    private static void AppendDetailInput(
-        StringBuilder html,
-        string label,
-        string name,
-        string description,
-        string? value,
-        string? placeholder = null)
-    {
-        html.AppendLine("<div class=\"detail-row\">");
-        html.AppendLine("<div>");
-        html.Append("<span>");
-        html.Append(Encode(label));
-        html.AppendLine("</span>");
-        html.Append("<small>");
-        html.Append(Encode(description));
-        html.AppendLine("</small>");
-        html.AppendLine("</div>");
-        html.Append("<input name=\"");
-        html.Append(Encode(name));
-        html.Append("\" value=\"");
-        html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
-        html.Append("\"");
-        if (!string.IsNullOrWhiteSpace(placeholder))
-        {
-            html.Append(" placeholder=\"");
-            html.Append(Encode(placeholder));
+            html.Append("<option value=\"");
+            html.Append(Encode(provider));
             html.Append("\"");
+            if (string.Equals(provider, selectedValue, StringComparison.OrdinalIgnoreCase))
+            {
+                html.Append(" selected");
+            }
+
+            html.Append(">");
+            html.Append(Encode(provider));
+            html.AppendLine("</option>");
         }
 
-        html.AppendLine(">");
-        html.AppendLine("</div>");
-    }
-
-    private static void AppendDetailTextarea(
-        StringBuilder html,
-        string label,
-        string name,
-        string description,
-        IReadOnlyList<string> values)
-    {
-        html.AppendLine("<div class=\"detail-row detail-textarea\">");
-        html.AppendLine("<div>");
-        html.Append("<span>");
-        html.Append(Encode(label));
-        html.AppendLine("</span>");
-        html.Append("<small>");
-        html.Append(Encode(description));
-        html.AppendLine("</small>");
-        html.AppendLine("</div>");
-        AppendTextarea(html, name, values);
-        html.AppendLine("</div>");
-    }
-
-    private static void AppendGroupTypesPicker(StringBuilder html, IReadOnlyList<string> values)
-    {
-        var selected = new HashSet<string>(values, StringComparer.OrdinalIgnoreCase);
-        var knownTypes = new[] { "Microsoft365", "MailEnabledSecurity", "Distribution", "Security" };
-
-        html.AppendLine("<div class=\"detail-row detail-multiselect\">");
-        html.AppendLine("<div>");
-        html.AppendLine("<span>Group types</span>");
-        html.AppendLine("<small>Limits which group types are loaded from Graph. Leave all unchecked to load all types.</small>");
-        html.AppendLine("</div>");
-        html.AppendLine("<details class=\"checkbox-dropdown\">");
-        html.Append("<summary>");
-        html.Append(Encode(GroupTypesSummary(values)));
-        html.AppendLine("</summary>");
-        html.AppendLine("<div class=\"checkbox-menu\">");
-        foreach (var groupType in knownTypes)
+        private static void AppendReadonlyField(StringBuilder html, string label, string? value, string description)
         {
-            AppendGroupTypeOption(html, groupType, selected.Contains(groupType));
+            html.AppendLine("<label class=\"setting-row\">");
+            html.Append("<span>");
+            html.Append(Encode(label));
+            html.AppendLine("</span>");
+            html.Append("<small>");
+            html.Append(Encode(description));
+            html.AppendLine("</small>");
+            html.Append("<input value=\"");
+            html.Append(Encode(Display(value)));
+            html.AppendLine("\" readonly>");
+            html.AppendLine("</label>");
         }
 
-        foreach (var customValue in values.Where(value => !knownTypes.Contains(value, StringComparer.OrdinalIgnoreCase)))
+        private static void AppendListField(
+            StringBuilder html,
+            string title,
+            string name,
+            string description,
+            IReadOnlyList<string> values)
         {
-            AppendGroupTypeOption(html, customValue, true);
+            html.AppendLine("<section class=\"rule-group\">");
+            html.Append("<h3>");
+            html.Append(Encode(title));
+            html.AppendLine("</h3>");
+            html.Append("<p class=\"description\">");
+            html.Append(Encode(description));
+            html.AppendLine("</p>");
+            AppendTextarea(html, name, values);
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine("</div>");
-        html.AppendLine("</details>");
-        html.AppendLine("</div>");
-    }
-
-    private static void AppendGroupTypeOption(StringBuilder html, string value, bool selected)
-    {
-        html.AppendLine("<label class=\"checkbox-option\">");
-        html.Append("<input type=\"checkbox\" name=\"Microsoft365.GroupTypes\" value=\"");
-        html.Append(Encode(value));
-        html.Append("\"");
-        if (selected)
+        private static void AppendMappings(StringBuilder html, IReadOnlyList<GroupMapping> mappings)
         {
-            html.Append(" checked");
+            html.AppendLine("<section class=\"rule-group mappings\">");
+            html.AppendLine("<h3>Group mappings</h3>");
+            html.AppendLine("<p class=\"description\">Merge contacts from one source group into another target group label.</p>");
+            html.Append("<textarea name=\"ContactMesh.Rules.GroupMappings\" rows=\"");
+            html.Append(Math.Max(3, mappings.Count));
+            html.AppendLine("\">");
+            foreach (var mapping in mappings)
+            {
+                html.Append(Encode(mapping.From));
+                html.Append(" -> ");
+                html.AppendLine(Encode(mapping.To));
+            }
+
+            html.AppendLine("</textarea>");
+            html.AppendLine("</section>");
         }
 
-        html.AppendLine(">");
-        html.Append("<span>");
-        html.Append(Encode(value));
-        html.AppendLine("</span>");
-        html.AppendLine("</label>");
-    }
-
-    private static string GroupTypesSummary(IReadOnlyList<string> values)
-    {
-        return values.Count == 0
-            ? "All group types"
-            : string.Join(", ", values);
-    }
-
-    private static void AppendTextarea(StringBuilder html, string name, IReadOnlyList<string> values)
-    {
-        html.Append("<textarea name=\"");
-        html.Append(Encode(name));
-        html.Append("\" rows=\"");
-        html.Append(Math.Max(3, values.Count));
-        html.AppendLine("\">");
-        foreach (var value in values)
+        private static void AppendDetailInput(
+            StringBuilder html,
+            string label,
+            string name,
+            string description,
+            string? value,
+            string? placeholder = null)
         {
-            html.AppendLine(Encode(value));
+            html.AppendLine("<div class=\"detail-row\">");
+            html.AppendLine("<div>");
+            html.Append("<span>");
+            html.Append(Encode(label));
+            html.AppendLine("</span>");
+            html.Append("<small>");
+            html.Append(Encode(description));
+            html.AppendLine("</small>");
+            html.AppendLine("</div>");
+            html.Append("<input name=\"");
+            html.Append(Encode(name));
+            html.Append("\" value=\"");
+            html.Append(string.IsNullOrWhiteSpace(value) ? string.Empty : Encode(value));
+            html.Append("\"");
+            if (!string.IsNullOrWhiteSpace(placeholder))
+            {
+                html.Append(" placeholder=\"");
+                html.Append(Encode(placeholder));
+                html.Append("\"");
+            }
+
+            html.AppendLine(">");
+            html.AppendLine("</div>");
         }
 
-        html.AppendLine("</textarea>");
-    }
-
-    private static string Display(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
-    }
-
-    private static string ResolveDirectoryLabel(SyncRuleOptions rules)
-    {
-        if (!string.IsNullOrWhiteSpace(rules.MainContactsGroupLabel))
+        private static void AppendDetailTextarea(
+            StringBuilder html,
+            string label,
+            string name,
+            string description,
+            IReadOnlyList<string> values)
         {
-            return rules.MainContactsGroupLabel;
+            html.AppendLine("<div class=\"detail-row detail-textarea\">");
+            html.AppendLine("<div>");
+            html.Append("<span>");
+            html.Append(Encode(label));
+            html.AppendLine("</span>");
+            html.Append("<small>");
+            html.Append(Encode(description));
+            html.AppendLine("</small>");
+            html.AppendLine("</div>");
+            AppendTextarea(html, name, values);
+            html.AppendLine("</div>");
         }
 
-        return ContactSyncOrchestrator.DirectoryLabel;
+        private static void AppendGroupTypesPicker(StringBuilder html, IReadOnlyList<string> values)
+        {
+            var selected = new HashSet<string>(values, StringComparer.OrdinalIgnoreCase);
+            var knownTypes = new[] { "Microsoft365", "MailEnabledSecurity", "Distribution", "Security" };
+
+            html.AppendLine("<div class=\"detail-row detail-multiselect\">");
+            html.AppendLine("<div>");
+            html.AppendLine("<span>Group types</span>");
+            html.AppendLine("<small>Limits which group types are loaded from Graph. Leave all unchecked to load all types.</small>");
+            html.AppendLine("</div>");
+            html.AppendLine("<details class=\"checkbox-dropdown\">");
+            html.Append("<summary>");
+            html.Append(Encode(GroupTypesSummary(values)));
+            html.AppendLine("</summary>");
+            html.AppendLine("<div class=\"checkbox-menu\">");
+            foreach (var groupType in knownTypes)
+            {
+                AppendGroupTypeOption(html, groupType, selected.Contains(groupType));
+            }
+
+            foreach (var customValue in values.Where(value => !knownTypes.Contains(value, StringComparer.OrdinalIgnoreCase)))
+            {
+                AppendGroupTypeOption(html, customValue, true);
+            }
+
+            html.AppendLine("</div>");
+            html.AppendLine("</details>");
+            html.AppendLine("</div>");
+        }
+
+        private static void AppendGroupTypeOption(StringBuilder html, string value, bool selected)
+        {
+            html.AppendLine("<label class=\"checkbox-option\">");
+            html.Append("<input type=\"checkbox\" name=\"Microsoft365.GroupTypes\" value=\"");
+            html.Append(Encode(value));
+            html.Append("\"");
+            if (selected)
+            {
+                html.Append(" checked");
+            }
+
+            html.AppendLine(">");
+            html.Append("<span>");
+            html.Append(Encode(value));
+            html.AppendLine("</span>");
+            html.AppendLine("</label>");
+        }
+
+        private static string GroupTypesSummary(IReadOnlyList<string> values)
+        {
+            return values.Count == 0
+                ? "All group types"
+                : string.Join(", ", values);
+        }
+
+        private static void AppendTextarea(StringBuilder html, string name, IReadOnlyList<string> values)
+        {
+            html.Append("<textarea name=\"");
+            html.Append(Encode(name));
+            html.Append("\" rows=\"");
+            html.Append(Math.Max(3, values.Count));
+            html.AppendLine("\">");
+            foreach (var value in values)
+            {
+                html.AppendLine(Encode(value));
+            }
+
+            html.AppendLine("</textarea>");
+        }
+
+        private static string Display(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+        }
+
+        private static string ResolveDirectoryLabel(SyncRuleOptions rules)
+        {
+            if (!string.IsNullOrWhiteSpace(rules.MainContactsGroupLabel))
+            {
+                return rules.MainContactsGroupLabel;
+            }
+
+            return ContactSyncOrchestrator.DirectoryLabel;
+        }
+
+        private static string ResolveGroupContactPrefix(SyncRuleOptions rules)
+        {
+            return string.IsNullOrWhiteSpace(rules.GroupContactPrefix)
+                ? GroupContactFactory.DefaultGroupContactPrefix
+                : rules.GroupContactPrefix;
+        }
+
+        private static IReadOnlyList<string> ResolveMainContactsGroups(SyncRuleOptions rules)
+        {
+            return rules.MainContactsGroupEmails
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static string Encode(string value)
+        {
+            return HtmlEncoder.Default.Encode(value);
+        }
+
+        private const string Styles = """
+    :root {
+      color-scheme: light;
+      --ink: #20242a;
+      --muted: #667085;
+      --line: #d8dee7;
+      --surface: #f6f7f9;
+      --panel: #ffffff;
+      --teal: #0f766e;
+      --teal-soft: #d8f3ef;
+      --amber: #b7791f;
+      --amber-soft: #fff3d6;
+      --indigo: #3f4c8f;
     }
 
-    private static string ResolveGroupContactPrefix(SyncRuleOptions rules)
-    {
-        return string.IsNullOrWhiteSpace(rules.GroupContactPrefix)
-            ? GroupContactFactory.DefaultGroupContactPrefix
-            : rules.GroupContactPrefix;
+    * {
+      box-sizing: border-box;
     }
 
-    private static IReadOnlyList<string> ResolveMainContactsGroups(SyncRuleOptions rules)
-    {
-        return rules.MainContactsGroupEmails
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--surface);
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    private static string Encode(string value)
-    {
-        return HtmlEncoder.Default.Encode(value);
+    .page-shell {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      min-height: 100vh;
     }
 
-    private const string Styles = """
-:root {
-  color-scheme: light;
-  --ink: #20242a;
-  --muted: #667085;
-  --line: #d8dee7;
-  --surface: #f6f7f9;
-  --panel: #ffffff;
-  --teal: #0f766e;
-  --teal-soft: #d8f3ef;
-  --amber: #b7791f;
-  --amber-soft: #fff3d6;
-  --indigo: #3f4c8f;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  color: var(--ink);
-  background: var(--surface);
-  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.page-shell {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  min-height: 100vh;
-}
-
-.sidebar {
-  background: #18212c;
-  color: #f9fafb;
-  padding: 24px 18px;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 28px;
-  border: 1px solid #5eead4;
-  color: #ccfbf1;
-  font-weight: 700;
-}
-
-nav {
-  display: grid;
-  gap: 8px;
-}
-
-nav a {
-  color: #dbeafe;
-  padding: 10px 12px;
-  text-decoration: none;
-  border-left: 3px solid transparent;
-}
-
-nav a:hover,
-nav a:focus-visible {
-  border-left-color: #fbbf24;
-  background: #243142;
-  outline: none;
-}
-
-.workspace {
-  width: min(1160px, 100%);
-  padding: 28px clamp(18px, 4vw, 44px) 48px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 26px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  color: var(--teal);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
-
-h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.04;
-  letter-spacing: 0;
-}
-
-h2 {
-  font-size: 1.18rem;
-  letter-spacing: 0;
-}
-
-h3 {
-  font-size: 0.95rem;
-  letter-spacing: 0;
-}
-
-.status-strip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.status-pill,
-.chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  padding: 6px 10px;
-  font-size: 0.88rem;
-  white-space: nowrap;
-}
-
-.status-pill span {
-  margin-right: 8px;
-  color: var(--muted);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-}
-
-.band {
-  padding: 24px 0;
-  border-top: 1px solid var(--line);
-}
-
-.notice {
-  margin-bottom: 18px;
-  border: 1px solid #9adfd5;
-  background: var(--teal-soft);
-  color: #0f4f49;
-  padding: 12px 14px;
-}
-
-.band-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 16px;
-}
-
-.muted,
-.empty {
-  color: var(--muted);
-}
-
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.provider-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
-  gap: 14px;
-}
-
-.setting-row,
-.provider-panel,
-.rule-group {
-  border: 1px solid var(--line);
-  background: var(--panel);
-}
-
-.setting-row {
-  display: grid;
-  gap: 8px;
-  padding: 14px;
-  min-height: 86px;
-}
-
-.setting-row span,
-.detail-row span {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.setting-row small,
-.detail-row small,
-.description {
-  display: block;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  min-width: 0;
-  border: 1px solid var(--line);
-  color: var(--ink);
-  background: #ffffff;
-  font: inherit;
-  padding: 9px 10px;
-}
-
-textarea {
-  min-height: 104px;
-  resize: vertical;
-  line-height: 1.35;
-}
-
-input[readonly] {
-  color: var(--muted);
-  background: #f9fafb;
-}
-
-.switch-row {
-  align-content: start;
-}
-
-.switch-row input {
-  width: 42px;
-  height: 24px;
-  accent-color: var(--teal);
-}
-
-.rules-layout {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.rule-group {
-  padding: 14px;
-  min-height: 96px;
-}
-
-.rule-group h3,
-.provider-panel h3 {
-  margin-bottom: 8px;
-}
-
-.rule-group .description {
-  margin-bottom: 12px;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  background: var(--teal-soft);
-  border-color: #9adfd5;
-  color: #0f4f49;
-}
-
-.mappings {
-  grid-column: 1 / -1;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 10px 8px;
-  border-top: 1px solid var(--line);
-  text-align: left;
-}
-
-th {
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.provider-panel {
-  padding: 16px;
-}
-
-.detail-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(190px, 58%);
-  gap: 16px;
-  align-items: start;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-}
-
-.detail-row input,
-.detail-row select,
-.detail-row textarea,
-.checkbox-dropdown {
-  min-width: 0;
-  max-width: none;
-}
-
-.detail-textarea {
-  align-items: start;
-}
-
-.detail-multiselect {
-  grid-template-columns: 1fr;
-  gap: 10px;
-  align-items: start;
-}
-
-.checkbox-dropdown {
-  position: relative;
-  width: 100%;
-}
-
-.checkbox-dropdown summary {
-  min-height: 40px;
-  border: 1px solid var(--line);
-  background: #ffffff;
-  padding: 9px 34px 9px 10px;
-  line-height: 1.3;
-  list-style: none;
-  cursor: pointer;
-}
-
-.checkbox-dropdown summary::-webkit-details-marker {
-  display: none;
-}
-
-.checkbox-dropdown summary::after {
-  content: "";
-  position: absolute;
-  top: 17px;
-  right: 12px;
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg);
-}
-
-.checkbox-dropdown[open] summary::after {
-  top: 20px;
-  transform: rotate(225deg);
-}
-
-.checkbox-menu {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 10px;
-  margin-top: 6px;
-  border: 1px solid var(--line);
-  background: #ffffff;
-  padding: 10px;
-}
-
-.checkbox-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px;
-  min-width: 0;
-}
-
-.checkbox-option:hover,
-.checkbox-option:focus-within {
-  background: #f9fafb;
-}
-
-.checkbox-option input {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--teal);
-}
-
-.checkbox-option span {
-  color: var(--ink);
-  font-size: 0.9rem;
-  overflow-wrap: anywhere;
-}
-
-.save-bar {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  justify-content: flex-end;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-}
-
-button {
-  border: 1px solid #0f4f49;
-  background: var(--teal);
-  color: #ffffff;
-  padding: 10px 16px;
-  font: inherit;
-  font-weight: 700;
-}
-
-@media (max-width: 820px) {
-  .page-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-  }
-
-  .brand-mark {
-    margin-bottom: 0;
-  }
-
-  nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .toolbar,
-  .band-header {
-    align-items: start;
-    flex-direction: column;
-  }
-
-  .status-strip {
-    justify-content: flex-start;
-  }
-
-  .settings-grid,
-  .provider-grid,
-  .rules-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-row {
-    grid-template-columns: 1fr;
-  }
-}
-""";
+    .sidebar {
+      background: #18212c;
+      color: #f9fafb;
+      padding: 24px 18px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 28px;
+      border: 1px solid #5eead4;
+      color: #ccfbf1;
+      font-weight: 700;
+    }
+
+    nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    nav a {
+      color: #dbeafe;
+      padding: 10px 12px;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+    }
+
+    nav a:hover,
+    nav a:focus-visible {
+      border-left-color: #fbbf24;
+      background: #243142;
+      outline: none;
+    }
+
+    .workspace {
+      width: min(1160px, 100%);
+      padding: 28px clamp(18px, 4vw, 44px) 48px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 26px;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--teal);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 1.18rem;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 0.95rem;
+      letter-spacing: 0;
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .status-pill,
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 6px 10px;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .status-pill span {
+      margin-right: 8px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .band {
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .notice {
+      margin-bottom: 18px;
+      border: 1px solid #9adfd5;
+      background: var(--teal-soft);
+      color: #0f4f49;
+      padding: 12px 14px;
+    }
+
+    .band-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .muted,
+    .empty {
+      color: var(--muted);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+      gap: 14px;
+    }
+
+    .setting-row,
+    .provider-panel,
+    .rule-group {
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .setting-row {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      min-height: 86px;
+    }
+
+    .setting-row span,
+    .detail-row span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .setting-row small,
+    .detail-row small,
+    .description {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: #ffffff;
+      font: inherit;
+      padding: 9px 10px;
+    }
+
+    textarea {
+      min-height: 104px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    input[readonly] {
+      color: var(--muted);
+      background: #f9fafb;
+    }
+
+    .switch-row {
+      align-content: start;
+    }
+
+    .switch-row input {
+      width: 42px;
+      height: 24px;
+      accent-color: var(--teal);
+    }
+
+    .rules-layout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .rule-group {
+      padding: 14px;
+      min-height: 96px;
+    }
+
+    .rule-group h3,
+    .provider-panel h3 {
+      margin-bottom: 8px;
+    }
+
+    .rule-group .description {
+      margin-bottom: 12px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: var(--teal-soft);
+      border-color: #9adfd5;
+      color: #0f4f49;
+    }
+
+    .mappings {
+      grid-column: 1 / -1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      border-top: 1px solid var(--line);
+      text-align: left;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .provider-panel {
+      padding: 16px;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(190px, 58%);
+      gap: 16px;
+      align-items: start;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .detail-row input,
+    .detail-row select,
+    .detail-row textarea,
+    .checkbox-dropdown {
+      min-width: 0;
+      max-width: none;
+    }
+
+    .detail-textarea {
+      align-items: start;
+    }
+
+    .detail-multiselect {
+      grid-template-columns: 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .checkbox-dropdown {
+      position: relative;
+      width: 100%;
+    }
+
+    .checkbox-dropdown summary {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      padding: 9px 34px 9px 10px;
+      line-height: 1.3;
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .checkbox-dropdown summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .checkbox-dropdown summary::after {
+      content: "";
+      position: absolute;
+      top: 17px;
+      right: 12px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg);
+    }
+
+    .checkbox-dropdown[open] summary::after {
+      top: 20px;
+      transform: rotate(225deg);
+    }
+
+    .checkbox-menu {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px 10px;
+      margin-top: 6px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      padding: 10px;
+    }
+
+    .checkbox-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      min-width: 0;
+    }
+
+    .checkbox-option:hover,
+    .checkbox-option:focus-within {
+      background: #f9fafb;
+    }
+
+    .checkbox-option input {
+      flex: 0 0 auto;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--teal);
+    }
+
+    .checkbox-option span {
+      color: var(--ink);
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+    }
+
+    .save-bar {
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      justify-content: flex-end;
+      padding: 16px 0 0;
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    button {
+      border: 1px solid #0f4f49;
+      background: var(--teal);
+      color: #ffffff;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    @media (max-width: 820px) {
+      .page-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+      }
+
+      .brand-mark {
+        margin-bottom: 0;
+      }
+
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .toolbar,
+      .band-header {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .status-strip {
+        justify-content: flex-start;
+      }
+
+      .settings-grid,
+      .provider-grid,
+      .rules-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    """;
+    }
 }

@@ -1,24 +1,29 @@
-namespace ContactMesh.Core.Audit;
+// File: RunAuditContext.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record RunAuditContext
+namespace ContactMesh.Core.Audit
 {
-    public required string Provider { get; init; }
-    public required string RunId { get; init; }
-    public required DateTimeOffset StartedAt { get; init; }
-    public DateTimeOffset CompletedAt { get; init; }
-    public bool DryRun { get; init; }
-    public string? ConfigPath { get; init; }
-    public string? HostKind { get; init; }
-    public Exception? Failure { get; init; }
-
-    public static string NewRunId(DateTimeOffset startedAt)
+    public sealed record RunAuditContext
     {
-        return $"{startedAt.UtcDateTime:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}".Substring(0, 24);
-    }
-}
+        public required string Provider { get; init; }
+        public required string RunId { get; init; }
+        public required DateTimeOffset StartedAt { get; init; }
+        public DateTimeOffset CompletedAt { get; init; }
+        public bool DryRun { get; init; }
+        public string? ConfigPath { get; init; }
+        public string? HostKind { get; init; }
+        public Exception? Failure { get; init; }
 
-public sealed record RunAuditArtifacts(
-    string DetailCsvPath,
-    string SummaryCsvPath,
-    long DetailCsvBytes,
-    long SummaryCsvBytes);
+        public static string NewRunId(DateTimeOffset startedAt)
+        {
+            return $"{startedAt.UtcDateTime:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}".Substring(0, 24);
+        }
+    }
+
+    public sealed record RunAuditArtifacts(
+        string DetailCsvPath,
+        string SummaryCsvPath,
+        long DetailCsvBytes,
+        long SummaryCsvBytes);
+}

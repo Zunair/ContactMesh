@@ -1,16 +1,21 @@
-namespace ContactMesh.Core.Models;
+// File: SyncRule.cs
+// Author: Zunair
+// Producer: Copilot
 
-public sealed record SyncRule
+namespace ContactMesh.Core.Models
 {
-    public required string Name { get; init; }
-    public SyncRuleKind Kind { get; init; }
-    public IReadOnlySet<string> GroupIds { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    public bool Enabled { get; init; } = true;
-}
+    public sealed record SyncRule
+    {
+        public required string Name { get; init; }
+        public SyncRuleKind Kind { get; init; }
+        public IReadOnlySet<string> GroupIds { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public bool Enabled { get; init; } = true;
+    }
 
-public enum SyncRuleKind
-{
-    GlobalContact,
-    Exclusion,
-    GroupVisibility
+    public enum SyncRuleKind
+    {
+        GlobalContact,
+        Exclusion,
+        GroupVisibility
+    }
 }

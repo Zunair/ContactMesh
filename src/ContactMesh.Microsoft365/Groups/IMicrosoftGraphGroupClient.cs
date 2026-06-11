@@ -1,9 +1,14 @@
-namespace ContactMesh.Microsoft365.Groups;
+// File: IMicrosoftGraphGroupClient.cs
+// Author: Zunair
+// Producer: Copilot
 
-public interface IMicrosoftGraphGroupClient
+namespace ContactMesh.Microsoft365.Groups
 {
-    Task<IReadOnlyList<MicrosoftGraphGroup>> ListGroupsAsync(CancellationToken cancellationToken);
-    Task<IReadOnlyList<MicrosoftGraphGroupMember>> ListGroupMembersAsync(
-        string groupId,
-        CancellationToken cancellationToken);
+    public interface IMicrosoftGraphGroupClient
+    {
+        Task<IReadOnlyList<MicrosoftGraphGroup>> ListGroupsAsync(CancellationToken cancellationToken);
+        Task<IReadOnlyList<MicrosoftGraphGroupMember>> ListGroupMembersAsync(
+            string groupId,
+            CancellationToken cancellationToken);
+    }
 }
