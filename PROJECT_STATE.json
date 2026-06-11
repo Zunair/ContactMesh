@@ -1,7 +1,7 @@
 {
   "v": 1,
   "repo": "ContactMesh",
-  "updated": "2026-06-10",
+  "updated": "2026-06-11",
   "head": "58a6acd",
   "rule": "ContactMesh.Core stays provider-neutral; no Google/Microsoft/Graph/Workspace references.",
   "updatePolicy": "Update this file after every completed functional/docs/test slice before final response or commit.",
@@ -12,7 +12,7 @@
         "commit": null,
         "build": "pass",
         "tests": "287 pass, 1 skipped",
-        "warnings": "NU1900 package vulnerability feed unavailable in sandbox"
+        "warnings": "none"
       }
   },
   "bootstrap": {
@@ -123,7 +123,9 @@
     { "id": "readme-publish-refresh", "commit": null, "state": "done-local", "note": "Updated README before GitHub publish to describe the current Web settings editor, encrypted Microsoft365 ClientSecret save/decrypt behavior, Data Protection account scope, audit logs, notifications, current config shape, provider maturity, and recommended Microsoft Graph application permissions for app registration." },
     { "id": "stylecop-headers-block-namespaces", "commit": null, "state": "done-local", "note": "Added stable StyleCop.Analyzers package wiring with stylecop.json, inserted Copilot & Zunair file headers across all tracked src/tests C# files, converted file-scoped namespaces to block-scoped namespaces, wrapped top-level entrypoints in explicit Program classes, and suppressed unrelated legacy StyleCop defaults. Build passed with 0 warnings; tests passed 287, skipped 1." },
     { "id": "bin-obj-ignore-instruction", "commit": null, "state": "done-local", "note": "Updated AGENTS.md to treat bin/obj as ignored build output and stop requiring routine cleanup after verification unless a task specifically needs artifact removal." },
-    { "id": "header-author-producer", "commit": null, "state": "done-local", "note": "Changed tracked src/tests C# file headers and StyleCop template to use Author: Zunair and Producer: Copilot instead of a combined author line. Build passed; only NU1900 package vulnerability feed warnings appeared because NuGet was unreachable." }
+    { "id": "header-author-producer", "commit": null, "state": "done-local", "note": "Changed tracked src/tests C# file headers and StyleCop template to use Author: Zunair and Producer: Copilot instead of a combined author line. Build passed; only NU1900 package vulnerability feed warnings appeared because NuGet was unreachable." },
+    { "id": "net10-project-conversion", "commit": null, "state": "done-local", "note": "Converted all src/tests projects and Core publish profile to net10.0, updated README runtime wording to .NET 10, and verified build passed with 0 warnings and tests passed 287, skipped 1." },
+    { "id": "readme-deployment-guidance", "commit": null, "state": "done-local", "note": "Added README deployment guidance recommending published Worker plus Windows Task Scheduler for new Microsoft 365 orgs, with service-account, config, audit-log, Web secret-encryption, CLI diagnostics, and Docker-roadmap notes. Build passed with 0 warnings; tests passed 287, skipped 1." }
   ],
   "pending": [
     { "id": "docker-hosted-worker", "state": "pending", "note": "Sample compose exists; production Docker/hosted worker mode not implemented." }

@@ -4,7 +4,7 @@ ContactMesh syncs directory users, groups, and shared contacts into each user's 
 
 ## Status
 
-ContactMesh is now a provider-neutral .NET 8 solution with runnable CLI, Worker, and Web hosts.
+ContactMesh is now a provider-neutral .NET 10 solution with runnable CLI, Worker, and Web hosts.
 
 - `ContactMesh.Core` owns provider-neutral models, rules, merge logic, sync planning, execution, and dry-run reporting.
 - `ContactMesh.Google` includes delegated Google Workspace auth plus People API contact and contact-group label clients.
@@ -45,7 +45,7 @@ tools/migration/               Legacy Google code retained for migration
 
 ## Build
 
-Prerequisite: install the .NET 8 SDK.
+Prerequisite: install the .NET 10 SDK.
 
 ```powershell
 dotnet build ContactMesh.sln -m:1
@@ -174,6 +174,48 @@ dotnet run --no-build --project .\src\ContactMesh.Web\ContactMesh.Web.csproj -- 
 ```
 
 Open `http://localhost:5050/` or `http://localhost:5050/settings`. The Web editor saves the selected JSON config file and preserves masked secrets; Microsoft 365 client secrets are encrypted on save.
+
+## Recommended Deployment
+
+For a new Microsoft 365 organization, deploy the published Worker as the scheduled production entrypoint. The Worker is intentionally boring: it runs one sync pass, writes the same dry-run/applied report as the CLI, and exits. That makes it a good fit for Windows Task Scheduler, job history, audit CSVs, and notification emails.
+
+Recommended host layout:
+
+- Install the .NET 10 runtime on the server, or publish the Worker as self-contained if you do not want to manage a shared runtime.
+- Create a dedicated Windows or domain service account for ContactMesh.
+- Store the published app under a locked-down app folder such as `C:\ContactMesh\app`.
+- Store environment-specific config outside the app folder, such as `C:\ContactMesh\config\appsettings.production.json`.
+- Store audit logs in a writable data folder such as `C:\ContactMesh\audit-logs`.
+- Grant the service account read/execute access to the app folder, read access to config, and write access to audit/log folders.
+
+Publish the Worker for a framework-dependent deployment:
+
+```powershell
+dotnet publish .\src\ContactMesh.Worker\ContactMesh.Worker.csproj -c Release -o C:\ContactMesh\app
+```
+
+Then create a scheduled task that runs:
+
+```text
+Program/script: C:\ContactMesh\app\ContactMesh.Worker.exe
+Arguments:      C:\ContactMesh\config\appsettings.production.json
+Start in:       C:\ContactMesh\app
+```
+
+Use the Web host as an admin-only settings editor, preferably run under the same service account that will run the scheduled task. This matters when saving encrypted Microsoft 365 client secrets: `cmenc:v1:` values are tied to the local ASP.NET Core Data Protection key ring for that user/machine. If the Web editor runs as a different account, either re-enter the secret under the service account, restore the same key ring, or provide the secret through an environment variable or deployment secret store instead of encrypted JSON.
+
+Use the CLI for smoke tests, diagnostics, and focused commands such as `m365-contact-email-slot`; do not make it the default scheduled production entrypoint for a new deployment when the Worker is available.
+
+First-run checklist:
+
+1. Configure Microsoft 365 app permissions and grant admin consent.
+2. Start with `ContactMesh:DryRun` set to `true`.
+3. Scope the first runs with `TargetUsers` or `GlobalUserGroups`.
+4. Enable audit logs and, for live runs, notification emails.
+5. Review the dry-run report and CSVs.
+6. Set `DryRun` to `false` only after the planned creates, updates, and deletes look correct.
+
+Docker and always-on hosted worker deployment are still roadmap items. The sample compose file is useful as a starting point, but Windows Task Scheduler plus the published Worker is the recommended production path today.
 
 ## Provider Setup
 
